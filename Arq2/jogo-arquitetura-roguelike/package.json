@@ -1,0 +1,11 @@
+{
+  "name": "jogo-arquitetura-roguelike",
+  "version": "0.1.0",
+  "description": "ARQUITETO: Tape-Out Run — roguelite educacional de Arquitetura de Computadores (MIPS).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node tests/run-all.js",
+    "serve": "python -m http.server 8080"
+  }
+}
