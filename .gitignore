@@ -1,0 +1,126 @@
+# =============================================================================
+# .gitignore principal do repositório "jogos-estudos"
+# Cobertura única para todos os projetos (multi-tecnologia). Mantenha por seções.
+# Cada projeto PODE ter seu próprio .gitignore adicional, mas NÃO é obrigatório.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+node_modules/
+
+# -----------------------------------------------------------------------------
+# Build outputs (frontend e backends)
+# -----------------------------------------------------------------------------
+dist/
+build/
+target/
+out/
+coverage/
+.next/
+.nuxt/
+.vite/
+*.class
+*.tsbuildinfo
+
+# -----------------------------------------------------------------------------
+# Environment variables and credentials
+# Preserva sempre exemplos versionados (.env.example).
+# NUNCA commite arquivos .env reais, chaves, tokens ou segredos.
+# -----------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+secrets/
+credentials/
+
+# -----------------------------------------------------------------------------
+# Logs and temporary files
+# -----------------------------------------------------------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+tmp/
+temp/
+.cache/
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# -----------------------------------------------------------------------------
+# Java and Gradle
+# -----------------------------------------------------------------------------
+.gradle/
+
+# -----------------------------------------------------------------------------
+# Operating systems
+# -----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -----------------------------------------------------------------------------
+# IDEs and editors
+# -----------------------------------------------------------------------------
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+*.swp
+
+# -----------------------------------------------------------------------------
+# AI tool local files (configs de assistentes, caches, dados de sessão locais)
+# Documentação oficial gerada COM IA é versionada (ver docs/ de cada projeto).
+# -----------------------------------------------------------------------------
+.claude/
+.cursor/
+.codex/
+.ai/
+.ai-cache/
+.ai-temp/
+.agent/
+.agents/
+.superpowers/
+ai-scratch/
+session-notes/
+scratchpad/
+.copilot/
+
+# -----------------------------------------------------------------------------
+# Private prompts e notas de sessão
+# Documentos com linguagem de conversa, prompts privados ou rascunhos.
+# Requisitos essenciais viram documentação limpa em docs/.
+# -----------------------------------------------------------------------------
+prompts-privados/
+*.prompt.local.md
+*.ai.local.md
+claude.local.md
+agents.local.md
+
+# -----------------------------------------------------------------------------
+# Private academic material
+# Slides/PDFs com direitos autorais, materiais de terceiros ou privados.
+# Material público/no jogo é versionado normalmente em materiais/.
+# -----------------------------------------------------------------------------
+materiais-privados/
+
+# -----------------------------------------------------------------------------
+# Brainstorm scratch servers (artefatos de processo, não versionar)
+# -----------------------------------------------------------------------------
+*.server.pid
+*.server-info
+.events
