@@ -1,0 +1,2621 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MIPS Datapath Quest</title>
+<!--
+  ============================================================================
+  MIPS DATAPATH QUEST  —  Jogo educacional de Arquitetura de Computadores 2
+  Caminho de dados (datapath) do MIPS uniciclo.
+  Arquivo único, sem dependências, roda offline no navegador.
+  Autor: gerado para estudo. Comentado em pt-BR.
+
+  ÍNDICE DAS SEÇÕES:
+    1. CSS (tema escuro/gamer)
+    2. HTML (telas: home, tutorial, mapa de níveis, jogo, resultado)
+    3. JS - Seção A: Estado + persistência (localStorage)
+    4. JS - Seção B: Som (WebAudio)
+    5. JS - Seção C: Dados do MIPS (unidades, sinais, tempos)
+    6. JS - Seção D: SVG do datapath
+    7. JS - Seção E: Banco de questões (factories) + montagem por nível
+    8. JS - Seção F: Motor dos 4 modos de jogo
+    9. JS - Seção G: Conquistas (achievements)
+   10. JS - Seção H: Navegação de telas + tutorial + boot
+  ============================================================================
+-->
+<style>
+/* ===========================================================================
+   1. CSS  —  Tema escuro/gamer, accent roxo, mono p/ código, responsivo
+   =========================================================================== */
+:root{
+  --bg:#0e0e10;
+  --bg2:#16161a;
+  --bg3:#1d1d23;
+  --panel:#1a1a20;
+  --accent:#7c3aed;
+  --accent2:#a855f7;
+  --accent-glow:rgba(124,58,237,.55);
+  --green:#22c55e;
+  --green-glow:rgba(34,197,94,.55);
+  --red:#ef4444;
+  --red-glow:rgba(239,68,68,.55);
+  --yellow:#facc15;
+  --cyan:#22d3ee;
+  --text:#ececf1;
+  --muted:#9a9aa8;
+  --line:#2a2a33;
+  --mono:'JetBrains Mono','Fira Code','Cascadia Code',Consolas,'Courier New',monospace;
+  --sans:'Segoe UI',system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:var(--sans);
+  background:
+    radial-gradient(900px 500px at 80% -10%,rgba(124,58,237,.18),transparent 60%),
+    radial-gradient(700px 500px at -10% 110%,rgba(34,211,238,.10),transparent 55%),
+    var(--bg);
+  color:var(--text);
+  min-height:100%;
+  overflow-x:hidden;
+  line-height:1.45;
+}
+code,.mono{font-family:var(--mono);}
+button{font-family:inherit;cursor:pointer;border:none;color:inherit;background:none;}
+h1,h2,h3{line-height:1.15;}
+
+#app{max-width:1080px;margin:0 auto;padding:16px;min-height:100vh;display:flex;flex-direction:column;}
+.screen{display:none;animation:fade .35s ease;}
+.screen.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* ---- Barra de topo / HUD ---- */
+.topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.brand{font-family:var(--mono);font-weight:700;letter-spacing:.5px;font-size:15px;color:var(--accent2);
+  display:flex;align-items:center;gap:8px;}
+.brand .chip{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:2px 7px;border-radius:20px;}
+.spacer{flex:1;}
+.hud{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.stat{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:5px 10px;font-size:12px;
+  display:flex;align-items:center;gap:6px;}
+.stat b{color:var(--accent2);font-family:var(--mono);}
+.lives{letter-spacing:2px;font-size:14px;}
+.iconbtn{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px;}
+.iconbtn:hover{border-color:var(--accent);}
+
+/* ---- Botões ---- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:linear-gradient(180deg,var(--accent2),var(--accent));
+  color:#fff;font-weight:600;font-size:15px;padding:12px 22px;border-radius:12px;
+  box-shadow:0 6px 20px -6px var(--accent-glow);transition:transform .12s,box-shadow .12s,filter .12s;}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 28px -8px var(--accent-glow);}
+.btn:active{transform:translateY(0);}
+.btn.ghost{background:var(--bg2);border:1px solid var(--line);box-shadow:none;color:var(--text);font-weight:500;}
+.btn.ghost:hover{border-color:var(--accent);}
+.btn.small{padding:8px 14px;font-size:13px;}
+.btn.green{background:linear-gradient(180deg,#34d399,var(--green));box-shadow:0 6px 20px -6px var(--green-glow);}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+/* ---- Home ---- */
+.hero{text-align:center;padding:40px 10px 10px;}
+.hero h1{font-family:var(--mono);font-size:clamp(34px,8vw,62px);font-weight:800;letter-spacing:-1px;
+  background:linear-gradient(120deg,#fff 10%,var(--accent2) 55%,var(--cyan) 110%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 40px var(--accent-glow);}
+.hero .sub{color:var(--muted);margin-top:8px;font-size:15px;}
+.hero .pulse{display:inline-block;margin:22px 0 8px;font-size:64px;animation:floaty 3s ease-in-out infinite;}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(-3deg);}50%{transform:translateY(-10px) rotate(3deg);}}
+.home-actions{display:flex;flex-direction:column;gap:12px;max-width:340px;margin:18px auto;}
+.home-foot{color:var(--muted);font-size:12px;text-align:center;margin-top:18px;}
+
+/* ---- Cards / painéis ---- */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;}
+.panel h2{font-size:18px;margin-bottom:6px;}
+.muted{color:var(--muted);}
+.center{text-align:center;}
+
+/* ---- Mapa de níveis ---- */
+.levelgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+.levelcard{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:16px;text-align:center;
+  transition:transform .12s,border-color .12s;position:relative;overflow:hidden;}
+.levelcard.unlocked{cursor:pointer;}
+.levelcard.unlocked:hover{transform:translateY(-3px);border-color:var(--accent);}
+.levelcard.locked{opacity:.5;}
+.levelcard .num{font-family:var(--mono);font-size:30px;font-weight:800;color:var(--accent2);}
+.levelcard .lab{font-size:12px;color:var(--muted);margin-top:2px;}
+.levelcard .tier{font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-top:8px;
+  display:inline-block;padding:2px 8px;border-radius:20px;border:1px solid var(--line);}
+.tier.easy{color:var(--green);} .tier.med{color:var(--yellow);} .tier.hard{color:var(--red);}
+.levelcard .done{position:absolute;top:8px;right:10px;color:var(--green);font-size:14px;}
+.levelcard .lock{position:absolute;top:8px;right:10px;font-size:14px;}
+
+/* ---- Área de jogo ---- */
+.q-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.q-tag{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);font-weight:700;}
+.q-progress{font-size:12px;color:var(--muted);font-family:var(--mono);}
+.instr-box{background:#0a0a0c;border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:17px;color:#fff;margin:10px 0;}
+.instr-box .lbl{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;font-family:var(--sans);text-transform:uppercase;letter-spacing:1px;}
+.prompt{font-size:15px;margin:6px 0 12px;}
+
+/* ---- SVG datapath ---- */
+.svgwrap{background:#0a0a0c;border:1px solid var(--line);border-radius:14px;padding:6px;overflow-x:auto;}
+svg.datapath{width:100%;height:auto;display:block;min-width:560px;}
+.unit rect,.unit polygon,.unit ellipse{fill:var(--bg3);stroke:#3a3a46;stroke-width:1.5;transition:all .25s;}
+.unit text{fill:var(--text);font-size:13px;font-family:var(--sans);pointer-events:none;}
+.unit text.sm{font-size:10px;fill:var(--muted);}
+.unit.clickable{cursor:pointer;}
+.unit.clickable:hover rect,.unit.clickable:hover polygon,.unit.clickable:hover ellipse{stroke:var(--accent2);}
+.unit.hl-green rect,.unit.hl-green polygon,.unit.hl-green ellipse{
+  fill:rgba(34,197,94,.18);stroke:var(--green);stroke-width:2.5;filter:drop-shadow(0 0 8px var(--green-glow));}
+.unit.hl-red rect,.unit.hl-red polygon,.unit.hl-red ellipse{
+  fill:rgba(239,68,68,.18);stroke:var(--red);stroke-width:2.5;filter:drop-shadow(0 0 8px var(--red-glow));}
+.unit.hl-pulse rect,.unit.hl-pulse polygon,.unit.hl-pulse ellipse{
+  stroke:var(--accent2);filter:drop-shadow(0 0 10px var(--accent-glow));animation:pulseGlow 1.1s ease-in-out infinite;}
+@keyframes pulseGlow{0%,100%{filter:drop-shadow(0 0 3px var(--accent-glow));}50%{filter:drop-shadow(0 0 14px var(--accent-glow));}}
+.wire{stroke:#34343f;stroke-width:1.5;fill:none;}
+.step-badge{fill:var(--green);font-family:var(--mono);font-weight:700;font-size:13px;}
+/* zonas do modo pipeline */
+.stagezone{fill:rgba(124,58,237,.06);stroke:rgba(124,58,237,.5);stroke-dasharray:6 5;stroke-width:1.5;
+  cursor:pointer;transition:all .2s;}
+.stagezone:hover{fill:rgba(124,58,237,.16);}
+.stagezone.sel{fill:rgba(34,211,238,.16);stroke:var(--cyan);}
+.stagezone.ok{fill:rgba(34,197,94,.16);stroke:var(--green);stroke-dasharray:none;}
+.stagezone.bad{fill:rgba(239,68,68,.16);stroke:var(--red);stroke-dasharray:none;}
+.zone-label{fill:#fff;font-family:var(--mono);font-weight:800;font-size:22px;text-anchor:middle;pointer-events:none;}
+
+/* tooltip */
+#tooltip{position:fixed;z-index:50;pointer-events:none;background:#000;border:1px solid var(--accent);
+  border-radius:8px;padding:7px 10px;font-size:12px;max-width:240px;color:var(--text);
+  box-shadow:0 8px 24px rgba(0,0,0,.6);display:none;}
+#tooltip b{color:var(--accent2);}
+
+/* ---- Modo 1: passos ---- */
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0;}
+.steps .slot{font-size:12px;font-family:var(--mono);background:var(--bg2);border:1px dashed var(--line);
+  border-radius:8px;padding:6px 10px;color:var(--muted);}
+.steps .slot.filled{border-style:solid;border-color:var(--green);color:var(--text);background:rgba(34,197,94,.08);}
+
+/* ---- Modo 2: toggles de sinais ---- */
+.signals{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:6px 0 12px;}
+.control-tools{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:6px 0 12px;}
+.control-tools .prompt{margin:0;flex:1;min-width:240px;}
+.sig{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;
+  align-items:flex-start;justify-content:space-between;gap:10px;transition:border-color .15s;}
+.sig.right{border-color:var(--green);box-shadow:0 0 0 1px var(--green-glow) inset;}
+.sig.wrong{border-color:var(--red);box-shadow:0 0 0 1px var(--red-glow) inset;}
+.sig-main{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0;}
+.nm-row{display:flex;align-items:center;gap:6px;}
+.sig .nm{font-family:var(--mono);font-size:13px;font-weight:700;}
+.sig-q{width:18px;height:18px;border-radius:50%;border:1px solid var(--line);color:var(--muted);
+  font-size:11px;line-height:1;flex:0 0 auto;}
+.sig-q:hover{border-color:var(--accent);color:var(--accent2);}
+.sig-what{font-size:11.5px;color:var(--muted);line-height:1.35;}
+.sig-val{font-size:11.5px;color:var(--cyan);font-family:var(--mono);}
+.signals.hide-signal-help .sig-what,
+.signals.hide-signal-help .sig-val{display:none;}
+.sig-detail{display:none;font-size:11.5px;color:var(--muted);line-height:1.4;margin-top:3px;
+  border-top:1px dashed var(--line);padding-top:4px;}
+.sig.expanded .sig-detail{display:block;}
+.toggle{width:54px;height:28px;border-radius:20px;background:var(--bg3);border:1px solid var(--line);
+  position:relative;transition:background .2s;flex:0 0 auto;}
+.toggle .knob{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;
+  background:var(--muted);transition:all .2s;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#000;font-family:var(--mono);}
+.toggle.on{background:linear-gradient(180deg,var(--accent2),var(--accent));}
+.toggle.on .knob{left:30px;background:#fff;}
+.sig-explain{font-size:12px;color:var(--muted);margin-top:6px;display:none;}
+.sig.wrong .sig-explain{display:block;color:#fca5a5;}
+
+/* ---- Modo 3: numéricos ---- */
+.timesgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:8px 0;}
+.timecell{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;text-align:center;font-size:13px;}
+.timecell b{display:block;font-family:var(--mono);font-size:18px;color:var(--cyan);margin-top:2px;}
+.numrow{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap;}
+.numrow label{font-size:14px;flex:1;min-width:200px;}
+.numrow input{width:120px;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  color:#fff;padding:9px 11px;font-family:var(--mono);font-size:15px;}
+.numrow input:focus{outline:none;border-color:var(--accent);}
+.numrow .unit-suf{color:var(--muted);font-family:var(--mono);font-size:13px;}
+.numrow.right input{border-color:var(--green);} .numrow.wrong input{border-color:var(--red);}
+select.pick{background:var(--bg);border:1px solid var(--line);border-radius:8px;color:#fff;
+  padding:9px 11px;font-family:var(--mono);font-size:14px;}
+
+/* ---- Etiquetas drag (modo 4) ---- */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;}
+.chip-drag{font-family:var(--mono);font-weight:700;background:var(--bg2);border:1px solid var(--accent);
+  border-radius:10px;padding:8px 14px;font-size:14px;color:var(--accent2);transition:all .15s;}
+.chip-drag.sel{background:var(--accent);color:#fff;transform:scale(1.05);}
+.chip-drag.used{opacity:.35;border-color:var(--line);color:var(--muted);}
+
+/* ---- Feedback ---- */
+.feedback{border-radius:12px;padding:12px 14px;margin:10px 0;font-size:14px;display:none;}
+.feedback.show{display:block;animation:fade .25s;}
+.feedback.ok{background:rgba(34,197,94,.10);border:1px solid var(--green);}
+.feedback.err{background:rgba(239,68,68,.10);border:1px solid var(--red);}
+.feedback.hint{background:rgba(250,204,21,.08);border:1px solid var(--yellow);}
+.feedback b{color:#fff;}
+.feedback ul{margin:6px 0 0 18px;} .feedback li{margin:3px 0;}
+
+.actionsbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+
+/* ---- Conquistas / toast ---- */
+#toast-wrap{position:fixed;top:14px;right:14px;z-index:80;display:flex;flex-direction:column;gap:8px;max-width:300px;}
+.toast{background:var(--bg2);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);animation:slideIn .3s ease;}
+.toast .t1{font-weight:700;color:var(--yellow);font-size:13px;}
+.toast .t2{font-size:12px;color:var(--muted);}
+@keyframes slideIn{from{opacity:0;transform:translateX(40px);}to{opacity:1;transform:none;}}
+.ach-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+.ach{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;gap:10px;align-items:flex-start;}
+.ach.un{border-color:var(--yellow);}
+.ach .ic{font-size:24px;}
+.ach.lock{opacity:.45;}
+.ach .nm{font-weight:700;font-size:13px;} .ach .ds{font-size:12px;color:var(--muted);}
+
+/* ---- Tutorial ---- */
+.tut-card{min-height:280px;}
+.tut-dots{display:flex;gap:6px;justify-content:center;margin:14px 0;}
+.tut-dots span{width:9px;height:9px;border-radius:50%;background:var(--line);}
+.tut-dots span.on{background:var(--accent2);}
+.tut-emoji{font-size:54px;text-align:center;margin:6px 0 12px;}
+table.ctl{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;margin-top:8px;}
+table.ctl th,table.ctl td{border:1px solid var(--line);padding:5px 7px;text-align:center;}
+table.ctl th{background:var(--bg3);color:var(--accent2);}
+table.ctl td.x{color:var(--muted);}
+
+/* ---- Modal resultado ---- */
+.result-big{font-size:48px;text-align:center;margin:8px 0;}
+.result-stats{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:14px 0;}
+.result-stats .rs{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 18px;text-align:center;}
+.result-stats .rs b{display:block;font-family:var(--mono);font-size:24px;color:var(--accent2);}
+
+/* ---- Academia / Lições ---- */
+.chapter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.chapter-card{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;
+  transition:transform .12s,border-color .12s;position:relative;}
+.chapter-card:hover{transform:translateY(-3px);border-color:var(--accent);}
+.chapter-card .cic{font-size:30px;}
+.chapter-card .ct{font-weight:700;margin-top:6px;font-size:15px;}
+.chapter-card .cd{font-size:12px;color:var(--muted);margin-top:3px;}
+.chapter-card .cdone{position:absolute;top:10px;right:12px;color:var(--green);font-size:15px;}
+.lesson-caption,.demo-caption{background:#0a0a0c;border:1px solid var(--line);border-left:3px solid var(--cyan);
+  border-radius:10px;padding:11px 13px;font-size:14px;margin:10px 0;min-height:48px;}
+.lesson-caption b,.demo-caption b{color:#fff;}
+#lessonBody h3{font-size:17px;margin:2px 0 8px;color:var(--accent2);}
+#lessonBody p{margin:8px 0;font-size:14.5px;}
+#lessonBody ul{margin:8px 0 8px 20px;} #lessonBody li{margin:4px 0;font-size:14px;}
+.sig-teach{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+.sig-trow{display:flex;gap:10px;align-items:flex-start;background:var(--bg2);border:1px solid var(--line);
+  border-radius:10px;padding:8px 11px;font-size:13.5px;}
+.badge{font-family:var(--mono);font-weight:700;padding:3px 9px;border-radius:7px;white-space:nowrap;flex:0 0 auto;}
+.badge.on{background:rgba(34,197,94,.16);color:var(--green);border:1px solid var(--green);}
+.badge.off{background:var(--bg3);color:var(--muted);border:1px solid var(--line);}
+.badge.x{background:rgba(34,211,238,.14);color:var(--cyan);border:1px solid var(--cyan);}
+.tchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0;}
+.tchip{font-family:var(--mono);background:var(--bg2);border:1px solid var(--line);border-radius:9px;
+  padding:7px 10px;font-size:13px;text-align:center;}
+.tchip b{display:block;color:var(--cyan);font-size:16px;}
+.tplus{color:var(--muted);font-size:18px;font-family:var(--mono);}
+.teq{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--green);}
+.pipe-legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px;}
+.pipe-legend .pl{background:var(--bg2);border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:9px;padding:8px 10px;font-size:12.5px;}
+.pipe-legend .pl b{font-family:var(--mono);color:var(--accent2);}
+.bench-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;margin:8px 0;}
+.bench-table th,.bench-table td{border:1px solid var(--line);padding:6px 8px;text-align:center;}
+.bench-table th{background:var(--bg3);color:var(--accent2);}
+.callout{background:rgba(124,58,237,.08);border:1px solid var(--accent);border-radius:10px;padding:10px 12px;
+  font-size:13.5px;margin:10px 0;}
+.callout b{color:var(--accent2);}
+
+@media(max-width:560px){
+  #app{padding:10px;}
+  .hero{padding:24px 4px 6px;}
+  .hud .stat{font-size:11px;padding:4px 8px;}
+  .brand{font-size:13px;}
+}
+
+/* ===========================================================================
+   CSS EXTRA — Modo Prova (5), Glossário, Simulado
+   =========================================================================== */
+/* ---- Glossário modal ---- */
+#glOverlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;}
+#glOverlay.open{display:flex;}
+#glModal{background:var(--panel);border:1px solid var(--line);border-radius:16px;width:92%;max-width:640px;max-height:80vh;display:flex;flex-direction:column;animation:fade .25s;}
+#glModal h2{font-size:17px;margin:14px 16px 0;padding:0;}
+#glSearch{margin:10px 16px;padding:9px 12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:#fff;font-size:14px;width:calc(100% - 32px);}
+#glSearch:focus{outline:none;border-color:var(--accent);}
+#glBody{flex:1;overflow-y:auto;padding:0 16px 16px;}
+.gl-cat{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);font-weight:700;margin:12px 0 6px;padding-top:8px;border-top:1px dashed var(--line);}
+.gl-item{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:6px;}
+.gl-item b{color:var(--accent2);font-family:var(--mono);font-size:14px;}
+.gl-item .gl-def{font-size:13px;margin-top:4px;line-height:1.4;}
+.gl-item .gl-why{font-size:12px;color:var(--cyan);margin-top:3px;}
+.gl-close{align-self:flex-end;margin:0 16px 14px;}
+/* termos clicáveis inline */
+.term{color:var(--accent2);border-bottom:1px dotted var(--accent);cursor:pointer;transition:color .15s;}
+.term:hover{color:var(--cyan);}
+
+/* ---- Modo 5: questões fechadas ---- */
+.mc-options{display:flex;flex-direction:column;gap:8px;margin:10px 0;}
+.mc-opt{background:var(--bg2);border:2px solid var(--line);border-radius:12px;padding:12px 16px;font-size:14px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:10px;}
+.mc-opt:hover{border-color:var(--accent);}
+.mc-opt .mc-letter{font-family:var(--mono);font-weight:700;font-size:13px;color:var(--accent2);min-width:22px;}
+.mc-opt.sel{border-color:var(--accent);background:rgba(124,58,237,.1);}
+.mc-opt.right{border-color:var(--green);background:rgba(34,197,94,.08);}
+.mc-opt.wrong{border-color:var(--red);background:rgba(239,68,68,.08);}
+
+.tf-statement{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:14.5px;margin:10px 0;line-height:1.5;}
+.tf-buttons{display:flex;gap:10px;margin:8px 0;}
+.tf-btn{flex:1;padding:12px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;border:2px solid var(--line);background:var(--bg2);color:var(--text);}
+.tf-btn:hover{border-color:var(--accent);}
+.tf-btn.right{border-color:var(--green);background:rgba(34,197,94,.12);color:var(--green);}
+.tf-btn.wrong{border-color:var(--red);background:rgba(239,68,68,.12);color:var(--red);}
+
+.ar-statement{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:14.5px;margin:10px 0;line-height:1.5;}
+.ar-row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;}
+.ar-btn{padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;border:2px solid var(--line);background:var(--bg2);color:var(--text);transition:all .15s;}
+.ar-btn:hover{border-color:var(--accent);}
+.ar-btn.sel{border-color:var(--accent);background:rgba(124,58,237,.1);}
+.ar-btn.right{border-color:var(--green);background:rgba(34,197,94,.12);}
+.ar-btn.wrong{border-color:var(--red);background:rgba(239,68,68,.12);}
+.ar-justify{font-size:13px;color:var(--muted);margin-top:4px;min-height:20px;}
+
+.tbl-question{margin:10px 0;}
+.tbl-question p{font-size:14px;margin-bottom:8px;}
+.ctl-guess{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;margin:6px 0;}
+.ctl-guess th,.ctl-guess td{border:1px solid var(--line);padding:6px 8px;text-align:center;}
+.ctl-guess th{background:var(--bg3);color:var(--accent2);font-size:11px;}
+.ctl-guess select{background:var(--bg);border:1px solid var(--line);color:#fff;border-radius:6px;padding:4px 6px;font-size:13px;font-family:var(--mono);}
+.ctl-guess td.right{background:rgba(34,197,94,.1);color:var(--green);}
+.ctl-guess td.wrong{background:rgba(239,68,68,.1);color:var(--red);}
+.ctl-guess td.correct-val{color:var(--green);font-weight:700;}
+
+.time-context{background:#0a0a0c;border:1px solid var(--line);border-left:3px solid var(--cyan);
+  border-radius:10px;padding:10px 12px;margin:8px 0 12px;font-size:13px;}
+.time-context .timesgrid{margin-top:8px;}
+.program-card{background:#0a0a0c;border:1px solid var(--line);border-left:3px solid var(--accent);
+  border-radius:12px;padding:12px;margin:8px 0 12px;}
+.program-title{font-family:var(--mono);font-size:13px;font-weight:800;color:var(--accent2);margin-bottom:8px;}
+.program-code{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+  overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.55;color:#fff;margin:8px 0;}
+.program-meta{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;}
+.program-pill{background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:5px 9px;
+  font-size:12px;color:var(--muted);}
+.program-pill b{color:var(--cyan);font-family:var(--mono);}
+.program-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;margin:8px 0;}
+.program-table th,.program-table td{border:1px solid var(--line);padding:6px 7px;text-align:center;}
+.program-table th{background:var(--bg3);color:var(--accent2);font-size:11px;}
+.program-table input{width:86px;background:var(--bg);border:1px solid var(--line);border-radius:7px;
+  color:#fff;padding:6px 7px;font-family:var(--mono);font-size:13px;text-align:center;}
+.program-table tr.right input,.program-table tr.right td{border-color:var(--green);color:var(--green);}
+.program-table tr.wrong input,.program-table tr.wrong td{border-color:var(--red);color:#fca5a5;}
+.program-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:8px;}
+.program-summary .numrow{margin:0;}
+
+/* ---- Simulado ---- */
+.sim-timer{font-family:var(--mono);font-size:20px;font-weight:700;text-align:center;padding:8px;margin:6px 0;border-radius:10px;background:var(--bg2);border:1px solid var(--line);}
+.sim-timer.urgent{color:var(--red);border-color:var(--red);animation:pulseGlow 1s ease-in-out infinite;}
+.sim-topic-row{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0;}
+.sim-topic{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:13px;flex:1;min-width:120px;text-align:center;}
+.sim-topic b{display:block;font-family:var(--mono);font-size:18px;}
+.sim-topic.good b{color:var(--green);}
+.sim-topic.bad b{color:var(--red);}
+.sim-grade{font-size:48px;font-weight:800;font-family:var(--mono);text-align:center;margin:10px 0;}
+.sim-grade.pass{color:var(--green);}
+.sim-grade.fail{color:var(--red);}
+.gab-item{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;font-size:13px;}
+.gab-item .gab-q{margin-bottom:4px;}
+.gab-item .gab-ok{color:var(--green);font-weight:700;}
+.gab-item .gab-fail{color:var(--red);font-weight:700;}
+.gab-item .gab-exp{color:var(--muted);margin-top:4px;font-size:12px;line-height:1.4;}
+
+@media(max-width:560px){
+  #glModal{width:97%;max-height:85vh;}
+}
+</style>
+</head>
+<body>
+<div id="tooltip"></div>
+<div id="toast-wrap"></div>
+
+<div id="app">
+  <!-- ===================== BARRA DE TOPO / HUD ===================== -->
+  <div class="topbar" id="topbar" style="display:none">
+    <div class="brand">⚡ MIPS<span style="color:var(--cyan)">Quest</span><span class="chip" id="modeChip">—</span></div>
+    <div class="spacer"></div>
+    <div class="hud">
+      <div class="stat">Nível <b id="hudLevel">1</b></div>
+      <div class="stat">XP <b id="hudXP">0</b></div>
+      <div class="stat lives" id="hudLives" title="Vidas">❤️❤️❤️</div>
+      <button class="iconbtn" id="learnToggle" title="Modo Aprendiz / Prova">🎓</button>
+      <button class="iconbtn" id="glBtn" title="Glossário de Conceitos">📖</button>
+      <button class="iconbtn" id="muteBtn" title="Som">🔊</button>
+      <button class="iconbtn" id="homeBtn" title="Início">🏠</button>
+    </div>
+  </div>
+
+  <!-- ===================== HOME ===================== -->
+  <section class="screen active" id="scr-home">
+    <div class="hero">
+      <div class="pulse">🧩</div>
+      <h1>MIPS Datapath Quest</h1>
+      <div class="sub">Domine o caminho de dados do MIPS uniciclo jogando — sinais de controle, tempos, pipeline.</div>
+    </div>
+    <div class="home-actions">
+      <button class="btn" id="btnLearn">📚 Aprender (Academia)</button>
+      <button class="btn ghost" id="btnStart">▶ Jogar / Praticar</button>
+      <button class="btn ghost" id="btnTutorial">📖 Como jogar</button>
+      <button class="btn ghost" id="btnFree">🎲 Modo Livre</button>
+      <button class="btn ghost" id="btnProvaInf">♾️ Prova Infinita</button>
+      <button class="btn ghost" id="btnSimulado">📝 Simulado da Prova</button>
+      <button class="btn ghost" id="btnLoad">💾 Carregar Progresso</button>
+    </div>
+    <div class="home-foot">
+      Progresso salvo automaticamente neste navegador · <span id="homeProg">—</span><br>
+      <button class="iconbtn" id="btnAch2" style="margin-top:8px">🏆 Conquistas</button>
+      <button class="iconbtn" id="btnReset" style="margin-top:8px">🗑 Resetar</button>
+    </div>
+  </section>
+
+  <!-- ===================== TUTORIAL ===================== -->
+  <section class="screen" id="scr-tutorial">
+    <div class="panel tut-card" id="tutBody"></div>
+    <div class="tut-dots" id="tutDots"></div>
+    <div class="actionsbar" style="justify-content:space-between">
+      <button class="btn ghost small" id="tutPrev">← Voltar</button>
+      <button class="btn small" id="tutNext">Próximo →</button>
+    </div>
+  </section>
+
+  <!-- ===================== ACADEMIA (menu de capítulos) ===================== -->
+  <section class="screen" id="scr-learn">
+    <div class="panel">
+      <h2>📚 Academia MIPS</h2>
+      <p class="muted">Aprenda a matéria do zero, no seu ritmo. Cada capítulo ensina com diagramas, demonstrações animadas e exemplos resolvidos. Depois é só praticar.</p>
+    </div>
+    <div class="chapter-grid" id="chapterGrid"></div>
+    <div class="panel" style="margin-top:14px">
+      <h2>📋 Lista 3 = Prova — onde estudar cada questão</h2>
+      <table class="bench-table" style="margin-top:6px">
+        <tr><th>Questão da Lista 3</th><th>Onde treinar no jogo</th></tr>
+        <tr><td>Q2 — explicar as ações de cada unidade e o controle (LW, SW, BEQ, ADD)</td><td>Cap. 1 e 3 + Modo 1 (Roteirista) e Modo 2 (Controle)</td></tr>
+        <tr><td>Q3a — tempo de execução de cada instrução</td><td>Cap. 4 + Modo 3 (tempo único / período)</td></tr>
+        <tr><td>Q3b — comparar benchmarks GCC e ABC (speedup mono×multi)</td><td>Modo 3 benchmark — níveis 8 (GCC) e 9 (ABC), valores idênticos aos da lista</td></tr>
+        <tr><td>Q4 — fases do pipeline, dividir o diagrama</td><td>Cap. 5 + Modo 4 (Pipeline Master)</td></tr>
+        <tr><td>Q1 — programar 2 funções em assembly MIPS (vetor + quadrado)</td><td><span style="color:var(--yellow)">Não coberto</span> — é programação MIPS, não datapath</td></tr>
+      </table>
+    </div>
+    <div class="actionsbar" style="margin-top:14px">
+      <button class="btn ghost" id="learnBack">← Início</button>
+      <button class="btn" id="learnToPractice">Pular para a prática →</button>
+    </div>
+  </section>
+
+  <!-- ===================== LIÇÃO (player de slides) ===================== -->
+  <section class="screen" id="scr-lesson">
+    <div class="panel">
+      <div class="q-head">
+        <span class="q-tag" id="lessonTitle">Capítulo</span>
+        <span class="q-progress" id="lessonProg">1/3</span>
+      </div>
+      <div id="lessonBody"></div>
+    </div>
+    <div class="tut-dots" id="lessonDots"></div>
+    <div class="actionsbar" style="justify-content:space-between">
+      <button class="btn ghost small" id="lessonPrev">← Voltar</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn ghost small" id="lessonExit">Sair</button>
+        <button class="btn small" id="lessonNext">Próximo →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MAPA DE NÍVEIS ===================== -->
+  <section class="screen" id="scr-levels">
+    <div class="panel">
+      <h2>Selecione um nível</h2>
+      <p class="muted">Níveis 1–3: básico · 4–7: combinado · 8–10: estilo prova. Cada nível tem 3 vidas.</p>
+    </div>
+    <div class="levelgrid" id="levelGrid"></div>
+  </section>
+
+  <!-- ===================== JOGO ===================== -->
+  <section class="screen" id="scr-game">
+    <div class="panel">
+      <div class="q-head">
+        <span class="q-tag" id="qTag">MODO</span>
+        <span class="q-progress" id="qProgress">1/5</span>
+      </div>
+      <div id="qBody"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="actionsbar" id="qActions"></div>
+    </div>
+  </section>
+
+  <!-- ===================== RESULTADO ===================== -->
+  <section class="screen" id="scr-result">
+    <div class="panel center">
+      <div class="result-big" id="resEmoji">🎉</div>
+      <h2 id="resTitle">Nível completo!</h2>
+      <p class="muted" id="resSub"></p>
+      <div class="result-stats" id="resStats"></div>
+      <div class="actionsbar" style="justify-content:center">
+        <button class="btn" id="resNext">Continuar →</button>
+        <button class="btn ghost" id="resMap">Mapa de níveis</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== CONQUISTAS ===================== -->
+  <section class="screen" id="scr-ach">
+    <div class="panel">
+      <h2>🏆 Conquistas</h2>
+      <p class="muted" id="achCount"></p>
+    </div>
+    <div class="ach-list" id="achList"></div>
+    <div class="actionsbar" style="margin-top:14px">
+      <button class="btn ghost" id="achBack">← Voltar</button>
+    </div>
+  </section>
+
+  <!-- ===================== SIMULADO (joga aqui) ===================== -->
+  <section class="screen" id="scr-sim">
+    <div class="panel">
+      <div class="q-head">
+        <span class="q-tag" id="simTag">📝 Simulado</span>
+        <span class="q-progress" id="simProg">1/10</span>
+      </div>
+      <div class="sim-timer" id="simTimer">⏱ 12:00</div>
+      <div id="simBody"></div>
+      <div class="feedback" id="simFeedback"></div>
+      <div class="actionsbar" id="simActions"></div>
+    </div>
+  </section>
+
+  <!-- ===================== SIMULADO (configuração) ===================== -->
+  <section class="screen" id="scr-sim-setup">
+    <div class="panel center">
+      <div class="result-big">📝</div>
+      <h2>Simulado da Prova</h2>
+      <p class="muted">Sequência completa no estilo da Lista 3 (Q2 → Q3a → Q3b → Q4), com questões fechadas.</p>
+      <div id="simBestInfo" style="margin:12px 0;font-size:14px;"></div>
+      <div class="actionsbar" style="justify-content:center;flex-direction:column;max-width:320px;margin:12px auto;">
+        <button class="btn" id="simStartReal" style="margin-bottom:10px;">⏱ Simulado Real (cronometrado)</button>
+        <button class="btn ghost" id="simStartTreino">🎓 Simulado Treino (sem relógio)</button>
+      </div>
+      <div class="actionsbar" style="justify-content:center">
+        <button class="btn ghost" id="simSetupBack">← Voltar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RESULTADO DO SIMULADO ===================== -->
+  <section class="screen" id="scr-sim-result">
+    <div class="panel center">
+      <div class="result-big" id="simResEmoji">📊</div>
+      <h2 id="simResTitle">Simulado Concluído</h2>
+      <div class="sim-grade" id="simGrade">—</div>
+      <p class="muted" id="simResSub"></p>
+      <div class="sim-topic-row" id="simTopics"></div>
+      <div class="actionsbar" style="justify-content:center">
+        <button class="btn" id="simRetry">↻ Refazer</button>
+        <button class="btn ghost" id="simHome">🏠 Início</button>
+      </div>
+      <div style="text-align:left;margin-top:10px;">
+        <h3 style="font-size:15px;text-align:center;margin:10px 0;">📋 Gabarito Comentado</h3>
+        <div id="simGabarito"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===================== OVERLAY DO GLOSSÁRIO ===================== -->
+<div id="glOverlay">
+  <div id="glModal">
+    <h2>📖 Glossário de Conceitos</h2>
+    <input type="text" id="glSearch" placeholder="Buscar termo..." />
+    <div id="glBody"></div>
+    <button class="btn ghost small gl-close" id="glClose">Fechar ✕</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ===========================================================================
+   3. JS — SEÇÃO A: ESTADO + PERSISTÊNCIA
+   =========================================================================== */
+const SAVE_KEY = 'mdq_exam_v2';
+const DEFAULT_SAVE = {
+  xp:0,
+  unlocked:1,          // maior nível desbloqueado
+  achievements:[],     // ids desbloqueados
+  muted:false,
+  totalCorrect:0,
+  learnMode:true,      // Modo Aprendiz: ensina antes de cobrar (ligado por padrão)
+  signalAssistVisible:true, // Ajuda visual dos sinais no Modo 2
+  lessonsDone:[],      // ids de capítulos da Academia concluídos
+  // contadores p/ conquistas
+  ctlPerfectInstr:[],  // instruções com os 7 sinais corretos sem dica
+  // simulado / modo prova
+  simBest:0,           // melhor nota no simulado (0–10)
+  simHistory:[],       // últimas 3 tentativas: {date, score, perTopic}
+  provaMastery:{Q2:0,Q3a:0,Q3b:0,Q4:0,QProg:0}  // taxa de acerto por tópico da Lista 3
+};
+let save = loadSave();
+
+function loadSave(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(raw) return Object.assign({}, DEFAULT_SAVE, JSON.parse(raw));
+  }catch(e){/* localStorage indisponível */}
+  return JSON.parse(JSON.stringify(DEFAULT_SAVE));
+}
+function persist(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){}
+  refreshHUD();
+}
+function refreshHUD(){
+  document.getElementById('hudLevel').textContent = G.level || save.unlocked;
+  document.getElementById('hudXP').textContent = save.xp;
+  document.getElementById('homeProg').textContent =
+    `XP ${save.xp} · Nível ${save.unlocked}/10 · ${save.achievements.length} conquistas · ${save.learnMode?'Modo Aprendiz 🎓':'Modo Prova 📝'}`;
+  document.getElementById('muteBtn').textContent = save.muted ? '🔇' : '🔊';
+  const lt=document.getElementById('learnToggle');
+  if(lt){ lt.textContent = save.learnMode ? '🎓' : '📝'; lt.title = save.learnMode ? 'Modo Aprendiz (ensina) — clique p/ Modo Prova' : 'Modo Prova (só teste) — clique p/ Modo Aprendiz'; }
+}
+
+/* ===========================================================================
+   4. JS — SEÇÃO B: SOM (WebAudio, sem arquivos externos)
+   =========================================================================== */
+let audioCtx = null;
+function beep(freq, dur, type='sine', vol=0.15){
+  if(save.muted) return;
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+const sfx = {
+  ok(){ beep(660,.08,'triangle'); setTimeout(()=>beep(990,.12,'triangle'),70); },
+  err(){ beep(200,.18,'sawtooth',.12); },
+  click(){ beep(440,.04,'square',.08); },
+  win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>beep(f,.15,'triangle'),i*90)); },
+  ach(){ [784,1046,1318].forEach((f,i)=>setTimeout(()=>beep(f,.16,'sine',.18),i*110)); },
+  lose(){ [330,260,180].forEach((f,i)=>setTimeout(()=>beep(f,.2,'sawtooth',.12),i*120)); }
+};
+
+/* ===========================================================================
+   5. JS — SEÇÃO C: DADOS DO MIPS (unidades, sinais, tempos)
+   =========================================================================== */
+
+// --- Unidades funcionais: nome, tooltip, fase do pipeline ---
+const UNITS = {
+  pc:        {name:'PC',                     tip:'Program Counter — guarda o endereço da instrução atual.', phase:'IF'},
+  imem:      {name:'Memória de Instruções',  tip:'Busca a instrução no endereço apontado pelo PC.',         phase:'IF'},
+  add4:      {name:'Somador +4',             tip:'Calcula PC+4 (próxima instrução).',                       phase:'IF'},
+  regs:      {name:'Banco de Registradores', tip:'Lê 2 registradores (rs, rt) e escreve 1 (no WB).',        phase:'ID/WB'},
+  control:   {name:'Unidade de Controle',    tip:'Decodifica o opcode e gera todos os sinais de controle.', phase:'ID'},
+  signext:   {name:'Extensão de Sinal',      tip:'Estende o imediato de 16 → 32 bits preservando o sinal.', phase:'ID'},
+  sl2:       {name:'Shift Left 2',           tip:'Desloca 2 bits (×4) o offset do desvio.',                 phase:'EX'},
+  alu:       {name:'ULA',                    tip:'Unidade Lógica e Aritmética — soma, subtrai, AND, OR…',   phase:'EX'},
+  addbr:     {name:'Somador de Desvio',      tip:'Soma (PC+4) + (offset<<2) = endereço alvo do branch.',    phase:'EX'},
+  dmem:      {name:'Memória de Dados',       tip:'lw lê dados; sw escreve dados.',                          phase:'MEM'},
+  muxRegDst: {name:'MUX RegDst',             tip:'Escolhe o registrador destino: rt (lw) ou rd (tipo-R).',  phase:'ID'},
+  muxAluSrc: {name:'MUX ALUSrc',             tip:'Escolhe o 2º operando da ULA: registrador ou imediato.',  phase:'EX'},
+  muxMemReg: {name:'MUX MemtoReg',           tip:'Escolhe o que volta ao reg.: saída da ULA ou da memória.',phase:'WB'},
+  muxPcSrc:  {name:'MUX PCSrc',              tip:'Escolhe o próximo PC: PC+4 ou endereço de desvio.',       phase:'EX'}
+};
+
+// --- Instruções e seus dados ---
+const INSTR = {
+  R:  { key:'R',  label:'add $s1, $s2, $s3',  name:'tipo-R',
+        desc:'Operação registrador-registrador (add, sub, and, or, slt…).' },
+  lw: { key:'lw', label:'lw $s1, 8($s2)',      name:'lw (load word)',
+        desc:'Carrega da memória para um registrador.' },
+  sw: { key:'sw', label:'sw $s1, 8($s2)',      name:'sw (store word)',
+        desc:'Armazena um registrador na memória.' },
+  beq:{ key:'beq',label:'beq $s1, $s2, Desvio',name:'beq (branch if equal)',
+        desc:'Desvia se dois registradores forem iguais.' },
+  j:  { key:'j',  label:'j Destino',           name:'j (jump)',
+        desc:'Salto incondicional.' }
+};
+
+// --- Sinais de controle (ordem fixa). 'X' = don't care ---
+const SIGNAL_NAMES = ['RegDst','ALUSrc','MemtoReg','RegWrite','MemRead','MemWrite','Branch'];
+const CONTROL = {                         // valores corretos por instrução
+  R:   [1,0,0,1,0,0,0],
+  lw:  [0,1,1,1,1,0,0],
+  sw:  ['X',1,'X',0,0,1,0],
+  beq: ['X',0,'X',0,0,0,1]
+};
+// Explicação curta por sinal/instrução (para feedback do Modo 2)
+const SIG_WHY = {
+  RegDst:{1:'há registrador destino rd (campo da tipo-R).',0:'o destino é rt (campo do lw).',X:'não há escrita em registrador → indiferente.'},
+  ALUSrc:{1:'o 2º operando da ULA é o imediato (offset/constante).',0:'o 2º operando vem de um registrador.'},
+  MemtoReg:{1:'o valor escrito vem da Memória de Dados (lw).',0:'o valor escrito vem da ULA (tipo-R).',X:'não escreve em registrador → indiferente.'},
+  RegWrite:{1:'a instrução grava resultado em um registrador.',0:'a instrução NÃO grava em registrador.'},
+  MemRead:{1:'precisa LER a Memória de Dados (lw).',0:'não lê a memória.'},
+  MemWrite:{1:'precisa ESCREVER na Memória de Dados (sw).',0:'não escreve na memória.'},
+  Branch:{1:'é um desvio condicional (beq).',0:'não é desvio.'}
+};
+// O QUE CADA SINAL É (definição) + o que significa cada valor 0/1.
+// Usado para ENSINAR dentro do Modo 2 enquanto o jogador decide.
+const SIG_INFO = {
+  RegDst:  {what:'Escolhe QUAL registrador será o destino da escrita (qual MUX seleciona o nº do registrador).',
+            v0:'destino = rt (bits 20-16) — usado pela lw', v1:'destino = rd (bits 15-11) — usado pela tipo-R'},
+  ALUSrc:  {what:'Escolhe o 2º operando da ULA: vem de um registrador ou é o imediato?',
+            v0:'2º operando = registrador lido (rt)', v1:'2º operando = imediato estendido (offset/constante)'},
+  MemtoReg:{what:'Escolhe O QUE volta para o banco de registradores: o resultado da ULA ou o dado da memória.',
+            v0:'grava no registrador a saída da ULA', v1:'grava no registrador o dado lido da Memória de Dados'},
+  RegWrite:{what:'Habilita (ou não) a ESCRITA no banco de registradores.',
+            v0:'NÃO grava em registrador', v1:'grava o resultado em um registrador'},
+  MemRead: {what:'Habilita a LEITURA da Memória de Dados.',
+            v0:'não lê a memória', v1:'lê a Memória de Dados (instrução lw)'},
+  MemWrite:{what:'Habilita a ESCRITA na Memória de Dados.',
+            v0:'não escreve na memória', v1:'escreve na Memória de Dados (instrução sw)'},
+  Branch:  {what:'Marca que a instrução é um DESVIO condicional (combina com o Zero da ULA no MUX PCSrc).',
+            v0:'não é desvio → próximo PC = PC+4', v1:'é desvio (beq) → se ULA Zero=1, PC = endereço de desvio'}
+};
+
+// --- Modelo de tempos do professor (ns) ---
+const DEFAULT_TIMES = { imem:4, regread:1, alu:2, dmem:4, control:1, adder:1, regwrite:1 };
+// Caminho crítico de cada instrução em função dos tempos das unidades.
+// (regread e regwrite usam o mesmo bloco "Banco de Registradores" = 1 ns)
+function instrTime(instr, t){
+  const reg = t.regread, wr = t.regwrite!==undefined?t.regwrite:t.regread;
+  switch(instr){
+    case 'lw':  return t.imem + reg + t.alu + t.dmem + wr; // 4+1+2+4+1 = 12
+    case 'sw':  return t.imem + reg + t.alu + t.dmem;      // 4+1+2+4   = 11
+    case 'R':   return t.imem + reg + t.alu + wr;          // 4+1+2+1   = 8
+    case 'beq': return t.imem + reg + t.alu;               // 4+1+2     = 7
+    case 'j':   return t.imem;                             // 4
+  }
+}
+function periodUniciclo(t){
+  return Math.max(...['lw','sw','R','beq','j'].map(i=>instrTime(i,t)));
+}
+
+// --- Sequência (caminho de dados) percorrida por cada instrução (Modo 1) ---
+// Lista ordenada de chaves de UNITS. Nº de cliques = comprimento da lista.
+const PATHS = {
+  R:   ['pc','imem','regs','alu','muxMemReg','regs'],
+  lw:  ['pc','imem','regs','signext','muxAluSrc','alu','dmem','muxMemReg','regs'],
+  sw:  ['pc','imem','regs','signext','muxAluSrc','alu','dmem'],
+  beq: ['pc','imem','regs','alu','addbr','muxPcSrc'],
+  j:   ['pc','imem','muxPcSrc']
+};
+// rótulo amigável de cada passo (quando a unidade se repete, distingue leitura/escrita)
+function stepLabel(instr, idx){
+  const k = PATHS[instr][idx];
+  if(k==='regs'){
+    const firstRegs = PATHS[instr].indexOf('regs');
+    return idx===firstRegs ? 'Banco Reg. (lê)' : 'Banco Reg. (escreve)';
+  }
+  return UNITS[k].name;
+}
+
+/* ===========================================================================
+   6. JS — SEÇÃO D: SVG DO DATAPATH
+   Desenho simplificado porém reconhecível. Cada <g class="unit" id="u-CHAVE">.
+   =========================================================================== */
+function buildDatapathSVG(opts){
+  opts = opts || {};
+  const stages = opts.stages; // se true, inclui zonas do pipeline
+  // helper p/ criar bloco retangular
+  function box(key,x,y,w,h,label,sub){
+    const lines = label.split('\n');
+    let txt = lines.map((l,i)=>`<text x="${x+w/2}" y="${y+h/2 - (lines.length-1)*8 + i*16 + 5}" text-anchor="middle">${l}</text>`).join('');
+    if(sub) txt += `<text class="sm" x="${x+w/2}" y="${y+h-7}" text-anchor="middle">${sub}</text>`;
+    return `<g class="unit" id="u-${key}" data-key="${key}">
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6"></rect>${txt}</g>`;
+  }
+  function mux(key,x,y,h){ // MUX vertical fininho
+    return `<g class="unit" id="u-${key}" data-key="${key}">
+      <rect x="${x}" y="${y}" width="22" height="${h}" rx="11"></rect>
+      <text class="sm" x="${x+11}" y="${y+h/2+4}" text-anchor="middle" style="font-size:9px">M</text></g>`;
+  }
+  function alu(key,x,y){ // ULA em formato de "trapézio com bico"
+    const pts = `${x},${y} ${x+58},${y+20} ${x+58},${y+78} ${x},${y+98} ${x},${y+62} ${x+18},${y+49} ${x},${y+36}`;
+    return `<g class="unit" id="u-${key}" data-key="${key}">
+      <polygon points="${pts}"></polygon>
+      <text x="${x+34}" y="${y+53}" text-anchor="middle">ULA</text></g>`;
+  }
+
+  let zones = '';
+  if(stages){
+    const Z = [
+      ['IF', 20, 230], ['ID', 300, 175], ['EX', 560, 170], ['MEM',745,170], ['WB',905,150]
+    ];
+    const ZW = {IF:255,ID:230,EX:150,MEM:150,WB:90};
+    zones = Z.map(([s,x,y])=>`
+      <g class="stagezone-g">
+        <rect class="stagezone" data-stage="${s}" x="${x}" y="${y}" width="${ZW[s]}" height="${340-(y-150)}"></rect>
+        <text class="zone-label" id="zl-${s}" x="${x+ZW[s]/2}" y="${y+ ((340-(y-150))/2)+8}">?</text>
+      </g>`).join('');
+  }
+
+  return `<div class="svgwrap"><svg class="datapath" viewBox="0 0 1000 540" xmlns="http://www.w3.org/2000/svg">
+    <!-- fios representativos -->
+    <path class="wire" d="M76 300 H110"/>
+    <path class="wire" d="M230 300 H320"/>
+    <path class="wire" d="M55 250 V100 H150"/>
+    <path class="wire" d="M460 300 H600"/>
+    <path class="wire" d="M460 340 H540 V320"/>
+    <path class="wire" d="M390 400 H540 V315"/>
+    <path class="wire" d="M658 305 H760"/>
+    <path class="wire" d="M880 305 H930 V300"/>
+    <path class="wire" d="M952 290 V210 H300 V300"/>
+    <path class="wire" d="M600 133 H560 V110"/>
+    <!-- unidades -->
+    ${box('add4',150,78,70,44,'Soma +4')}
+    ${box('pc',30,250,46,72,'PC')}
+    ${box('imem',110,250,120,100,'Mem.\nInstruções')}
+    ${box('control',420,30,150,52,'Controle')}
+    ${mux('muxRegDst',278,235,90)}
+    ${box('regs',320,250,140,120,'Banco de\nRegistradores')}
+    ${box('signext',330,388,118,40,'Ext. Sinal')}
+    ${box('sl2',470,388,90,40,'Shift\nLeft 2')}
+    ${mux('muxAluSrc',538,275,80)}
+    ${alu('alu',600,256)}
+    ${box('addbr',600,100,86,46,'Somador')}
+    ${box('dmem',760,250,120,110,'Mem.\nDados')}
+    ${mux('muxMemReg',930,260,80)}
+    ${mux('muxPcSrc',278,110,70)}
+    ${zones}
+  </svg></div>`;
+}
+
+// Tooltip nas unidades (mouse + toque)
+function wireTooltips(root){
+  const tip = document.getElementById('tooltip');
+  root.querySelectorAll('.unit').forEach(g=>{
+    const k = g.dataset.key;
+    const u = UNITS[k]; if(!u) return;
+    function show(e){
+      const p = e.touches ? e.touches[0] : e;
+      tip.innerHTML = `<b>${u.name}</b><br>${u.tip}<br><span style="color:var(--cyan)">Fase: ${u.phase}</span>`;
+      tip.style.display='block';
+      tip.style.left = Math.min(p.clientX+12, window.innerWidth-250)+'px';
+      tip.style.top = (p.clientY+14)+'px';
+    }
+    function hide(){ tip.style.display='none'; }
+    g.addEventListener('mouseenter',show);
+    g.addEventListener('mousemove',show);
+    g.addEventListener('mouseleave',hide);
+    g.addEventListener('touchstart',e=>{show(e);},{passive:true});
+    g.addEventListener('touchend',()=>setTimeout(hide,1200));
+  });
+}
+
+/* ===========================================================================
+   7. JS — SEÇÃO E: BANCO DE QUESTÕES
+   Cada questão é um objeto {mode, diff, ...params, hint}. Factories abaixo
+   geram questões reutilizáveis; LEVELS monta o jogo por nível (>35 instâncias).
+   =========================================================================== */
+
+// Factory Modo 1 (Roteirista — clicar unidades na ordem)
+function q1(instr, diff){
+  return {mode:1, diff, instr,
+    hint:`Pense no fluxo: PC → busca a instrução → lê registradores → ULA → (memória) → escreve. A ${INSTR[instr].name} percorre ${PATHS[instr].length} blocos.`};
+}
+// Factory Modo 2 (Engenheiro de Controle — 7 toggles)
+function q2(instr, diff){
+  return {mode:2, diff, instr,
+    hint:`Regra rápida: RegWrite=1 só se grava registrador (R, lw). ALUSrc=1 quando usa imediato (lw, sw). MemRead/MemWrite só em lw/sw. Branch só em beq.`};
+}
+// Factory Modo 3 (Calculadora de Tempos)
+//   t3type: 'single' (1 instr), 'period' (uniciclo), 'benchmark' (média + speedup)
+function q3(t3type, params, diff){
+  return Object.assign({mode:3, diff, t3type, times:DEFAULT_TIMES}, params || {},
+    {hint: t3type==='benchmark'
+      ? 'Uniciclo: todas as instruções usam o MAIOR tempo (lw=12 ns). Multiciclo ideal: cada instrução leva seu próprio tempo → média = Σ (fração × tempo). Speedup = uniciclo / multiciclo.'
+      : t3type==='period'
+      ? 'O período do uniciclo é determinado pela instrução mais lenta — a lw (4+1+2+4+1).'
+      : `Some os blocos do caminho crítico. ${(params&&params.instr)||''}: Mem.Instr(4)+Reg(1)+ULA(2)${(params&&['lw','sw'].includes(params.instr))?'+Mem.Dados(4)':''}${(params&&['lw','R'].includes(params.instr))?'+EscreveReg(1)':''}.`});
+}
+// Factory Modo 4 (Pipeline Master)
+function q4(diff){
+  return {mode:4, diff,
+    hint:'IF=busca (PC, Mem.Instr) · ID=decodifica (Banco Reg., Controle) · EX=executa (ULA) · MEM=memória de dados · WB=escreve no registrador.'};
+}
+// Factory Modo 5 (Prova Fechada — subtipos: mc, tf, ar, tbl)
+function q5(sub, diff, params){
+  return Object.assign({mode:5, diff, sub}, params || {},
+    {hint: params?.hint || 'Pense no conceito e nas regras da Lista 3.'});
+}
+
+// --------- Montagem dos 10 níveis (lista de instâncias por nível) ----------
+const LEVELS = [
+  /* 1  */ { tier:'easy', label:'Sinais básicos', qs:[ q2('lw','easy'), q2('R','easy'), q1('R','easy') ] },
+  /* 2  */ { tier:'easy', label:'Load & Store',   qs:[ q2('sw','easy'), q3('single',{instr:'lw'},'easy'), q1('lw','easy') ] },
+  /* 3  */ { tier:'easy', label:'Desvio & fases', qs:[ q2('beq','easy'), q3('single',{instr:'R'},'easy'), q4('easy') ] },
+  /* 4  */ { tier:'med',  label:'Store completo', qs:[ q1('sw','med'), q2('R','med'), q3('period',{},'med') ] },
+  /* 5  */ { tier:'med',  label:'Comparando',     qs:[ q3('single',{instr:'beq'},'med'), q1('beq','med'), q2('sw','med') ] },
+  /* 6  */ { tier:'med',  label:'Pipeline+tempo', qs:[ q4('med'), q3('single',{instr:'sw'},'med'), q2('beq','med'), q5('mc','med',{topic:'Q4',question:'Em qual fase do pipeline a ULA executa a operação?',options:['IF','ID','EX','MEM','WB'],correct:2,explain:'ULA está na fase EX (Execute). É nela que a operação aritmética/lógica é realizada.'}) ] },
+  /* 7  */ { tier:'med',  label:'Caminho do lw',  qs:[ q1('lw','med'), q3('period',{times:{imem:5,regread:1,alu:3,dmem:5,control:1,adder:1,regwrite:1}},'med'), q2('lw','med'), q5('tf','med',{topic:'Q3a',statement:'A instrução beq é mais rápida que a tipo-R porque não passa pela ULA.',correct:false,explain:'Falso. A beq passa pela ULA (subtrai rs−rt para verificar se são iguais). Ela é mais rápida porque não escreve no registrador e não acessa memória de dados, logo tem um caminho crítico menor.'}) ] },
+  /* 8  */ { tier:'hard', label:'Benchmark GCC',  qs:[ q3('benchmark',{name:'GCC',fromList:true,mix:{lw:22,sw:11,R:49,beq:16,j:2}},'hard'), q2('sw','hard'), q1('beq','hard'), q5('mc','hard',{topic:'Q2',question:'Qual sinal de controle diferencia a lw da sw?',options:['RegDst','MemtoReg','RegWrite','MemRead','Branch'],correct:3,explain:'MemRead=1 na lw (precisa ler a memória de dados), MemRead=0 na sw. Ambas usam MemWrite diferentemente (lw=0, sw=1), mas MemRead é o que distingue que uma LE e a outra ESCREVE.'}) ] },
+  /* 9  */ { tier:'hard', label:'Benchmark ABC',  qs:[ q3('benchmark',{name:'ABC',fromList:true,mix:{lw:11,sw:49,R:22,beq:2,j:16}},'hard'), q4('hard'), q3('single',{instr:'lw'},'hard'), q5('tbl','hard',{topic:'Q2',instruction:'sw',blanks:['RegDst','ALUSrc','MemtoReg'],explain:'sw: RegDst=X (não escreve em reg.), ALUSrc=1 (usa imediato), MemtoReg=X (não escreve em reg.).'}) ] },
+  /* 10 */ { tier:'hard', label:'Prova final',    qs:[ q3('benchmark',{name:'GCC',fromList:true,mix:{lw:22,sw:11,R:49,beq:16,j:2}},'hard'), q2('beq','hard'), q3('period',{times:{imem:6,regread:2,alu:3,dmem:6,control:1,adder:1,regwrite:2}},'hard'), q5('ar','hard',{topic:'Q3b',statement:'O speedup do multiciclo ideal sobre o uniciclo é sempre maior que 1 porque cada instrução usa apenas o tempo que precisa.',correct:true,explain:'Verdadeiro. No uniciclo o clock é determinado pela instrução mais lenta (lw). No multiciclo ideal cada instrução leva seu próprio tempo, logo a média ponderada é sempre menor que o período uniciclo. Speedup = uniciclo/multiciclo > 1.'}) ] }
+];
+const DIFF_POINTS = {easy:100, med:160, hard:260};
+const HINT_COST = 50;
+
+/* ===========================================================================
+   8. JS — SEÇÃO F: MOTOR DO JOGO
+   =========================================================================== */
+const G = {                 // estado da partida em andamento
+  level:1, mode:'levels', queue:[], idx:0, lives:3,
+  earned:0, usedHint:false, correctInQ:0, errInQ:0,
+  timeStreak:0, qStart:0, free:false
+};
+const $ = id => document.getElementById(id);
+const shuffle = a => { a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]];} return a; };
+const MODE_NAMES = {1:'🎬 Roteirista da Instrução',2:'🎛 Engenheiro de Controle',3:'⏱ Calculadora de Tempos',4:'🚉 Pipeline Master',5:'📝 Prova Fechada'};
+
+// ---- Iniciar um nível ----
+function startLevel(n){
+  G.level=n; G.free=false; G.mode='levels';
+  G.queue = shuffle(LEVELS[n-1].qs);   // aleatoriza a ordem → rejogável
+  G.idx=0; G.lives=3; G.earned=0;
+  showScreen('scr-game');
+  renderQuestion();
+}
+// ---- Modo Livre: fila aleatória infinita (turbinado com procedurais) ----
+function startFree(){
+  G.free=true; G.mode='free';
+  const all=[];
+  LEVELS.forEach(l=>l.qs.forEach(q=>all.push(q)));
+  // adiciona questões procedurais para variação infinita
+  for(let i=0;i<6;i++) all.push(geraQ5Random());
+  for(let i=0;i<4;i++) all.push(geraBenchmarkQ3());
+  for(let i=0;i<3;i++) all.push(geraTempoQ5());
+  for(let i=0;i<4;i++) all.push(geraProgramaQ5());
+  G.queue = shuffle(all); G.idx=0; G.lives=99; G.earned=0;
+  showScreen('scr-game');
+  renderQuestion();
+}
+// ---- Prova Infinita: só questões fechadas, sem vidas ----
+function startProvaInfinita(){
+  G.free=true; G.mode='provaInfinita';
+  const all=[];
+  for(let i=0;i<4;i++) all.push(geraQ5Random());
+  for(let i=0;i<3;i++) all.push(geraBenchmarkQ3());
+  for(let i=0;i<3;i++) all.push(geraTempoQ5());
+  for(let i=0;i<5;i++) all.push(geraProgramaQ5());
+  G.queue = shuffle(all); G.idx=0; G.lives=99; G.earned=0;
+  showScreen('scr-game');
+  renderQuestion();
+}
+
+function updateLivesHUD(){
+  $('hudLives').textContent = G.free ? '∞' : '❤️'.repeat(Math.max(0,G.lives)) + '🖤'.repeat(Math.max(0,3-G.lives));
+}
+
+// ---- Renderiza a questão atual conforme o modo ----
+function renderQuestion(){
+  const q = G.queue[G.idx];
+  G.usedHint=false; G.assisted=false; G.correctInQ=0; G.errInQ=0; G.qStart=Date.now();
+  $('modeChip').textContent = 'Modo '+q.mode;
+  $('qTag').textContent = MODE_NAMES[q.mode];
+  $('qProgress').textContent = G.free ? `Livre · ${G.idx+1}` : `${G.idx+1}/${G.queue.length}`;
+  $('feedback').className='feedback'; $('feedback').innerHTML='';
+  updateLivesHUD(); refreshHUD();
+  const body=$('qBody'), act=$('qActions');
+  body.innerHTML=''; act.innerHTML='';
+  ({1:renderMode1,2:renderMode2,3:renderMode3,4:renderMode4,5:renderMode5})[q.mode](q, body, act);
+
+  if(save.learnMode){
+    // MODO APRENDIZ: botão "Me ensina" gratuito e repetível — mostra o raciocínio completo.
+    const teachBtn=document.createElement('button');
+    teachBtn.className='btn ghost small'; teachBtn.innerHTML='📖 Me ensina';
+    teachBtn.onclick=()=>{ G.assisted=true; teachForQuestion(q); };
+    act.appendChild(teachBtn);
+  } else {
+    // MODO PROVA: dica única que custa XP.
+    const hintBtn=document.createElement('button');
+    hintBtn.className='btn ghost small'; hintBtn.innerHTML=`💡 Dica (−${HINT_COST})`;
+    hintBtn.onclick=()=>{
+      if(G.usedHint) return;
+      G.usedHint=true; save.xp=Math.max(0,save.xp-HINT_COST); persist();
+      const fb=$('feedback'); fb.className='feedback hint show';
+      fb.innerHTML=`💡 <b>Dica:</b> ${q.hint}`;
+      hintBtn.disabled=true; sfx.click();
+    };
+    act.appendChild(hintBtn);
+  }
+}
+
+// ---- Avança após acerto ----
+function questionSolved(extraPts){
+  const q=G.queue[G.idx];
+  let pts = DIFF_POINTS[q.diff] + (extraPts||0);
+  if(!G.usedHint && !G.assisted) pts += 20;   // bônus sem ajuda
+  G.earned += pts; save.xp += pts; save.totalCorrect++;
+  persist(); sfx.ok();
+  const fb=$('feedback');
+  fb.className='feedback ok show';
+  fb.innerHTML = `✅ <b>Correto!</b> +${pts} XP. ${q.explainOK||''}`;
+  checkAchievements(q);
+  // botão próximo
+  const act=$('qActions'); act.innerHTML='';
+  const nx=document.createElement('button');
+  nx.className='btn green'; nx.textContent = (G.idx+1>=G.queue.length && !G.free) ? '🏁 Finalizar nível' : 'Próxima →';
+  nx.onclick=nextQuestion; act.appendChild(nx);
+}
+function nextQuestion(){
+  G.idx++;
+  if(!G.free && G.idx>=G.queue.length){ winLevel(); return; }
+  if(G.free && G.idx>=G.queue.length){ G.queue=shuffle(G.queue); G.idx=0; }
+  renderQuestion();
+}
+// ---- Erro: perde vida ----
+function loseLife(){
+  if(G.free) return;                    // modo livre não tem vidas
+  G.lives--; updateLivesHUD();
+  if(G.lives<=0){ failLevel(); }
+}
+function winLevel(){
+  sfx.win();
+  if(G.level>=save.unlocked && save.unlocked<LEVELS.length){ save.unlocked=G.level+1; }
+  persist();
+  $('resEmoji').textContent='🎉';
+  $('resTitle').textContent=`Nível ${G.level} completo!`;
+  $('resSub').textContent = LEVELS[G.level-1].label;
+  $('resStats').innerHTML =
+    `<div class="rs">XP ganho<b>+${G.earned}</b></div>
+     <div class="rs">XP total<b>${save.xp}</b></div>
+     <div class="rs">Vidas<b>${'❤️'.repeat(Math.max(0,G.lives))||'—'}</b></div>`;
+  const nx=$('resNext');
+  if(G.level<LEVELS.length){ nx.style.display=''; nx.textContent=`Nível ${G.level+1} →`; nx.onclick=()=>startLevel(G.level+1); }
+  else { nx.style.display='none'; }
+  showScreen('scr-result');
+}
+function failLevel(){
+  sfx.lose();
+  $('resEmoji').textContent='💀';
+  $('resTitle').textContent='Sem vidas!';
+  $('resSub').textContent=`Você perdeu as 3 vidas no nível ${G.level}. Tente de novo — as questões vêm embaralhadas.`;
+  $('resStats').innerHTML=`<div class="rs">XP ganho<b>+${G.earned}</b></div><div class="rs">XP total<b>${save.xp}</b></div>`;
+  const nx=$('resNext'); nx.style.display=''; nx.textContent='↻ Repetir nível'; nx.onclick=()=>startLevel(G.level);
+  showScreen('scr-result');
+}
+
+/* -------------------- MODO 1: Roteirista da Instrução -------------------- */
+function renderMode1(q, body){
+  const seq = PATHS[q.instr];
+  body.innerHTML =
+    `<div class="instr-box"><span class="lbl">Instrução</span>${INSTR[q.instr].label} <span style="color:var(--muted);font-size:12px">— ${INSTR[q.instr].name}</span></div>
+     <p class="prompt">Clique nas unidades funcionais na <b>ordem correta</b> em que a instrução percorre o caminho de dados. (${seq.length} passos)</p>
+     <div class="steps" id="m1steps"></div>
+     ${buildDatapathSVG()}`;
+  const stepsEl = $('m1steps');
+  seq.forEach((k,i)=>{
+    const s=document.createElement('span'); s.className='slot'; s.id='slot-'+i;
+    s.textContent = (i+1)+'. ___'; stepsEl.appendChild(s);
+  });
+  let cur=0;
+  wireTooltips(body);
+  body.querySelectorAll('.unit').forEach(g=>{
+    g.classList.add('clickable');
+    g.addEventListener('click',()=>{
+      if(cur>=seq.length) return;
+      const k=g.dataset.key;
+      if(k===seq[cur]){
+        g.classList.remove('hl-red'); g.classList.add('hl-green');
+        // badge numérico no canto da unidade
+        const r=g.querySelector('rect')||g.querySelector('polygon');
+        const bx = r.getAttribute('x') ? +r.getAttribute('x') : 600;
+        const by = r.getAttribute('y') ? +r.getAttribute('y') : 256;
+        const t=document.createElementNS('http://www.w3.org/2000/svg','text');
+        t.setAttribute('class','step-badge'); t.setAttribute('x',bx+4); t.setAttribute('y',by+15);
+        t.textContent='①②③④⑤⑥⑦⑧⑨'[cur]||(cur+1); g.appendChild(t);
+        const slot=$('slot-'+cur); slot.className='slot filled'; slot.textContent=(cur+1)+'. '+stepLabel(q.instr,cur);
+        cur++; sfx.click();
+        if(cur>=seq.length){
+          q.explainOK=`Caminho da ${INSTR[q.instr].name} completo! 🟢`;
+          const bonus = Math.max(0, 60 - Math.floor((Date.now()-G.qStart)/1000)*3); // bônus de tempo
+          questionSolved(bonus);
+        }
+      } else {
+        g.classList.add('hl-red'); setTimeout(()=>g.classList.remove('hl-red'),700);
+        sfx.err(); G.errInQ++;
+        const fb=$('feedback'); fb.className='feedback err show';
+        const expected=stepLabel(q.instr,cur);
+        fb.innerHTML=`❌ <b>Agora não.</b> O próximo passo é <b>${expected}</b>, não <b>${UNITS[k].name}</b>. <br><span class="muted">${UNITS[k].name}: ${UNITS[k].tip}</span>`;
+        loseLife();
+      }
+    });
+  });
+}
+
+/* -------------------- MODO 2: Engenheiro de Controle -------------------- */
+function renderMode2(q, body, act){
+  const correct = CONTROL[q.instr];
+  body.innerHTML =
+    `<div class="instr-box"><span class="lbl">Instrução</span>${INSTR[q.instr].label} <span style="color:var(--muted);font-size:12px">— ${INSTR[q.instr].name}</span></div>
+     <div class="control-tools">
+       <p class="prompt">Ligue/desligue os <b>7 sinais de controle</b> corretos. Use a ajuda quando quiser lembrar <b>o que faz</b> e <b>o que aquele valor significa</b>. <span class="muted">(X = indiferente)</span></p>
+       <button class="btn ghost small" id="ctlAssistToggle" type="button"></button>
+     </div>
+     <div class="signals" id="m2sig"></div>`;
+  const wrap=$('m2sig');
+  const assistToggle=$('ctlAssistToggle');
+  const syncSignalAssist=()=>{
+    wrap.classList.toggle('hide-signal-help', !save.signalAssistVisible);
+    assistToggle.textContent = save.signalAssistVisible ? '👁 Ajuda ligada' : '🙈 Modo difícil';
+    assistToggle.title = save.signalAssistVisible ? 'Ocultar descrições dos sinais' : 'Mostrar descrições dos sinais';
+    assistToggle.setAttribute('aria-pressed', save.signalAssistVisible ? 'true' : 'false');
+  };
+  assistToggle.onclick=()=>{
+    save.signalAssistVisible=!save.signalAssistVisible;
+    persist(); syncSignalAssist(); sfx.click();
+  };
+  const state = SIGNAL_NAMES.map(()=>0);
+  const valText=(nm,v)=>`${v} → ${SIG_INFO[nm]['v'+v]}`;   // significado do valor atual
+  SIGNAL_NAMES.forEach((nm,i)=>{
+    const info=SIG_INFO[nm];
+    const sig=document.createElement('div'); sig.className='sig'; sig.id='sig-'+i;
+    sig.innerHTML=`<div class="sig-main">
+        <div class="nm-row"><span class="nm">${nm}</span><button class="sig-q" type="button" title="ver os dois valores">?</button></div>
+        <div class="sig-what">${info.what}</div>
+        <div class="sig-val" id="val-${i}">${valText(nm,0)}</div>
+        <div class="sig-detail">🔵 <b>=1:</b> ${info.v1}<br>⚪ <b>=0:</b> ${info.v0}</div>
+        <div class="sig-explain"></div>
+      </div>
+      <div class="toggle"><div class="knob">0</div></div>`;
+    wrap.appendChild(sig);
+    const tog=sig.querySelector('.toggle'), knob=tog.querySelector('.knob'), val=sig.querySelector('#val-'+i);
+    tog.onclick=()=>{
+      state[i]^=1; tog.classList.toggle('on',state[i]===1); knob.textContent=state[i];
+      val.textContent=valText(nm,state[i]);                 // atualiza o significado ao vivo
+      sfx.click();
+      sig.classList.remove('right','wrong'); sig.querySelector('.sig-explain').textContent='';
+    };
+    sig.querySelector('.sig-q').onclick=()=>{ sig.classList.toggle('expanded'); sfx.click(); };
+  });
+  syncSignalAssist();
+  const verify=document.createElement('button');
+  verify.className='btn'; verify.textContent='✔ Verificar';
+  verify.onclick=()=>{
+    let allOk=true, wrongs=[];
+    SIGNAL_NAMES.forEach((nm,i)=>{
+      const sig=$('sig-'+i); const want=correct[i];
+      const got=state[i];
+      const ok = (want==='X') || (want===got);
+      sig.className='sig '+(ok?'right':'wrong');
+      const exp=sig.querySelector('.sig-explain');
+      if(!ok){
+        allOk=false; wrongs.push(nm);
+        const wantTxt = want==='X' ? 'X' : want;
+        exp.textContent=`Deveria ser ${wantTxt} — ${SIG_WHY[nm][want]}`;
+      } else if(want!=='X' || got===0){
+        // mostra reforço positivo curto opcional (somente quando relevante)
+      }
+    });
+    const fb=$('feedback');
+    if(allOk){
+      q.explainOK = `Todos os 7 sinais corretos para a ${INSTR[q.instr].name}. 🎛`;
+      q._noHintControl = !G.usedHint && !G.assisted;   // p/ conquista (sem nenhuma ajuda)
+      questionSolved();
+    } else {
+      fb.className='feedback err show';
+      fb.innerHTML=`❌ <b>${wrongs.length} sinal(is) errado(s):</b> ${wrongs.join(', ')}. Veja as explicações em vermelho e ajuste.`;
+      sfx.err(); G.errInQ++; loseLife();
+    }
+  };
+  act.appendChild(verify);
+}
+
+/* -------------------- MODO 3: Calculadora de Tempos -------------------- */
+function renderMode3(q, body, act){
+  const t = q.times;
+  const timeRows = `
+    <div class="timesgrid">
+      <div class="timecell">Mem. Instruções<b>${t.imem} ns</b></div>
+      <div class="timecell">Banco Reg.<b>${t.regread} ns</b></div>
+      <div class="timecell">ULA<b>${t.alu} ns</b></div>
+      <div class="timecell">Mem. Dados<b>${t.dmem} ns</b></div>
+      <div class="timecell">Controle<b>${t.control} ns</b></div>
+      <div class="timecell">Somadores<b>${t.adder} ns</b></div>
+    </div>`;
+
+  if(q.t3type==='single'){
+    const instr=q.instr;
+    body.innerHTML=`<p class="prompt">Tempos de cada unidade (uniciclo):</p>${timeRows}
+      <div class="instr-box"><span class="lbl">Calcule o tempo total da instrução</span>${INSTR[instr].label} — ${INSTR[instr].name}</div>
+      <div class="numrow" id="r1"><label>Tempo do caminho crítico:</label>
+        <input type="number" id="a1" step="0.1" inputmode="decimal"><span class="unit-suf">ns</span></div>`;
+    addCheck(act,()=>{
+      const ans=instrTime(instr,t);
+      const ok=near($('a1').value, ans);
+      mark('r1',ok);
+      if(ok){ q.explainOK=`${INSTR[instr].name} = ${critStr(instr,t)} = <b>${ans} ns</b>.`; questionSolved(); }
+      else failNum(`O caminho crítico da ${INSTR[instr].name} é ${critStr(instr,t)} = <b>${ans} ns</b>.`);
+    });
+
+  } else if(q.t3type==='period'){
+    const per=periodUniciclo(t);
+    body.innerHTML=`<p class="prompt">Dados os tempos das unidades, responda:</p>${timeRows}
+      <div class="numrow" id="r1"><label>Período de clock do <b>uniciclo</b> (instrução mais lenta):</label>
+        <input type="number" id="a1" step="0.1" inputmode="decimal"><span class="unit-suf">ns</span></div>`;
+    addCheck(act,()=>{
+      const ok=near($('a1').value, per); mark('r1',ok);
+      if(ok){ q.explainOK=`O período = tempo da lw = ${critStr('lw',t)} = <b>${per} ns</b> (a instrução mais lenta).`; questionSolved(); }
+      else failNum(`No uniciclo o clock acomoda a instrução mais lenta (lw): ${critStr('lw',t)} = <b>${per} ns</b>.`);
+    });
+
+  } else { // benchmark + speedup
+    const mix=q.mix; const per=periodUniciclo(t);
+    let avg=0; const parts=[];
+    for(const k in mix){ const f=mix[k]/100; const ti=instrTime(k,t); avg+=f*ti; parts.push(`${mix[k]}%·${ti}`); }
+    avg=Math.round(avg*100)/100;
+    const speed=Math.round((per/avg)*100)/100;
+    body.innerHTML=`<p class="prompt">Tempos das unidades:</p>${timeRows}
+      <p class="prompt">${q.name?`Benchmark <b>${q.name}</b> `:'Benchmark '}(frequência das instruções)${q.fromList?' <span class="muted" style="font-size:11px">— da Lista 3</span>':''}:
+        <span class="mono">lw ${mix.lw}% · sw ${mix.sw}% · R(alu) ${mix.R}% · beq ${mix.beq}% · j ${mix.j}%</span></p>
+      <div class="numrow" id="r1"><label>a) Período do <b>uniciclo</b>:</label>
+        <input type="number" id="a1" step="0.1" inputmode="decimal"><span class="unit-suf">ns</span></div>
+      <div class="numrow" id="r2"><label>b) Tempo médio por instrução no <b>multiciclo ideal</b>:</label>
+        <input type="number" id="a2" step="0.01" inputmode="decimal"><span class="unit-suf">ns</span></div>
+      <div class="numrow" id="r3"><label>c) <b>Speedup</b> do multiciclo sobre o uniciclo:</label>
+        <input type="number" id="a3" step="0.01" inputmode="decimal"><span class="unit-suf">×</span></div>`;
+    addCheck(act,()=>{
+      const o1=near($('a1').value,per), o2=near($('a2').value,avg,0.06), o3=near($('a3').value,speed,0.03);
+      mark('r1',o1); mark('r2',o2); mark('r3',o3);
+      if(o1&&o2&&o3){
+        q.explainOK=`Uniciclo=${per} ns; média multiciclo=Σ(fração×tempo)=${avg} ns; speedup=${per}/${avg}=<b>${speed}×</b>.`;
+        questionSolved(40);
+      } else {
+        failNum(`Uniciclo = ${per} ns (lw). Média multiciclo = ${parts.join(' + ')} (÷100) = <b>${avg} ns</b>. Speedup = ${per} / ${avg} = <b>${speed}×</b>.`);
+      }
+    });
+  }
+}
+// helpers Modo 3
+function critStr(instr,t){
+  const reg=t.regread, wr=(t.regwrite!==undefined?t.regwrite:t.regread);
+  if(instr==='lw') return `Mem.Instr(${t.imem})+Reg(${reg})+ULA(${t.alu})+Mem.Dados(${t.dmem})+EscreveReg(${wr})`;
+  if(instr==='sw') return `Mem.Instr(${t.imem})+Reg(${reg})+ULA(${t.alu})+Mem.Dados(${t.dmem})`;
+  if(instr==='R')  return `Mem.Instr(${t.imem})+Reg(${reg})+ULA(${t.alu})+EscreveReg(${wr})`;
+  if(instr==='beq')return `Mem.Instr(${t.imem})+Reg(${reg})+ULA(${t.alu})`;
+  if(instr==='j')  return `Mem.Instr(${t.imem})`;
+}
+function near(v, target, tol=0.05){ const n=parseFloat(String(v).replace(',','.')); return isFinite(n) && Math.abs(n-target)<=tol; }
+function mark(rowId, ok){ const r=$(rowId); if(r) r.className='numrow '+(ok?'right':'wrong'); }
+function timeContextHTML(t){
+  return `<div class="time-context"><b>Tempos das unidades para esta questão:</b>
+    <div class="timesgrid">
+      <div class="timecell">Mem. Instruções<b>${t.imem} ns</b></div>
+      <div class="timecell">Banco Reg.<b>${t.regread} ns</b></div>
+      <div class="timecell">ULA<b>${t.alu} ns</b></div>
+      <div class="timecell">Mem. Dados<b>${t.dmem} ns</b></div>
+      <div class="timecell">Controle<b>${t.control} ns</b></div>
+      <div class="timecell">Somadores<b>${t.adder} ns</b></div>
+    </div></div>`;
+}
+function addCheck(act, fn){ const b=document.createElement('button'); b.className='btn'; b.textContent='✔ Verificar'; b.onclick=fn; act.appendChild(b); }
+function failNum(msg){
+  const fb=$('feedback'); fb.className='feedback err show';
+  fb.innerHTML=`❌ <b>Não foi dessa vez.</b> ${msg}`; sfx.err(); G.timeStreak=0; G.errInQ++; loseLife();
+}
+
+/* -------------------- MODO 4: Pipeline Master -------------------- */
+function renderMode4(q, body, act){
+  body.innerHTML=
+    `<p class="prompt">Arraste/toque cada etiqueta de fase do pipeline e coloque sobre a <b>região correta</b> do datapath. Ordem: IF → ID → EX → MEM → WB.</p>
+     <div class="chips" id="m4chips"></div>
+     ${buildDatapathSVG({stages:true})}`;
+  const labels=shuffle(['IF','ID','EX','MEM','WB']);
+  const chipsEl=$('m4chips');
+  let selected=null;        // etiqueta atualmente "pega" (tap-to-pick)
+  const placed={};          // zona -> etiqueta
+  labels.forEach(L=>{
+    const c=document.createElement('div'); c.className='chip-drag'; c.textContent=L; c.dataset.l=L;
+    c.onclick=()=>{
+      if(c.classList.contains('used')) return;
+      chipsEl.querySelectorAll('.chip-drag').forEach(x=>x.classList.remove('sel'));
+      if(selected===L){ selected=null; }
+      else { selected=L; c.classList.add('sel'); }
+      sfx.click();
+    };
+    chipsEl.appendChild(c);
+  });
+  wireTooltips(body);
+  body.querySelectorAll('.stagezone').forEach(z=>{
+    z.addEventListener('click',()=>{
+      if(!selected) return;
+      const st=z.dataset.stage;
+      // se a zona já tinha etiqueta, devolve a antiga
+      if(placed[st]){ const old=chipsEl.querySelector(`[data-l="${placed[st]}"]`); if(old) old.classList.remove('used'); }
+      // remove a etiqueta selecionada de qualquer outra zona
+      for(const k in placed){ if(placed[k]===selected){ delete placed[k]; body.querySelector('#zl-'+k).textContent='?'; } }
+      placed[st]=selected;
+      body.querySelector('#zl-'+st).textContent=selected;
+      const chip=chipsEl.querySelector(`[data-l="${selected}"]`); chip.classList.add('used'); chip.classList.remove('sel');
+      selected=null; sfx.click();
+    });
+  });
+  const verify=document.createElement('button');
+  verify.className='btn'; verify.textContent='✔ Verificar';
+  verify.onclick=()=>{
+    const zones=body.querySelectorAll('.stagezone');
+    if(Object.keys(placed).length<5){ const fb=$('feedback'); fb.className='feedback err show'; fb.innerHTML='❌ Coloque as 5 etiquetas antes de verificar.'; sfx.err(); return; }
+    let allOk=true;
+    zones.forEach(z=>{ const st=z.dataset.stage; const ok=placed[st]===st; z.classList.add(ok?'ok':'bad'); if(!ok) allOk=false; });
+    const fb=$('feedback');
+    if(allOk){
+      q.explainOK = `Pipeline correto! Mapa das unidades: <span class="mono">PC/Mem.Instr→IF · Banco Reg./Controle→ID · ULA→EX · Mem.Dados→MEM · escrita no reg.→WB</span>`;
+      questionSolved();
+    } else {
+      fb.className='feedback err show';
+      fb.innerHTML=`❌ <b>Algumas fases erradas.</b> Lembre: <span class="mono">IF</span>=busca · <span class="mono">ID</span>=decodifica/lê reg. · <span class="mono">EX</span>=ULA · <span class="mono">MEM</span>=memória de dados · <span class="mono">WB</span>=escreve reg. Ajuste e tente de novo.`;
+      sfx.err(); G.errInQ++; loseLife();
+      // limpa marcação para nova tentativa (mantém posições)
+      setTimeout(()=>zones.forEach(z=>z.classList.remove('ok','bad')),900);
+    }
+  };
+  act.appendChild(verify);
+}
+
+/* ===========================================================================
+   9. JS — SEÇÃO G: CONQUISTAS
+   =========================================================================== */
+const ACHIEVEMENTS = [
+  {id:'lw_signals', ic:'🎛', nm:'Mestre do lw', ds:'Acertou todos os 7 sinais do lw sem usar dica.'},
+  {id:'time_streak',ic:'⏱', nm:'Cronômetro humano', ds:'Calculou 5 tempos seguidos sem errar.'},
+  {id:'control_master', ic:'🧠', nm:'Decorou o controle', ds:'Acertou os 7 sinais de R, lw, sw e beq.'},
+  {id:'first_level', ic:'🥇', nm:'Primeiros passos', ds:'Completou o nível 1.'},
+  {id:'half_way', ic:'🚀', nm:'Na metade', ds:'Desbloqueou o nível 6.'},
+  {id:'finish', ic:'👑', nm:'Arquiteto MIPS', ds:'Completou o nível 10.'},
+  {id:'pipeliner', ic:'🚉', nm:'Pipeliner', ds:'Montou o pipeline de 5 fases sem erro.'},
+  {id:'xp1000', ic:'💎', nm:'Veterano', ds:'Acumulou 1000 XP.'}
+];
+function unlock(id){
+  if(save.achievements.includes(id)) return;
+  save.achievements.push(id); persist();
+  const a=ACHIEVEMENTS.find(x=>x.id===id);
+  sfx.ach(); toast(`🏆 Conquista: ${a.nm}`, a.ds);
+}
+function checkAchievements(q){
+  // streak de tempos (modo 3) — incrementa só em acerto de tempo
+  if(q.mode===3){ G.timeStreak++; if(G.timeStreak>=5) unlock('time_streak'); } else { /* mantém */ }
+  // sinais do lw sem dica
+  if(q.mode===2 && q.instr==='lw' && q._noHintControl) unlock('lw_signals');
+  // controle de 4 instruções
+  if(q.mode===2 && G.errInQ===0){
+    if(!save.ctlPerfectInstr.includes(q.instr)){ save.ctlPerfectInstr.push(q.instr); persist(); }
+    if(['R','lw','sw','beq'].every(k=>save.ctlPerfectInstr.includes(k))) unlock('control_master');
+  }
+  // pipeline sem erro
+  if(q.mode===4 && G.errInQ===0) unlock('pipeliner');
+  // marcos
+  if(G.level>=1 && G.idx+1>=G.queue.length){ if(G.level===1) unlock('first_level'); }
+  if(save.unlocked>=6) unlock('half_way');
+  if(save.xp>=1000) unlock('xp1000');
+}
+function toast(t1,t2){
+  const w=$('toast-wrap'); const d=document.createElement('div'); d.className='toast';
+  d.innerHTML=`<div class="t1">${t1}</div><div class="t2">${t2}</div>`;
+  w.appendChild(d); setTimeout(()=>{d.style.opacity='0';d.style.transition='opacity .4s';setTimeout(()=>d.remove(),400);},3800);
+}
+function renderAchievements(){
+  $('achCount').textContent=`${save.achievements.length}/${ACHIEVEMENTS.length} desbloqueadas · XP total ${save.xp}`;
+  $('achList').innerHTML = ACHIEVEMENTS.map(a=>{
+    const un=save.achievements.includes(a.id);
+    return `<div class="ach ${un?'un':'lock'}"><div class="ic">${un?a.ic:'🔒'}</div>
+      <div><div class="nm">${a.nm}</div><div class="ds">${a.ds}</div></div></div>`;
+  }).join('');
+}
+
+/* ===========================================================================
+   9.5. JS — SEÇÃO G2: ACADEMIA / LIÇÕES (a parte que ENSINA)
+   =========================================================================== */
+
+// --- Narração passo-a-passo de cada instrução (alinhada a PATHS) ---
+const NARR = {
+  R: [
+    'O PC guarda o endereço da instrução add na memória.',
+    'A Memória de Instruções entrega os 32 bits da instrução.',
+    'O Banco de Registradores lê $s2 e $s3 (os dois operandos).',
+    'A ULA soma $s2 + $s3 (ALUSrc=0 → 2º operando vem de registrador).',
+    'MemtoReg=0: o valor escolhido é a saída da ULA, não da memória.',
+    'RegWrite=1: o resultado é gravado em $s1 (RegDst=1 escolhe o campo rd).'
+  ],
+  lw: [
+    'O PC aponta para a instrução lw.',
+    'A Memória de Instruções busca a lw.',
+    'O Banco de Registradores lê $s2 — o registrador BASE do endereço.',
+    'O imediato 8 (16 bits) passa pela Extensão de Sinal → 32 bits.',
+    'ALUSrc=1: a ULA usará o imediato como 2º operando.',
+    'A ULA calcula o ENDEREÇO: $s2 + 8.',
+    'MemRead=1: lê a palavra nesse endereço da Memória de Dados.',
+    'MemtoReg=1: o valor escolhido vem da MEMÓRIA.',
+    'RegWrite=1: grava o dado lido em $s1 (RegDst=0 escolhe o campo rt).'
+  ],
+  sw: [
+    'O PC aponta para a instrução sw.',
+    'A Memória de Instruções busca a sw.',
+    'O Banco de Registradores lê $s2 (base) e $s1 (o dado a gravar).',
+    'O imediato 8 é estendido para 32 bits.',
+    'ALUSrc=1: a ULA usa o imediato.',
+    'A ULA calcula o endereço $s2 + 8.',
+    'MemWrite=1: grava $s1 na Memória de Dados. (sw NÃO escreve registrador → RegWrite=0.)'
+  ],
+  beq: [
+    'O PC aponta para a instrução beq.',
+    'A Memória de Instruções busca a beq.',
+    'O Banco de Registradores lê $s1 e $s2 para comparar.',
+    'A ULA SUBTRAI $s1 − $s2; se der zero, são iguais (sinal Zero=1).',
+    'Em paralelo, o Somador de Desvio calcula (PC+4)+(offset<<2).',
+    'Branch=1 e Zero=1 → o MUX PCSrc escolhe o endereço de desvio (senão, PC+4).'
+  ],
+  j: [
+    'O PC aponta para a instrução j.',
+    'A Memória de Instruções busca a j.',
+    'O PC recebe direto o endereço de salto — sem ULA, sem registradores. Por isso a j leva só 4 ns.'
+  ]
+};
+
+// --- Anima o caminho de uma instrução dentro de um SVG (reutilizável) ---
+function animatePath(instr, svgRoot, captionEl, done){
+  const seq = PATHS[instr];
+  svgRoot.querySelectorAll('.unit').forEach(g=>g.classList.remove('hl-green','hl-pulse','hl-red'));
+  let i=0;
+  (function step(){
+    if(i>0){ const prev=svgRoot.querySelector('#u-'+seq[i-1]); if(prev){prev.classList.remove('hl-pulse');prev.classList.add('hl-green');} }
+    if(i>=seq.length){
+      if(captionEl) captionEl.innerHTML=`✅ <b>Fim.</b> A ${INSTR[instr].name} percorreu ${seq.length} blocos.`;
+      if(done) done(); return;
+    }
+    const g=svgRoot.querySelector('#u-'+seq[i]); if(g) g.classList.add('hl-pulse');
+    if(captionEl) captionEl.innerHTML=`<b>Passo ${i+1}/${seq.length} — ${stepLabel(instr,i)}</b><br>${NARR[instr][i]}`;
+    beep(420+i*55,.06,'triangle',.08);
+    i++; setTimeout(step, 1150);
+  })();
+}
+
+// --- Termos do caminho crítico de uma instrução (p/ exemplos resolvidos) ---
+function termList(instr,t){
+  const reg=t.regread, wr=(t.regwrite!==undefined?t.regwrite:t.regread);
+  if(instr==='j') return [{l:'Mem.Instr',v:t.imem}];
+  const a=[{l:'Mem.Instr',v:t.imem},{l:'Reg',v:reg},{l:'ULA',v:t.alu}];
+  if(instr==='lw'||instr==='sw') a.push({l:'Mem.Dados',v:t.dmem});
+  if(instr==='lw'||instr==='R')  a.push({l:'Escreve Reg',v:wr});
+  return a;
+}
+function chipsHTML(instr,t){
+  const terms=termList(instr,t); const total=terms.reduce((s,x)=>s+x.v,0);
+  let h='<div class="tchips">';
+  terms.forEach((x,i)=>{ h+=`<div class="tchip">${x.l}<b>${x.v}</b></div>`; if(i<terms.length-1) h+='<span class="tplus">+</span>'; });
+  h+=`<span class="tplus">=</span><span class="teq">${total} ns</span></div>`;
+  return h;
+}
+
+// --- "Me ensina" durante a prática (gratuito, repetível) ---
+function teachForQuestion(q){
+  const fb=$('feedback'); fb.className='feedback hint show'; sfx.click();
+  if(q.mode===1){
+    const svg=document.querySelector('#qBody svg.datapath');
+    fb.innerHTML=`📖 <b>Veja a ordem certa no diagrama:</b><div class="demo-caption" id="teachCap" style="margin-top:6px">▶ rodando…</div>`;
+    svg.querySelectorAll('.unit').forEach(g=>g.classList.remove('hl-green','hl-pulse','hl-red'));
+    animatePath(q.instr, svg, $('teachCap'), ()=>{
+      // limpa os destaques para você refazer sozinho
+      setTimeout(()=>svg.querySelectorAll('.unit').forEach(g=>g.classList.remove('hl-green','hl-pulse')),1400);
+    });
+  } else if(q.mode===2){
+    const c=CONTROL[q.instr];
+    fb.innerHTML=`📖 <b>Como deduzir os sinais da ${INSTR[q.instr].name}:</b>
+      <div class="sig-teach" style="margin-top:6px">`+
+      SIGNAL_NAMES.map((nm,i)=>`<div class="sig-trow"><span class="badge ${c[i]==='X'?'x':c[i]?'on':'off'}">${nm}=${c[i]}</span><span>${SIG_WHY[nm][c[i]]}</span></div>`).join('')
+      +`</div>`;
+  } else if(q.mode===3){
+    fb.innerHTML='📖 '+teachTime(q);
+  } else if(q.mode===5){
+    // Modo Prova: explica o conceito da questão
+    let h='<div class="demo-caption" style="margin-top:6px">';
+    if(q.sub==='prog'){
+      h+=programExplain(q);
+    } else if(q.sub==='tbl'){
+      const c=CONTROL[q.instruction];
+      h+=`<b>Sinais completos da ${INSTR[q.instruction].name}:</b><div class="sig-teach" style="margin-top:4px">`+
+        SIGNAL_NAMES.map((nm,i)=>`<div class="sig-trow"><span class="badge ${c[i]==='X'?'x':c[i]?'on':'off'}">${nm}=${c[i]}</span><span>${SIG_WHY[nm][c[i]]}</span></div>`).join('')+'</div>';
+    } else if(q.topic==='Q3b'){
+      h+=teachTime({t3type:'benchmark',mix:q.mix,times:q.times});
+    } else if(q.topic==='Q3a'){
+      h+=`<b>Método:</b> some os blocos do caminho crítico.${q.instr?chipsHTML(q.instr,q.times||DEFAULT_TIMES):''}`;
+    } else {
+      h+=`<b>Explicação:</b> ${q.explain||''}`;
+    }
+    h+='</div>';
+    fb.innerHTML='📖 '+h;
+  } else {
+    fb.innerHTML=`📖 <b>Mapa das fases do pipeline</b> — passe sobre cada bloco do diagrama p/ confirmar:
+      <ul><li><b>IF</b> (busca): PC, Memória de Instruções</li>
+      <li><b>ID</b> (decodifica): Banco de Registradores (leitura), Unidade de Controle</li>
+      <li><b>EX</b> (executa): ULA, Somador de Desvio</li>
+      <li><b>MEM</b> (memória): Memória de Dados</li>
+      <li><b>WB</b> (escrita): MUX MemtoReg → grava no registrador</li></ul>`;
+  }
+}
+function teachTime(q){
+  const t=q.times;
+  if(q.t3type==='single'){
+    return `<b>Método:</b> some os tempos dos blocos do caminho crítico da ${INSTR[q.instr].name}:${chipsHTML(q.instr,t)}`;
+  }
+  if(q.t3type==='period'){
+    return `<b>Método:</b> no uniciclo o clock precisa caber na instrução mais LENTA, a lw:${chipsHTML('lw',t)}<div class="callout">Logo o período = tempo da lw.</div>`;
+  }
+  // benchmark
+  const mix=q.mix; const per=periodUniciclo(t); let avg=0; const rows=[];
+  for(const k in mix){ const ti=instrTime(k,t); avg+=(mix[k]/100)*ti; rows.push(`${k} ${mix[k]}% × ${ti} = ${Math.round(mix[k]/100*ti*100)/100}`); }
+  avg=Math.round(avg*100)/100; const sp=Math.round((per/avg)*100)/100;
+  return `<b>Passo a passo:</b><ul>
+    <li><b>Uniciclo</b> = tempo da lw = <span class="mono">${per} ns</span> (todas as instruções usam esse clock).</li>
+    <li><b>Multiciclo ideal</b> = cada instrução leva o próprio tempo → média = Σ(fração×tempo):<br>
+      <span class="mono">${rows.join(' + ')} = ${avg} ns</span></li>
+    <li><b>Speedup</b> = uniciclo ÷ multiciclo = <span class="mono">${per} ÷ ${avg} = ${sp}×</span></li></ul>`;
+}
+
+// --- Conteúdo da Academia: 5 capítulos de slides ---
+const LESSONS = [
+  { id:'unidades', ic:'🧱', title:'1 · Unidades funcionais', desc:'O que cada bloco do datapath faz.',
+    slides:[
+      {t:'text', html:`<h3>O que é o caminho de dados?</h3>
+        <p>O <b>datapath</b> (caminho de dados) é o conjunto de blocos por onde os bits da instrução passam para serem executados. No MIPS <b>uniciclo</b>, toda instrução começa e termina em <b>um único ciclo de clock</b>.</p>
+        <p>Os blocos principais são: <span class="mono">PC</span>, <span class="mono">Memória de Instruções</span>, <span class="mono">Banco de Registradores</span>, <span class="mono">ULA</span>, <span class="mono">Memória de Dados</span>, <span class="mono">Extensão de Sinal</span>, <span class="mono">Somadores</span>, <span class="mono">MUXes</span> e a <span class="mono">Unidade de Controle</span>.</p>
+        <p>Vamos conhecer cada um. Toque para avançar. 👉</p>`},
+      {t:'explore'},
+      {t:'text', html:`<h3>Resumo dos blocos</h3>
+        <ul>
+        <li><b>PC</b> — endereço da instrução atual.</li>
+        <li><b>Memória de Instruções</b> — busca a instrução.</li>
+        <li><b>Banco de Registradores</b> — lê 2 registradores e escreve 1.</li>
+        <li><b>ULA</b> — soma, subtrai, AND, OR, slt…</li>
+        <li><b>Memória de Dados</b> — usada por lw (lê) e sw (escreve).</li>
+        <li><b>Extensão de Sinal</b> — transforma o imediato de 16 → 32 bits.</li>
+        <li><b>Somadores</b> — PC+4 e endereço de desvio.</li>
+        <li><b>MUXes</b> — chaves que escolhem o caminho (RegDst, ALUSrc, MemtoReg, PCSrc).</li>
+        <li><b>Controle</b> — lê o opcode e comanda tudo isso.</li>
+        </ul>
+        <div class="callout">Próximo capítulo: como a <b>Unidade de Controle</b> liga/desliga os sinais. 🎛</div>`}
+    ]},
+
+  { id:'sinais', ic:'🎛', title:'2 · Sinais de controle', desc:'Os 7 sinais e por que cada um liga.',
+    slides:[
+      {t:'text', html:`<h3>A Unidade de Controle</h3>
+        <p>Ela lê o <b>opcode</b> (os 6 primeiros bits da instrução) e gera os sinais que comandam os MUXes e as memórias. São <b>7 sinais</b> principais:</p>
+        <ul>
+        <li><b>RegDst</b> — qual campo é o registrador destino (rt ou rd).</li>
+        <li><b>ALUSrc</b> — 2º operando da ULA: registrador (0) ou imediato (1).</li>
+        <li><b>MemtoReg</b> — o que volta ao registrador: ULA (0) ou memória (1).</li>
+        <li><b>RegWrite</b> — grava em registrador? (1 = sim).</li>
+        <li><b>MemRead</b> — lê a memória de dados? (lw).</li>
+        <li><b>MemWrite</b> — escreve na memória de dados? (sw).</li>
+        <li><b>Branch</b> — é um desvio? (beq).</li>
+        </ul>
+        <p>Veja agora, sinal por sinal, como cada instrução é decodificada. 👉</p>`},
+      {t:'signals', instr:'lw'},
+      {t:'signals', instr:'R'},
+      {t:'signals', instr:'sw'},
+      {t:'signals', instr:'beq'},
+      {t:'text', html:`<h3>Tabela completa</h3>
+        <table class="ctl"><tr><th>Sinal</th><th>R</th><th>lw</th><th>sw</th><th>beq</th></tr>
+        <tr><td>RegDst</td><td>1</td><td>0</td><td class="x">X</td><td class="x">X</td></tr>
+        <tr><td>ALUSrc</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+        <tr><td>MemtoReg</td><td>0</td><td>1</td><td class="x">X</td><td class="x">X</td></tr>
+        <tr><td>RegWrite</td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+        <tr><td>MemRead</td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+        <tr><td>MemWrite</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+        <tr><td>Branch</td><td>0</td><td>0</td><td>0</td><td>1</td></tr></table>
+        <div class="callout"><b>Regras pra decorar:</b> RegWrite=1 só se grava registrador (R, lw) · ALUSrc=1 quando há imediato (lw, sw) · MemRead/MemWrite só em lw/sw · Branch só em beq · <b>X</b> = indiferente (quando não escreve registrador, RegDst e MemtoReg não importam).</div>`}
+    ]},
+
+  { id:'caminho', ic:'🛣️', title:'3 · Caminho de uma instrução', desc:'Demonstração animada de cada instrução.',
+    slides:[
+      {t:'text', html:`<h3>Como uma instrução "anda" no datapath</h3>
+        <p>Cada tipo de instrução percorre um conjunto diferente de blocos. Nas próximas telas você verá a <b>animação passo a passo</b> de cada uma. Observe a ordem dos blocos que acendem e leia a narração.</p>
+        <p>👉 Comece pela tipo-R.</p>`},
+      {t:'demo', instr:'R'},
+      {t:'demo', instr:'lw'},
+      {t:'demo', instr:'sw'},
+      {t:'demo', instr:'beq'},
+      {t:'demo', instr:'j'},
+      {t:'text', html:`<h3>Resumindo os caminhos</h3>
+        <ul>
+        <li><b>tipo-R:</b> PC → Instr → Reg → ULA → escreve Reg.</li>
+        <li><b>lw:</b> PC → Instr → Reg + ExtSinal → ULA → Mem.Dados → escreve Reg.</li>
+        <li><b>sw:</b> PC → Instr → Reg + ExtSinal → ULA → Mem.Dados (não escreve Reg).</li>
+        <li><b>beq:</b> PC → Instr → Reg → ULA (subtrai) + Somador de Desvio → MUX PCSrc.</li>
+        <li><b>j:</b> PC → Instr → PC (salto direto).</li>
+        </ul>
+        <div class="callout">Quanto mais blocos no caminho, mais lenta a instrução. Isso liga direto com o <b>cálculo de tempos</b>. ⏱</div>`}
+    ]},
+
+  { id:'tempos', ic:'⏱️', title:'4 · Cálculo de tempos', desc:'Caminho crítico, período e speedup.',
+    slides:[
+      {t:'text', html:`<h3>Modelo de tempos (do professor)</h3>
+        <p>Cada bloco tem um atraso fixo em nanossegundos:</p>
+        <table class="ctl"><tr><th>Memória</th><th>Registradores</th><th>ULA</th><th>Controle</th><th>Somadores</th><th>Outros</th></tr>
+        <tr><td>4 ns</td><td>1 ns</td><td>2 ns</td><td>1 ns</td><td>1 ns</td><td>0 ns</td></tr></table>
+        <p>O tempo de uma instrução é a <b>soma dos blocos do seu caminho crítico</b> (o caminho mais longo dos bits).</p>`},
+      {t:'worked', kind:'single', instr:'lw'},
+      {t:'worked', kind:'single', instr:'R'},
+      {t:'worked', kind:'single', instr:'beq'},
+      {t:'text', html:`<h3>Tempos de cada instrução</h3>
+        <table class="ctl"><tr><th>lw</th><th>sw</th><th>tipo-R</th><th>beq</th><th>j</th></tr>
+        <tr><td>12</td><td>11</td><td>8</td><td>7</td><td>4</td></tr></table>
+        <h3 style="margin-top:12px">Período do uniciclo</h3>
+        <p>Como o clock é único para TODAS as instruções, ele tem que caber na <b>mais lenta</b>:</p>
+        <div class="callout"><b>Período uniciclo = 12 ns</b> (a lw). Mesmo a j, que precisa de só 4 ns, gasta 12 ns. Esse desperdício é o que o <b>multiciclo</b> e o <b>pipeline</b> resolvem.</div>`},
+      {t:'worked', kind:'benchmark', name:'GCC', mix:{lw:22,sw:11,R:49,beq:16,j:2}},
+    ]},
+
+  { id:'pipeline', ic:'🚉', title:'5 · Pipeline (5 fases)', desc:'IF, ID, EX, MEM, WB.',
+    slides:[
+      {t:'text', html:`<h3>Por que pipeline?</h3>
+        <p>No uniciclo, uma instrução só começa quando a outra termina. O <b>pipeline</b> divide o datapath em <b>5 fases</b> e executa várias instruções ao mesmo tempo — como uma linha de montagem.</p>
+        <ul>
+        <li><b>IF</b> — <i>Instruction Fetch</i>: busca a instrução.</li>
+        <li><b>ID</b> — <i>Instruction Decode</i>: decodifica e lê registradores.</li>
+        <li><b>EX</b> — <i>Execute</i>: a ULA opera.</li>
+        <li><b>MEM</b> — acessa a memória de dados (lw/sw).</li>
+        <li><b>WB</b> — <i>Write Back</i>: grava o resultado no registrador.</li>
+        </ul>`},
+      {t:'pipemap'},
+      {t:'text', html:`<h3>Mapa unidade → fase</h3>
+        <ul>
+        <li><b>IF</b>: PC, Memória de Instruções</li>
+        <li><b>ID</b>: Banco de Registradores (leitura), Unidade de Controle</li>
+        <li><b>EX</b>: ULA, Somador de Desvio</li>
+        <li><b>MEM</b>: Memória de Dados</li>
+        <li><b>WB</b>: MUX MemtoReg → escrita no registrador</li>
+        </ul>
+        <div class="callout">Pronto! Agora pratique no <b>Pipeline Master</b> e nos outros modos. 🎮</div>`}
+    ]}
+];
+
+// --- Renderiza o menu de capítulos da Academia ---
+function renderAcademy(){
+  const grid=$('chapterGrid'); grid.innerHTML='';
+  LESSONS.forEach((ch,i)=>{
+    const done=save.lessonsDone.includes(ch.id);
+    const c=document.createElement('div'); c.className='chapter-card';
+    c.innerHTML=`${done?'<span class="cdone">✔</span>':''}<div class="cic">${ch.ic}</div>
+      <div class="ct">${ch.title}</div><div class="cd">${ch.desc}</div>`;
+    c.onclick=()=>{ sfx.click(); openChapter(i); };
+    grid.appendChild(c);
+  });
+}
+// --- Player de lição ---
+const LS = {ch:0, i:0};
+function openChapter(idx){ LS.ch=idx; LS.i=0; showScreen('scr-lesson'); renderLessonSlide(); }
+function renderLessonSlide(){
+  const ch=LESSONS[LS.ch], s=ch.slides[LS.i], body=$('lessonBody');
+  $('lessonTitle').textContent=ch.ic+' '+ch.title;
+  $('lessonProg').textContent=`${LS.i+1}/${ch.slides.length}`;
+  $('lessonDots').innerHTML=ch.slides.map((_,k)=>`<span class="${k===LS.i?'on':''}"></span>`).join('');
+  $('lessonPrev').style.visibility = LS.i===0 ? 'hidden':'visible';
+  $('lessonNext').textContent = LS.i===ch.slides.length-1 ? '✓ Concluir' : 'Próximo →';
+  body.innerHTML='';
+  if(s.t==='text'){ body.innerHTML=s.html; }
+  else if(s.t==='explore'){ renderExplore(body); }
+  else if(s.t==='demo'){ renderDemo(body, s.instr); }
+  else if(s.t==='signals'){ renderSignalsLesson(body, s.instr); }
+  else if(s.t==='worked'){ renderWorked(body, s); }
+  else if(s.t==='pipemap'){ renderPipemap(body); }
+  window.scrollTo(0,0);
+}
+function renderExplore(body){
+  const keys=Object.keys(UNITS);
+  body.innerHTML=`<p class="prompt">Toque em cada bloco do datapath para aprender o que ele faz. <span class="muted" id="expCount">(0/${keys.length})</span></p>
+    ${buildDatapathSVG()}
+    <div class="lesson-caption" id="expCap">👆 Toque numa unidade para ver a explicação…</div>`;
+  wireTooltips(body);
+  const visited=new Set();
+  body.querySelectorAll('.unit').forEach(g=>{
+    g.classList.add('clickable');
+    g.onclick=()=>{
+      const k=g.dataset.key, u=UNITS[k];
+      g.classList.add('hl-green'); visited.add(k);
+      $('expCap').innerHTML=`<b>${u.name}</b> — ${u.tip} <span style="color:var(--cyan)">[fase ${u.phase}]</span>`;
+      $('expCount').textContent=`(${visited.size}/${keys.length})`;
+      beep(500,.05,'triangle',.08);
+    };
+  });
+}
+function renderDemo(body, instr){
+  body.innerHTML=`<div class="instr-box"><span class="lbl">Demonstração — ${INSTR[instr].name}</span>${INSTR[instr].label}</div>
+    <div class="demo-caption" id="demoCap">▶ iniciando…</div>
+    ${buildDatapathSVG()}
+    <div style="margin-top:8px"><button class="btn ghost small" id="replayBtn">↻ Repetir demonstração</button></div>`;
+  const svg=body.querySelector('svg.datapath');
+  const play=()=>animatePath(instr, svg, $('demoCap'));
+  $('replayBtn').onclick=()=>{ sfx.click(); play(); };
+  setTimeout(play, 350);
+}
+function renderSignalsLesson(body, instr){
+  const c=CONTROL[instr];
+  body.innerHTML=`<div class="instr-box"><span class="lbl">Decodificando os sinais</span>${INSTR[instr].label} <span class="muted" style="font-size:12px">— ${INSTR[instr].name}</span></div>
+    <p class="prompt">A Unidade de Controle define cada sinal assim:</p>
+    <div class="sig-teach">`+
+    SIGNAL_NAMES.map((nm,i)=>`<div class="sig-trow"><span class="badge ${c[i]==='X'?'x':c[i]?'on':'off'}">${nm} = ${c[i]}</span><span>${SIG_WHY[nm][c[i]]}</span></div>`).join('')
+    +`</div>`;
+}
+function renderWorked(body, s){
+  const t=DEFAULT_TIMES;
+  if(s.kind==='single'){
+    body.innerHTML=`<div class="instr-box"><span class="lbl">Exemplo resolvido</span>Tempo da ${INSTR[s.instr].name}</div>
+      <p class="prompt">Soma dos blocos do caminho crítico:</p>${chipsHTML(s.instr,t)}
+      <div class="callout">A ${INSTR[s.instr].name} leva <b>${instrTime(s.instr,t)} ns</b>.</div>`;
+  } else { // benchmark
+    const mix=s.mix, per=periodUniciclo(t); let avg=0; const rows=[];
+    for(const k in mix){ const ti=instrTime(k,t); const c=Math.round(mix[k]/100*ti*100)/100; avg+=mix[k]/100*ti;
+      rows.push(`<tr><td>${k}</td><td>${mix[k]}%</td><td>${ti} ns</td><td>${c}</td></tr>`); }
+    avg=Math.round(avg*100)/100; const sp=Math.round((per/avg)*100)/100;
+    body.innerHTML=`<h3>Exemplo de prova: benchmark${s.name?' '+s.name:''} + speedup</h3>
+      <p class="muted" style="font-size:12px">${s.name==='GCC'?'Este é o benchmark GCC da Lista 3.':'Estilo da questão 3 da Lista 3.'}</p>
+      <p>Frequência das instruções: <span class="mono">lw ${mix.lw}% · sw ${mix.sw}% · R(alu) ${mix.R}% · beq ${mix.beq}% · j ${mix.j}%</span></p>
+      <table class="bench-table"><tr><th>Instr</th><th>Freq</th><th>Tempo</th><th>Freq×Tempo</th></tr>${rows.join('')}
+      <tr><td colspan="3"><b>Média multiciclo</b></td><td><b>${avg} ns</b></td></tr></table>
+      <div class="callout">
+        <b>Uniciclo</b> = ${per} ns (a lw, para todas).<br>
+        <b>Multiciclo ideal</b> = ${avg} ns (média ponderada).<br>
+        <b>Speedup</b> = ${per} ÷ ${avg} = <b>${sp}×</b>.
+      </div>`;
+  }
+}
+function renderPipemap(body){
+  body.innerHTML=`<p class="prompt">O datapath dividido nas 5 fases do pipeline:</p>${buildDatapathSVG({stages:true})}
+    <div class="pipe-legend">
+      <div class="pl"><b>IF</b> — PC · Mem. Instruções</div>
+      <div class="pl"><b>ID</b> — Banco de Reg. (lê) · Controle</div>
+      <div class="pl"><b>EX</b> — ULA · Somador de Desvio</div>
+      <div class="pl"><b>MEM</b> — Memória de Dados</div>
+      <div class="pl"><b>WB</b> — escrita no registrador</div>
+    </div>`;
+  ['IF','ID','EX','MEM','WB'].forEach(st=>{
+    const z=body.querySelector(`.stagezone[data-stage="${st}"]`); if(z){ z.classList.add('ok'); z.style.cursor='default'; }
+    const t=body.querySelector('#zl-'+st); if(t) t.textContent=st;
+  });
+}
+function finishChapter(){
+  const ch=LESSONS[LS.ch];
+  if(!save.lessonsDone.includes(ch.id)){ save.lessonsDone.push(ch.id); persist(); }
+  sfx.win(); toast('✅ Capítulo concluído', ch.title);
+  renderAcademy(); showScreen('scr-learn');
+}
+
+/* ===========================================================================
+   10. JS — SEÇÃO H: NAVEGAÇÃO + TUTORIAL + BOOT
+   =========================================================================== */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
+  $('topbar').style.display = (id==='scr-home') ? 'none' : 'flex';
+  window.scrollTo(0,0);
+}
+
+// ---- Mapa de níveis ----
+function renderLevels(){
+  const grid=$('levelGrid'); grid.innerHTML='';
+  LEVELS.forEach((lv,i)=>{
+    const n=i+1; const unlocked = n<=save.unlocked;
+    const c=document.createElement('div');
+    c.className='levelcard '+(unlocked?'unlocked':'locked');
+    const done = n<save.unlocked;
+    c.innerHTML=`${done?'<span class="done">✔</span>':''}${!unlocked?'<span class="lock">🔒</span>':''}
+      <div class="num">${n}</div><div class="lab">${lv.label}</div>
+      <div class="tier ${lv.tier}">${lv.tier==='easy'?'Fácil':lv.tier==='med'?'Médio':'Difícil'}</div>`;
+    if(unlocked) c.onclick=()=>{ sfx.click(); startLevel(n); };
+    grid.appendChild(c);
+  });
+}
+
+// ---- Tutorial (5 telas) ----
+const TUTORIAL = [
+  {e:'🧩', h:'Bem-vindo ao MIPS Datapath Quest', b:`
+    <p>Você vai dominar o <b>caminho de dados do MIPS uniciclo</b> jogando. São <b>4 modos</b> distribuídos em <b>10 níveis</b> de dificuldade crescente.</p>
+    <p class="muted">A cada acerto você ganha XP. Cada nível dá <b>3 vidas</b> — 3 erros e o nível reinicia (com questões embaralhadas).</p>`},
+  {e:'🎬', h:'Modo 1 — Roteirista & Modo 4 — Pipeline', b:`
+    <p><b>Roteirista:</b> clique nas unidades funcionais na <b>ordem</b> que a instrução percorre o datapath (PC → Mem. Instruções → Registradores → ULA → …).</p>
+    <p><b>Pipeline Master:</b> arraste as etiquetas <span class="mono">IF · ID · EX · MEM · WB</span> sobre as regiões certas do diagrama.</p>
+    <p class="muted">Passe o mouse/toque numa unidade para ver o que ela faz.</p>`},
+  {e:'🎛', h:'Modo 2 — Engenheiro de Controle', b:`
+    <p>Para cada instrução, ligue os <b>7 sinais de controle</b> corretos. Tabela-base:</p>
+    <table class="ctl"><tr><th>Sinal</th><th>R</th><th>lw</th><th>sw</th><th>beq</th></tr>
+    <tr><td>RegDst</td><td>1</td><td>0</td><td class="x">X</td><td class="x">X</td></tr>
+    <tr><td>ALUSrc</td><td>0</td><td>1</td><td>1</td><td>0</td></tr>
+    <tr><td>MemtoReg</td><td>0</td><td>1</td><td class="x">X</td><td class="x">X</td></tr>
+    <tr><td>RegWrite</td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
+    <tr><td>MemRead</td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+    <tr><td>MemWrite</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+    <tr><td>Branch</td><td>0</td><td>0</td><td>0</td><td>1</td></tr></table>
+    <p class="muted" style="margin-top:6px">X = indiferente (não importa o valor).</p>`},
+  {e:'⏱', h:'Modo 3 — Calculadora de Tempos', b:`
+    <p>Modelo de tempos: <span class="mono">Memória 4 ns · Registradores 1 ns · ULA 2 ns · Controle 1 ns · Somadores 1 ns</span>.</p>
+    <p>Tempos por instrução (caminho crítico):</p>
+    <table class="ctl"><tr><th>lw</th><th>sw</th><th>tipo-R</th><th>beq</th><th>j</th></tr>
+    <tr><td>12</td><td>11</td><td>8</td><td>7</td><td>4</td></tr></table>
+    <p class="muted" style="margin-top:6px">O <b>período do uniciclo</b> = maior tempo = 12 ns (lw). No multiciclo ideal, cada instrução leva o seu próprio tempo.</p>`},
+  {e:'🏆', h:'Pronto para começar!', b:`
+    <p>Peça <b>dicas</b> a qualquer momento (custam ${HINT_COST} XP). Desbloqueie <b>conquistas</b> e suba os 10 níveis.</p>
+    <p>Seu progresso é salvo automaticamente neste navegador. Bons estudos! 🚀</p>`}
+];
+let tutIdx=0;
+function renderTutorial(){
+  const t=TUTORIAL[tutIdx];
+  $('tutBody').innerHTML=`<div class="tut-emoji">${t.e}</div><h2 class="center">${t.h}</h2>${t.b}`;
+  $('tutDots').innerHTML=TUTORIAL.map((_,i)=>`<span class="${i===tutIdx?'on':''}"></span>`).join('');
+  $('tutPrev').style.visibility = tutIdx===0?'hidden':'visible';
+  $('tutNext').textContent = tutIdx===TUTORIAL.length-1 ? 'Começar ▶' : 'Próximo →';
+}
+
+// ---- Ligações de botões / boot ----
+/* ===========================================================================
+   11. JS — SEÇÃO L: GLOSSÁRIO DE CONCEITOS
+   =========================================================================== */
+const GLOSSARY = [
+  // Unidades funcionais
+  {cat:'Unidades funcionais', term:'PC', def:'Program Counter — registrador que guarda o endereço da próxima instrução a ser executada.', why:'É o ponto de partida de toda instrução.'},
+  {cat:'Unidades funcionais', term:'Memória de Instruções', def:'Memória somente-leitura que contém o programa. O PC a indexa para buscar a instrução.', why:'Separa código dos dados (modelo Harvard).'},
+  {cat:'Unidades funcionais', term:'Banco de Registradores', def:'Conjunto de registradores ($s0, $t0…). Lê 2 registradores (rs, rt) por vez e escreve em 1.', why:'É onde a ULA busca e devolve operandos.'},
+  {cat:'Unidades funcionais', term:'ULA', def:'Unidade Lógica e Aritmética. Realiza soma, subtração, AND, OR, SLt etc.', why:'É o "cérebro" que executa a operação.'},
+  {cat:'Unidades funcionais', term:'Memória de Dados', def:'Memória lida/escrita por lw e sw. Endereço vem da ULA.', why:'lw lê; sw escreve nela.'},
+  {cat:'Unidades funcionais', term:'Extensão de Sinal', def:'Pega o imediato de 16 bits e o converte para 32 bits preservando o sinal.', why:'A ULA trabalha com 32 bits.'},
+  {cat:'Unidades funcionais', term:'Shift Left 2', def:'Desloca 2 bits à esquerda (= multiplicar por 4) o offset do desvio.', why:'Endereços são múltiplos de 4 (word).'},
+  {cat:'Unidades funcionais', term:'Somadores', def:'Dois: o +4 (calcula PC+4) e o de Desvio (calcula PC+4+offset<<2).', why:'Definem o próximo PC.'},
+  {cat:'Unidades funcionais', term:'MUX', def:'Multiplexador — chave que seleciona entre 2 entradas conforme um sinal de controle.', why:'RegDst, ALUSrc, MemtoReg e PCSrc são MUXes.'},
+  {cat:'Unidades funcionais', term:'Unidade de Controle', def:'Lê o opcode e gera todos os sinais de controle (liga/desliga os MUXes e memórias).', why:'É ela que "comanda" o datapath.'},
+  // Sinais de controle
+  {cat:'Sinais de controle', term:'opcode', def:'Os 6 bits mais significativos da instrução. A Unidade de Controle o lê.', why:'Identifica o tipo de instrução (R, lw, sw, beq…).'},
+  {cat:'Sinais de controle', term:'RegDst', def:'Escolhe o registrador destino: rd (tipo-R, =1) ou rt (lw, =0).', why:'Define onde o resultado será gravado.'},
+  {cat:'Sinais de controle', term:'ALUSrc', def:'Escolhe o 2º operando da ULA: registrador (=0) ou imediato (=1).', why:'lw/sw usam imediato; R e beq usam registrador.'},
+  {cat:'Sinais de controle', term:'MemtoReg', def:'Escolhe o que volta ao registrador: saída da ULA (=0) ou dado da memória (=1).', why:'Diferencia R (ULA) de lw (memória).'},
+  {cat:'Sinais de controle', term:'RegWrite', def:'Habilita escrita no banco de registradores (=1 grava).', why:'sw e beq não gravam → RegWrite=0.'},
+  {cat:'Sinais de controle', term:'MemRead', def:'Habilita leitura da memória de dados (=1).', why:'Só a lw lê a memória.'},
+  {cat:'Sinais de controle', term:'MemWrite', def:'Habilita escrita na memória de dados (=1).', why:'Só a sw escreve na memória.'},
+  {cat:'Sinais de controle', term:'Branch', def:'Marca que é desvio condicional (=1). Combina com Zero da ULA no PCSrc.', why:'Só a beq é branch.'},
+  {cat:'Sinais de controle', term:'don\'t care (X)', def:'Quando um sinal não afeta o resultado, seu valor é irrelevante.', why:'Ex.: sw não escreve em reg → RegDst e MemtoReg = X.'},
+  // Instruções
+  {cat:'Instruções', term:'tipo-R', def:'Instrução registrador-registrador (add, sub, and, or, slt).', why:'add $s1,$s2,$s3 — 3 registradores.'},
+  {cat:'Instruções', term:'lw', def:'Load word — carrega uma palavra da memória para um registrador.', why:'lw $s1, 8($s2) lê o endereço $s2+8.'},
+  {cat:'Instruções', term:'sw', def:'Store word — armazena um registrador na memória.', why:'sw $s1, 8($s2) grava no endereço $s2+8.'},
+  {cat:'Instruções', term:'beq', def:'Branch if equal — desvia se dois registradores forem iguais.', why:'Compara subtraindo; Zero=1 → desvia.'},
+  {cat:'Instruções', term:'j', def:'Jump — salto incondicional.', why:'Só atualiza o PC; não usa ULA.'},
+  {cat:'Instruções', term:'rs / rt / rd', def:'Campos da instrução: rs/rt são lidos; rd é o destino (tipo-R).', why:'rt também é destino na lw.'},
+  {cat:'Instruções', term:'imediato / offset', def:'Constante de 16 bits embutida na própria instrução.', why:'Usado por lw, sw e beq.'},
+  // Tempos
+  {cat:'Tempos', term:'caminho crítico', def:'O caminho mais longo que os bits percorrem na instrução.', why:'Define o tempo da instrução — não pode ser mais rápido que isso.'},
+  {cat:'Tempos', term:'período de clock', def:'Duração de um ciclo. No uniciclo, acomoda a instrução mais lenta.', why:'Uniciclo: período = 12 ns (lw).'},
+  {cat:'Tempos', term:'uniciclo', def:'Cada instrução completa em 1 ciclo. Clock = instrução mais lenta.', why:'Desperdiça tempo nas instruções rápidas.'},
+  {cat:'Tempos', term:'multiciclo', def:'Cada instrução leva vários ciclos, mas só os necessários.', why:'Média ponderada → speedup > 1.'},
+  {cat:'Tempos', term:'speedup', def:'Ganho: speedup = tempo_uniciclo / tempo_multiciclo.', why:'Mede o benefício do multiciclo.'},
+  {cat:'Tempos', term:'benchmark', def:'Mistura de instruções com frequências (% de cada uma).', why:'Permite calcular tempo médio realista.'},
+  // Pipeline
+  {cat:'Pipeline', term:'IF', def:'Instruction Fetch — busca a instrução (PC, Mem. Instruções).', why:'1ª fase do pipeline.'},
+  {cat:'Pipeline', term:'ID', def:'Instruction Decode — decodifica e lê registradores.', why:'2ª fase. Inclui a Unidade de Controle.'},
+  {cat:'Pipeline', term:'EX', def:'Execute — a ULA opera.', why:'3ª fase.'},
+  {cat:'Pipeline', term:'MEM', def:'Acessa a memória de dados (lw/sw).', why:'4ª fase.'},
+  {cat:'Pipeline', term:'WB', def:'Write Back — grava o resultado no registrador.', why:'5ª e última fase.'},
+  {cat:'Pipeline', term:'hazard', def:'Conflito que impede a próxima instrução de executar no ciclo seguinte.', why:'Causa paradas (stalls).'},
+  {cat:'Pipeline', term:'stall / bolha', def:'Ciclo de espera inserido para resolver um hazard.', why:'Reduz o ganho ideal do pipeline.'}
+];
+function renderGlossary(){
+  const filter = ($('glSearch').value||'').trim().toLowerCase();
+  const body=$('glBody');
+  let html='';
+  let lastCat='';
+  GLOSSARY.forEach(g=>{
+    if(filter && !(g.term.toLowerCase().includes(filter)||g.def.toLowerCase().includes(filter))) return;
+    if(g.cat!==lastCat){ html+=`<div class="gl-cat">${g.cat}</div>`; lastCat=g.cat; }
+    html+=`<div class="gl-item"><b>${g.term}</b><div class="gl-def">${g.def}</div><div class="gl-why">💡 ${g.why}</div></div>`;
+  });
+  if(!html) html='<div class="muted" style="padding:20px;text-align:center;">Nenhum termo encontrado.</div>';
+  body.innerHTML=html;
+}
+function openGlossary(){ $('glSearch').value=''; renderGlossary(); $('glOverlay').classList.add('open'); }
+function closeGlossary(){ $('glOverlay').classList.remove('open'); }
+// envolve um termo em span clicável (para uso inline)
+function termLink(term){
+  return `<span class="term" data-term="${term.replace(/"/g,'')}">${term}</span>`;
+}
+// conecta cliques nos termos inline dentro de um elemento raiz
+function wireConceptTerms(root){
+  root.querySelectorAll('.term').forEach(t=>{
+    t.onclick=()=>{
+      const g=GLOSSARY.find(x=>x.term.toLowerCase()===t.dataset.term.toLowerCase());
+      const fb=document.activeElement.closest('.screen')||document.body;
+      // mostra como toast flutuante perto do termo
+      if(g){
+        const tip=document.getElementById('tooltip');
+        tip.innerHTML=`<b>${g.term}</b><br>${g.def}<br><span style="color:var(--cyan)">💡 ${g.why}</span>`;
+        tip.style.display='block';
+        const r=t.getBoundingClientRect();
+        tip.style.left=Math.min(r.left+12,window.innerWidth-280)+'px';
+        tip.style.top=(r.bottom+8)+'px';
+        setTimeout(()=>{tip.style.display='none';},4000);
+        sfx.click();
+      }
+    };
+  });
+}
+
+/* ===========================================================================
+   12. JS — SEÇÃO I: GERADORES PROCEDURAIS (variação infinita)
+   =========================================================================== */
+// RNG injetável (default Math.random). Funções PURAS.
+function rngPick(arr, r){ return arr[Math.floor((r||Math.random)()*arr.length)]; }
+
+// Sorteia 5 frações que somam 100 (em %), nenhuma < min.
+function rngMix(r){
+  r=r||Math.random;
+  const keys=['lw','sw','R','beq','j'];
+  let remaining=100; const mix={};
+  for(let i=0;i<keys.length-1;i++){
+    const max = remaining-(keys.length-1-i)*5; // garante ≥5 p/ os próximos
+    const v = 5 + Math.floor(r()*(max-4));      // 5..max
+    mix[keys[i]]=v; remaining-=v;
+  }
+  mix[keys[keys.length-1]]=remaining;
+  return mix;
+}
+// Sorteia tempos de unidades com números fáceis, mas quase sempre diferentes.
+function rngTimes(r){
+  r=r||Math.random;
+  const imem=rngPick([8,10,12],r);
+  const dmem=rngPick([8,10,12],r);
+  const reg=rngPick([3,4,5],r);
+  const alu=rngPick([6,8,10],r);
+  return {imem,regread:reg,alu,dmem,control:rngPick([1,2],r),adder:rngPick([1,2],r),regwrite:reg};
+}
+function rngInt(min,max,r){ r=r||Math.random; return min + Math.floor(r()*(max-min+1)); }
+function roundN(n,d=2){ const p=Math.pow(10,d); return Math.round(n*p)/p; }
+function cpiToTimeNs(cpi,freqMHz){ return roundN(cpi*1000/freqMHz,3); }
+function escHTML(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function solveProgramCase(program){
+  const rowCycles={}, rowCpi={}; let totalInstr=0, totalCycles=0;
+  program.rows.forEach(row=>{
+    const count=program.counts[row]||0;
+    const timeNs=program.timeNs[row]||0;
+    const cpi=roundN(timeNs*program.freqMHz/1000,2);
+    const cycles=count*cpi;
+    rowCpi[row]=cpi;
+    rowCycles[row]=cycles;
+    totalInstr+=count;
+    totalCycles+=cycles;
+  });
+  const avgCpi=roundN(totalCycles/totalInstr,2);
+  const timeUs=roundN(totalCycles/program.freqMHz,3); // MHz = ciclos por microssegundo
+  const percent={};
+  program.rows.forEach(row=>{ percent[row]=roundN((program.counts[row]||0)*100/totalInstr,1); });
+  return {rowCpi,rowCycles,totalInstr,totalCycles,avgCpi,timeUs,percent,finalValue:program.finalValue};
+}
+function programQuestion(program){
+  const solution=solveProgramCase(program);
+  return q5('prog','hard',{topic:'QProg',program,solution,
+    question:`Complete a tabela dinâmica do programa: <b>${program.title}</b>`,
+    explain:programExplain({program,solution})});
+}
+function geraProgramaQ5(r){
+  r=r||Math.random;
+  return r()<0.55 ? geraLoopAcumuladorQ5(r) : geraVetorMaxQ5(r);
+}
+function geraLoopAcumuladorQ5(r){
+  r=r||Math.random;
+  const iters=rngPick([4,5,6,8,10,12,15],r);
+  const delta=rngPick([1,2,3,4],r);
+  const initial=iters*delta;
+  const stored=rngPick([-1,0,1,2],r);
+  const addK=delta+stored;
+  const freqMHz=rngPick([100,200,250,500],r);
+  const cpi={ULA:rngPick([4,5,6],r),Desvio:rngPick([3,4,5],r),'Memória':rngPick([6,7,8],r),Outras:rngPick([6,7,8],r)};
+  const timeNs={}; Object.keys(cpi).forEach(row=>{ timeNs[row]=cpiToTimeNs(cpi[row],freqMHz); });
+  const program={
+    title:`Laço acumulador (${iters} voltas)`,
+    family:'loop',
+    rows:['ULA','Desvio','Memória','Outras'],
+    counts:{ULA:3+2*iters,Desvio:iters,'Memória':2*iters+1,Outras:0},
+    timeNs,freqMHz,finalValue:stored,
+    finalLabel:'Valor final em 0x10010000',
+    setup:`$s0 começa em ${initial}; a cada volta soma ${-delta}; o laço termina quando $s0 chega a 0.`,
+    reasoning:[
+      `Voltas do loop = ${initial} ÷ ${delta} = ${iters}.`,
+      `Antes do loop há 3 instruções de ULA.`,
+      `Por volta: sw + addi + lw + add + bne = 2 Memória, 2 ULA e 1 Desvio.`,
+      `Depois do loop há 1 sw final.`
+    ],
+    code:[
+      `ori  $s0, $zero, ${initial}`,
+      `lui  $s1, 0x1001`,
+      `addi $s2, $zero, -${delta}`,
+      `loop: sw   $s2, 0($s1)`,
+      `      addi $t1, $s2, ${addK}`,
+      `      lw   $t0, 0($s1)`,
+      `      add  $s0, $s0, $t0`,
+      `      bne  $s0, $zero, loop`,
+      `      sw   $t1, 0($s1)`
+    ]
+  };
+  return programQuestion(program);
+}
+function geraVetorMaxQ5(r){
+  r=r||Math.random;
+  const n=rngPick([8,10,16,20,25,32,50,64,100],r);
+  const updates=rngInt(0,n-1,r);
+  const maxVal=rngPick([7,12,18,24,31,42,63,99],r);
+  const freqMHz=rngPick([100,200,250,500],r);
+  const cpi={lw:rngPick([5,6,7],r),sw:rngPick([5,6,7],r),add:rngPick([4,5,6],r),beq:rngPick([3,4,5],r),j:rngPick([6,7,8],r)};
+  const timeNs={}; Object.keys(cpi).forEach(row=>{ timeNs[row]=cpiToTimeNs(cpi[row],freqMHz); });
+  const remaining=n-1;
+  const program={
+    title:`Maior de vetor com ${n} elementos`,
+    family:'vector-max',
+    rows:['lw','sw','add','beq','j'],
+    counts:{
+      lw:n,
+      sw:1,
+      add:1 + 4*remaining + updates,
+      beq:2*n - 1,
+      j:remaining
+    },
+    timeNs,freqMHz,finalValue:maxVal,
+    finalLabel:'Valor salvo na última posição do vetor',
+    setup:`N=${n}; o corpo analisa ${remaining} elementos depois do primeiro; o máximo é atualizado ${updates} vez(es).`,
+    reasoning:[
+      `lw = 1 leitura inicial do máximo + ${remaining} leituras no loop = ${n}.`,
+      `sw = 1 escrita final na última posição.`,
+      `add = 1 setup + 4 por volta (${remaining} voltas) + ${updates} atualização(ões) do máximo.`,
+      `beq/bne = teste de fim executado ${n} vezes + comparação do máximo ${remaining} vezes = ${2*n-1}.`,
+      `j = volta para o loop em cada uma das ${remaining} voltas.`
+    ],
+    code:[
+      `lw   $s2, 0($s1)        # max = v[0]`,
+      `addi $t0, $zero, 1      # i = 1`,
+      `loop: beq  $t0, $s3, fim`,
+      `      add  $t1, $t0, $t0`,
+      `      add  $t1, $t1, $t1`,
+      `      add  $t2, $s1, $t1`,
+      `      lw   $t3, 0($t2)`,
+      `      beq  atual<=max, pula`,
+      `      add  $s2, $t3, $zero  # executa ${updates} vez(es) no caso dado`,
+      `pula: addi $t0, $t0, 1`,
+      `      j    loop`,
+      `fim:  sw   $s2, -4($t2)     # salva ${maxVal}`
+    ]
+  };
+  return programQuestion(program);
+}
+function programExplain(q){
+  const p=q.program, s=q.solution;
+  const rows=p.rows.map(row=>`<tr><td>${row}</td><td>${p.counts[row]}</td><td>${s.percent[row]}%</td><td>${p.timeNs[row]} ns</td><td>${p.timeNs[row]}×${p.freqMHz}/1000=${s.rowCpi[row]}</td><td>${p.counts[row]}×${s.rowCpi[row]}=${s.rowCycles[row]}</td></tr>`).join('');
+  return `<b>${p.title}</b><br><span class="muted">${p.setup}</span>
+    <ul>${p.reasoning.map(x=>`<li>${x}</li>`).join('')}</ul>
+    <table class="program-table"><tr><th>Tipo</th><th>Qtde</th><th>%</th><th>Tempo/instr.</th><th>Ciclos por instrução</th><th>Ciclos totais</th></tr>${rows}</table>
+    <div class="callout">Ciclos por instrução = tempo(ns) × frequência(MHz) ÷ 1000. Total de instruções = <b>${s.totalInstr}</b> · Ciclos = <b>${s.totalCycles}</b> · CPI médio = <b>${s.avgCpi}</b> · Tempo = ciclos ÷ frequência = <b>${s.totalCycles} ÷ ${p.freqMHz} = ${s.timeUs} us</b> · ${p.finalLabel} = <b>${s.finalValue}</b></div>`;
+}
+// --- Gera questão de benchmark (modo 3) com mistura aleatória ---
+function geraBenchmarkQ3(r){
+  const mix=rngMix(r), t=rngTimes(r);
+  const per=periodUniciclo(t);
+  return q3('benchmark',{name:'Sorteado',mix,times:t},'hard');
+}
+// --- Gera questão de tempo (modo 5, MC) com distratores de erro comum ---
+function geraTempoQ5(r){
+  const instr=rngPick(['lw','sw','R','beq','j'],r);
+  const t=rngTimes(r);
+  const correct=instrTime(instr,t);
+  // distratores = erros típicos
+  const wrongs=[
+    correct-1, // esquecer EscreveReg
+    correct+1,
+    instr==='lw'?instrTime('sw',t):(instrTime('lw',t)), // confundir lw/sw
+    correct+2
+  ].filter(x=>x!==correct && x>0);
+  const options=shuffle([correct,...wrongs.slice(0,3)]).map(String);
+  const correctIdx=options.indexOf(String(correct));
+  return q5('mc','hard',{topic:'Q3a',times:t,instr,
+    question:`Qual é o tempo (caminho crítico) da instrução ${INSTR[instr].label}?`,
+    options, correct:correctIdx,
+    explain:`${INSTR[instr].name}: ${critStr(instr,t)} = <b>${correct} ns</b>.`});
+}
+// --- Gera questão de controle (modo 5) aleatória ---
+function geraControleQ5(r){
+  const instr=rngPick(['R','lw','sw','beq'],r);
+  // tipo de pergunta
+  const kind=rngPick(['which-signal','tf-action'],r);
+  if(kind==='which-signal'){
+    // "qual sinal diferencia X de Y"
+    const pairs=[['lw','sw','MemRead','MemRead=1 na lw (lê memória), =0 na sw.'],
+                 ['lw','sw','MemWrite','MemWrite=1 na sw (escreve memória), =0 na lw.'],
+                 ['R','lw','MemtoReg','MemtoReg=0 na R (vem da ULA), =1 na lw (vem da memória).'],
+                 ['R','lw','RegDst','RegDst=1 na R (usa rd), =0 na lw (usa rt).']];
+    const [a,b,sig,expl]=rngPick(pairs,r);
+    const opts=shuffle(['RegDst','ALUSrc','MemtoReg','MemRead','MemWrite','Branch']);
+    const ci=opts.indexOf(sig);
+    return q5('mc','med',{topic:'Q2',
+      question:`Qual sinal de controle diferencia a instrução <b>${a}</b> da <b>${b}</b>?`,
+      options:opts, correct:ci, explain:expl});
+  } else {
+    // V/F sobre ação de uma unidade
+    const items=[
+      ['Na sw, a ULA calcula o endereço de escrita.',true,'V. A ULA soma base+offset para achar o endereço onde sw grava.'],
+      ['A instrução j passa pela ULA.',false,'F. O j só atualiza o PC; não usa ULA nem registradores.'],
+      ['A beq usa a ULA para subtrair rs−rt.',true,'V. A ULA subtrai; se Zero=1, são iguais e ocorre o desvio.'],
+      ['A lw escreve na Memória de Dados.',false,'F. A lw LÊ a memória. Quem escreve é a sw.'],
+      ['A tipo-R grava o resultado da ULA no registrador.',true,'V. MemtoReg=0 → vem da ULA, e RegWrite=1.']
+    ];
+    const [stmt,ok,expl]=rngPick(items,r);
+    return q5('tf','med',{topic:'Q2',statement:stmt,correct:ok,explain:expl});
+  }
+}
+// --- Gera questão de pipeline (modo 5) aleatória ---
+function geraPipelineQ5(r){
+  const kind=rngPick(['order','unit-phase','ar'],r);
+  if(kind==='order'){
+    const correct=['IF','ID','EX','MEM','WB'];
+    return q5('mc','med',{topic:'Q4',question:'Qual é a ordem correta das fases do pipeline?',
+      options:['IF→ID→EX→MEM→WB','IF→EX→ID→MEM→WB','IF→ID→EX→WB→MEM','ID→IF→EX→MEM→WB'],correct:0,
+      explain:'Sempre IF (busca) → ID (decodifica) → EX (ULA) → MEM (memória) → WB (escrita no reg.).'});
+  } else if(kind==='unit-phase'){
+    const map=[['ULA','EX'],['Memória de Dados','MEM'],['Banco de Registradores (leitura)','ID'],['Unidade de Controle','ID'],['PC','IF'],['escrita no registrador (WB)','WB']];
+    const [unit,phase]=rngPick(map,r);
+    const opts=shuffle(['IF','ID','EX','MEM','WB']);
+    return q5('mc','med',{topic:'Q4',question:`Em qual fase do pipeline fica ${unit}?`,options:opts,correct:opts.indexOf(phase),
+      explain:`${unit} está na fase <b>${phase}</b>.`});
+  } else {
+    const items=[
+      ['O pipeline é mais rápido porque executa 5 instruções completas ao mesmo tempo no mesmo ciclo.',false,'F. O pipeline SOBREPÕE fases de instruções diferentes (uma em IF enquanto outra está em EX), não executa 5 completas ao mesmo tempo.'],
+      ['O pipeline reduz o tempo total somando 1 instrução por ciclo (após encher).',true,'V. Depois de preenchido, uma instrução termina por ciclo, em média.'],
+      ['O pipeline multiplica o CPI por 5.',false,'F. O CPI ideal do pipeline tende a 1, não a 5.']
+    ];
+    const [stmt,ok,expl]=rngPick(items,r);
+    return q5('ar','med',{topic:'Q4',statement:stmt,correct:ok,explain:expl});
+  }
+}
+// --- Gera uma questão fechada aleatória (topico sorteado) ---
+function geraQ5Random(r){
+  r=r||Math.random;
+  const fns=[geraTempoQ5,geraControleQ5,geraPipelineQ5,geraProgramaQ5,geraProgramaQ5];
+  return rngPick(fns,r)(r);
+}
+
+/* ===========================================================================
+   13. JS — SEÇÃO J: MOTOR DO MODO PROVA (formatos fechados)
+   =========================================================================== */
+// helper: registra acerto/erro no provaMastery por tópico
+function bumpMastery(topic, ok){
+  if(!topic || !save.provaMastery) return;
+  // média móvel simples (janela efetiva): mistura 70% antigo + 30% novo
+  const cur=save.provaMastery[topic]||0;
+  save.provaMastery[topic]=Math.round((cur*0.7 + (ok?1:0)*0.3)*100)/100;
+  persist();
+}
+function renderMode5(q, body, act){
+  body.innerHTML=`<div class="prompt">${q.question||q.statement||''}</div>${q.times?timeContextHTML(q.times):''}`;
+  if(q.sub==='mc') renderM5mc(q,body,act);
+  else if(q.sub==='tf') renderM5tf(q,body,act);
+  else if(q.sub==='ar') renderM5ar(q,body,act);
+  else if(q.sub==='tbl') renderM5tbl(q,body,act);
+  else if(q.sub==='prog') renderM5prog(q,body,act);
+}
+function renderM5mc(q,body,act){
+  const optsEl=document.createElement('div'); optsEl.className='mc-options';
+  body.appendChild(optsEl);
+  let sel=-1, answered=false;
+  q.options.forEach((opt,i)=>{
+    const b=document.createElement('div'); b.className='mc-opt';
+    b.innerHTML=`<span class="mc-letter">${'ABCDE'[i]}</span><span>${opt}</span>`;
+    b.onclick=()=>{ if(answered) return; sel=i; optsEl.querySelectorAll('.mc-opt').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); sfx.click(); };
+    optsEl.appendChild(b);
+  });
+  const verify=document.createElement('button'); verify.className='btn'; verify.textContent='✔ Verificar';
+  verify.onclick=()=>{
+    if(answered) return; if(sel<0){ const fb=$('feedback'); fb.className='feedback hint show'; fb.innerHTML='Selecione uma opção.'; return; }
+    answered=true;
+    const opts=optsEl.querySelectorAll('.mc-opt');
+    opts.forEach((o,i)=>{ o.classList.remove('sel'); if(i===q.correct) o.classList.add('right'); else if(i===sel) o.classList.add('wrong'); });
+    const ok=sel===q.correct;
+    const fb=$('feedback');
+    if(ok){ fb.className='feedback ok show'; fb.innerHTML=`✅ <b>Correto!</b> ${q.explain}`; q.explainOK=q.explain; bumpMastery(q.topic,true); questionSolved(); }
+    else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Incorreto.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); }
+  };
+  act.appendChild(verify);
+}
+function renderM5tf(q,body,act){
+  const wrap=document.createElement('div'); wrap.className='tf-statement';
+  wrap.innerHTML=q.statement; body.appendChild(wrap);
+  const btns=document.createElement('div'); btns.className='tf-buttons'; body.appendChild(btns);
+  let answered=false;
+  ['Verdadeiro','Falso'].forEach((label,i)=>{
+    const b=document.createElement('button'); b.className='tf-btn'; b.textContent=label; b.dataset.v=i===0;
+    b.onclick=()=>{ if(answered) return; answered=true; const val=i===0; const ok=val===q.correct;
+      btns.querySelectorAll('.tf-btn').forEach(x=>{ x.classList.remove('sel'); });
+      b.classList.add(ok?'right':'wrong');
+      // marca a correta
+      btns.querySelectorAll('.tf-btn').forEach(x=>{ if((x.dataset.v==='true')===q.correct) x.classList.add('right'); });
+      const fb=$('feedback');
+      if(ok){ fb.className='feedback ok show'; fb.innerHTML=`✅ <b>Correto!</b> ${q.explain}`; q.explainOK=q.explain; bumpMastery(q.topic,true); questionSolved(); }
+      else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Incorreto.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); }
+    };
+    btns.appendChild(b);
+  });
+}
+function renderM5ar(q,body,act){
+  // Assertion-reasoning: afirmação + (V/F) + justificativa curta opcional
+  const wrap=document.createElement('div'); wrap.className='ar-statement'; wrap.innerHTML=q.statement;
+  body.appendChild(wrap);
+  const row=document.createElement('div'); row.className='ar-row'; body.appendChild(row);
+  let answered=false;
+  ['Verdadeiro','Falso'].forEach((label,i)=>{
+    const b=document.createElement('button'); b.className='ar-btn'; b.textContent=label; b.dataset.v=i===0;
+    b.onclick=()=>{ if(answered) return; answered=true; const val=i===0; const ok=val===q.correct;
+      row.querySelectorAll('.ar-btn').forEach(x=>x.classList.remove('sel'));
+      b.classList.add(ok?'right':'wrong');
+      row.querySelectorAll('.ar-btn').forEach(x=>{ if((x.dataset.v==='true')===q.correct) x.classList.add('right'); });
+      const fb=$('feedback');
+      if(ok){ fb.className='feedback ok show'; fb.innerHTML=`✅ <b>Correto!</b> ${q.explain}`; q.explainOK=q.explain; bumpMastery(q.topic,true); questionSolved(); }
+      else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Incorreto.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); }
+    };
+    row.appendChild(b);
+  });
+}
+function renderM5tbl(q,body,act){
+  // Tabela de controle com buracos: escolher valor de cada sinal em branco
+  const instr=q.instruction||'sw';
+  const correctVals=CONTROL[instr];
+  const blanks=q.blanks||['RegDst','ALUSrc','MemtoReg'];
+  const wrap=document.createElement('div'); wrap.className='tbl-question';
+  wrap.innerHTML=`<p>Complete os sinais em branco para a instrução <b>${INSTR[instr].label}</b> (<b>${INSTR[instr].name}</b>):</p>`;
+  const tbl=document.createElement('table'); tbl.className='ctl-guess';
+  tbl.innerHTML=`<tr><th>Sinal</th><th>${instr}</th></tr>`;
+  const selects={};
+  SIGNAL_NAMES.forEach(nm=>{
+    const tr=document.createElement('tr');
+    const isBlank=blanks.includes(nm);
+    if(isBlank){
+      tr.innerHTML=`<td>${nm}</td><td><select data-sig="${nm}"><option value="">?</option><option value="0">0</option><option value="1">1</option><option value="X">X</option></select></td>`;
+    } else {
+      const v=correctVals[SIGNAL_NAMES.indexOf(nm)];
+      tr.innerHTML=`<td>${nm}</td><td class="correct-val">${v}</td>`;
+    }
+    tbl.appendChild(tr);
+  });
+  wrap.appendChild(tbl); body.appendChild(wrap);
+  const verify=document.createElement('button'); verify.className='btn'; verify.textContent='✔ Verificar';
+  verify.onclick=()=>{
+    let allOk=true; const fb=$('feedback');
+    blanks.forEach(nm=>{
+      const sel=tbl.querySelector(`select[data-sig="${nm}"]`);
+      const td=sel.closest('td'); const got=sel.value; const want=String(correctVals[SIGNAL_NAMES.indexOf(nm)]);
+      if(got===want){ td.classList.add('right'); } else { td.classList.add('wrong'); allOk=false; }
+      sel.disabled=true;
+    });
+    if(allOk){ fb.className='feedback ok show'; fb.innerHTML=`✅ <b>Correto!</b> ${q.explain}`; q.explainOK=q.explain; bumpMastery(q.topic,true); questionSolved(); }
+    else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Alguns sinais errados.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); }
+  };
+  act.appendChild(verify);
+}
+function renderM5prog(q,body,act){
+  renderProgramPractice(q,body,act,(ok)=>{
+    const fb=$('feedback');
+    if(ok){
+      fb.className='feedback ok show';
+      fb.innerHTML=`✅ <b>Correto!</b> ${programExplain(q)}`;
+      q.explainOK=programExplain(q);
+      bumpMastery(q.topic,true);
+      questionSolved(60);
+    } else {
+      fb.className='feedback err show';
+      fb.innerHTML=`❌ <b>Revise a tabela.</b> ${programExplain(q)}`;
+      sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife();
+    }
+  });
+}
+function renderProgramPractice(q,body,act,onDone){
+  const p=q.program, s=q.solution;
+  const card=document.createElement('div');
+  card.className='program-card';
+  card.innerHTML=`<div class="program-title">${p.title}</div>
+    <div class="program-meta">
+      <span class="program-pill">Frequência <b>${p.freqMHz} MHz</b></span>
+      <span class="program-pill">${escHTML(p.setup)}</span>
+    </div>
+    <pre class="program-code">${escHTML(p.code.map((line,i)=>String(i+1).padStart(2,'0')+'  '+line).join('\n'))}</pre>
+    <table class="program-table" id="progTable">
+      <tr><th>Tipo</th><th>Qtde executada</th><th>Tempo por instrução</th><th>Ciclos por instrução</th><th>Ciclos totais</th></tr>
+      ${p.rows.map(row=>`<tr data-row="${row}"><td>${row}</td><td><input type="number" data-kind="count" inputmode="numeric"></td><td>${p.timeNs[row]} ns</td><td><input type="number" data-kind="rowCpi" step="0.01" inputmode="decimal"></td><td><input type="number" data-kind="rowCycles" step="0.01" inputmode="decimal"></td></tr>`).join('')}
+    </table>
+    <div class="program-summary">
+      <div class="numrow" id="progTotalRow"><label>Total de instruções:</label><input type="number" id="progTotal" inputmode="numeric"></div>
+      <div class="numrow" id="progCpiRow"><label>CPI médio:</label><input type="number" id="progCpi" step="0.01" inputmode="decimal"></div>
+      <div class="numrow" id="progTimeRow"><label>Tempo total:</label><input type="number" id="progTime" step="0.001" inputmode="decimal"><span class="unit-suf">us</span></div>
+      <div class="numrow" id="progFinalRow"><label>${p.finalLabel}:</label><input type="number" id="progFinal" inputmode="numeric"></div>
+    </div>`;
+  body.appendChild(card);
+  const verify=document.createElement('button'); verify.className='btn'; verify.textContent='✔ Verificar tabela';
+  verify.onclick=()=>{
+    let ok=true;
+    p.rows.forEach(row=>{
+      const tr=body.querySelector(`tr[data-row="${row}"]`);
+      const countGot=parseInt(tr.querySelector('input[data-kind="count"]').value,10);
+      const cpiGot=tr.querySelector('input[data-kind="rowCpi"]').value;
+      const cyclesGot=tr.querySelector('input[data-kind="rowCycles"]').value;
+      const right=countGot===(p.counts[row]||0) && near(cpiGot,s.rowCpi[row],0.03) && near(cyclesGot,s.rowCycles[row],0.03);
+      tr.classList.toggle('right',right); tr.classList.toggle('wrong',!right);
+      if(!right) ok=false;
+    });
+    const totalOk=parseInt($('progTotal').value,10)===s.totalInstr;
+    const cpiOk=near($('progCpi').value,s.avgCpi,0.06);
+    const timeOk=near($('progTime').value,s.timeUs,0.01);
+    const finalOk=parseInt($('progFinal').value,10)===s.finalValue;
+    mark('progTotalRow',totalOk); mark('progCpiRow',cpiOk); mark('progTimeRow',timeOk); mark('progFinalRow',finalOk);
+    onDone(ok && totalOk && cpiOk && timeOk && finalOk);
+  };
+  act.appendChild(verify);
+}
+
+/* ===========================================================================
+   14. JS — SEÇÃO K: SIMULADO CRONOMETRADO
+   =========================================================================== */
+const SIM = { queue:[], idx:0, timed:false, timeLeft:0, timer:null, results:[], assistedAny:false };
+function buildSimQueue(r){
+  r=r||Math.random;
+  // 10 questões: inclui treino de programa/tabela dinâmica no estilo da prova.
+  return shuffle([
+    geraControleQ5(r),
+    q5('tf','hard',{topic:'Q2',statement:'A instrução sw não escreve no banco de registradores, por isso RegWrite=0.',correct:true,explain:'V. sw grava na memória, não no reg. → RegWrite=0.'}),
+    geraTempoQ5(r),
+    q5('mc','hard',{topic:'Q3a',question:'Qual instrução é a mais lenta no uniciclo (maior caminho crítico)?',options:['sw','lw','tipo-R','beq'],correct:1,explain:'A lw é a mais lenta: Mem.Instr+Reg+ULA+Mem.Dados+EscreveReg = 12 ns.'}),
+    geraBenchmarkQ3(r),
+    q5('mc','hard',{topic:'Q3b',question:'O speedup do multiciclo sobre o uniciclo é:',options:['Sempre < 1','Sempre = 1','Sempre > 1','Depende, mas geralmente > 1'],correct:3,explain:'Depende da mistura, mas geralmente > 1 porque no multiciclo cada instrução usa só o tempo que precisa.'}),
+    geraPipelineQ5(r),
+    q5('ar','hard',{topic:'Q4',statement:'No pipeline, após preenchido, termina em média 1 instrução por ciclo.',correct:true,explain:'V. As fases se sobrepõem; uma instrução completa por ciclo, em média.'}),
+    geraProgramaQ5(r),
+    geraProgramaQ5(r)
+  ]);
+}
+function startSim(timed){
+  SIM.queue=buildSimQueue(); SIM.idx=0; SIM.timed=!!timed; SIM.results=[]; SIM.assistedAny=false;
+  if(timed){ SIM.timeLeft=12*60; } // 12 minutos
+  $('scr-sim').querySelector('.sim-timer').style.display=timed?'block':'none';
+  showScreen('scr-sim');
+  renderSimQuestion();
+  if(timed) startSimTimer();
+}
+function startSimTimer(){
+  clearInterval(SIM.timer);
+  const upd=()=>{
+    const m=Math.floor(SIM.timeLeft/60), s=SIM.timeLeft%60;
+    const el=$('simTimer');
+    el.textContent=`⏱ ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    el.classList.toggle('urgent', SIM.timeLeft<=60);
+    if(SIM.timeLeft<=0){ clearInterval(SIM.timer); finishSim(); return; }
+    SIM.timeLeft--;
+  };
+  upd(); SIM.timer=setInterval(upd,1000);
+}
+function renderSimQuestion(){
+  const q=SIM.queue[SIM.idx];
+  $('simTag').textContent='📝 '+MODE_NAMES[q.mode];
+  $('simProg').textContent=`${SIM.idx+1}/${SIM.queue.length}`;
+  const body=$('simBody'), act=$('simActions');
+  body.innerHTML=''; act.innerHTML='';
+  $('simFeedback').className='feedback'; $('simFeedback').innerHTML='';
+  // dispatcha para o renderizador do modo (5 usa renderMode5 adaptado p/ simulado)
+  if(q.mode===5){ renderM5forSim(q,body,act); }
+  else if(q.mode===3){ renderM3forSim(q,body,act); }
+}
+// Modo 5 adaptado p/ simulado: ao acertar/errar, registra resultado e mostra "Próxima"
+function renderM5forSim(q,body,act){
+  // reutiliza renderMode5 mas intercepta o resultado
+  // Para simplicidade, renderiza como MC/TF/AR/TBL mas com handler que registra no SIM
+  body.innerHTML=`<div class="prompt">${q.question||q.statement||''}</div>${q.times?timeContextHTML(q.times):''}`;
+  const dispatchDone=(ok)=>{
+    SIM.results.push({q,ok,assisted:SIM.assistedAny});
+    SIM.assistedAny=false;
+    const fb=$('simFeedback');
+    fb.className=ok?'feedback ok show':'feedback err show';
+    fb.innerHTML=(ok?'✅ <b>Correto.</b> ':'❌ <b>Incorreto.</b> ')+q.explain;
+    act.innerHTML='';
+    const nx=document.createElement('button'); nx.className='btn green';
+    nx.textContent=SIM.idx+1>=SIM.queue.length?'Ver resultado 📊':'Próxima →';
+    nx.onclick=()=>{ SIM.idx++; if(SIM.idx>=SIM.queue.length){ finishSim(); } else renderSimQuestion(); };
+    act.appendChild(nx);
+  };
+  // constrói UI conforme subtipo
+  if(q.sub==='prog'){
+    renderProgramPractice(q,body,act,dispatchDone);
+  } else if(q.sub==='mc'){
+    const optsEl=document.createElement('div'); optsEl.className='mc-options'; body.appendChild(optsEl);
+    let sel=-1, answered=false;
+    q.options.forEach((opt,i)=>{
+      const b=document.createElement('div'); b.className='mc-opt';
+      b.innerHTML=`<span class="mc-letter">${'ABCDE'[i]}</span><span>${opt}</span>`;
+      b.onclick=()=>{ if(answered) return; sel=i; optsEl.querySelectorAll('.mc-opt').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); sfx.click(); };
+      optsEl.appendChild(b);
+    });
+    const verify=document.createElement('button'); verify.className='btn'; verify.textContent='✔ Confirmar';
+    verify.onclick=()=>{ if(answered) return; if(sel<0){ return; } answered=true;
+      optsEl.querySelectorAll('.mc-opt').forEach((o,i)=>{ if(i===q.correct) o.classList.add('right'); else if(i===sel) o.classList.add('wrong'); });
+      dispatchDone(sel===q.correct);
+    };
+    act.appendChild(verify);
+  } else if(q.sub==='tf'||q.sub==='ar'){
+    const wrap=document.createElement('div'); wrap.className=q.sub==='tf'?'tf-statement':'ar-statement'; wrap.innerHTML=q.statement; body.appendChild(wrap);
+    const btns=document.createElement('div'); btns.className=q.sub==='tf'?'tf-buttons':'ar-row'; body.appendChild(btns);
+    let answered=false;
+    ['Verdadeiro','Falso'].forEach((label,i)=>{
+      const b=document.createElement('button'); b.className=q.sub==='tf'?'tf-btn':'ar-btn'; b.textContent=label;
+      b.onclick=()=>{ if(answered) return; answered=true; const val=i===0; const ok=val===q.correct;
+        btns.querySelectorAll('button').forEach(x=>{ x.classList.remove('sel'); if((x.textContent==='Verdadeiro')===q.correct) x.classList.add('right'); });
+        b.classList.add(ok?'right':'wrong');
+        dispatchDone(ok);
+      };
+      btns.appendChild(b);
+    });
+  }
+  // botão "Me ensina" (invalida a questão: conta como errada)
+  addSimTeachBtn(q,act);
+}
+function renderM3forSim(q,body,act){
+  // benchmark no simulado: 3 entradas numéricas
+  const t=q.times; const mix=q.mix; const per=periodUniciclo(t);
+  let avg=0; for(const k in mix){ avg+=(mix[k]/100)*instrTime(k,t); } avg=Math.round(avg*100)/100;
+  const speed=Math.round((per/avg)*100)/100;
+  const timeRows=`<div class="timesgrid">
+      <div class="timecell">Mem. Instruções<b>${t.imem} ns</b></div>
+      <div class="timecell">Banco Reg.<b>${t.regread} ns</b></div>
+      <div class="timecell">ULA<b>${t.alu} ns</b></div>
+      <div class="timecell">Mem. Dados<b>${t.dmem} ns</b></div></div>`;
+  body.innerHTML=`<p class="prompt">Benchmark <b>${q.name}</b>: <span class="mono">lw ${mix.lw}% · sw ${mix.sw}% · R ${mix.R}% · beq ${mix.beq}% · j ${mix.j}%</span></p>
+    ${timeRows}
+    <div class="numrow"><label>a) Período uniciclo:</label><input type="number" id="simA" step="0.1"></div>
+    <div class="numrow"><label>b) Média multiciclo:</label><input type="number" id="simB" step="0.01"></div>
+    <div class="numrow"><label>c) Speedup:</label><input type="number" id="simC" step="0.01"></div>`;
+  const verify=document.createElement('button'); verify.className='btn'; verify.textContent='✔ Confirmar';
+  verify.onclick=()=>{
+    const o1=near($('simA').value,per), o2=near($('simB').value,avg,0.06), o3=near($('simC').value,speed,0.03);
+    const ok=o1&&o2&&o3;
+    SIM.results.push({q,ok,assisted:SIM.assistedAny}); SIM.assistedAny=false;
+    const parts=[]; for(const k in mix){ parts.push(`${mix[k]}%·${instrTime(k,t)}`); }
+    const fb=$('simFeedback');
+    fb.className=ok?'feedback ok show':'feedback err show';
+    fb.innerHTML=(ok?'✅ ':'❌ ')+`<b>Uniciclo=${per} ns · Média=${avg} ns · Speedup=${speed}×</b>`;
+    act.innerHTML='';
+    const nx=document.createElement('button'); nx.className='btn green';
+    nx.textContent=SIM.idx+1>=SIM.queue.length?'Ver resultado 📊':'Próxima →';
+    nx.onclick=()=>{ SIM.idx++; if(SIM.idx>=SIM.queue.length) finishSim(); else renderSimQuestion(); };
+    act.appendChild(nx);
+  };
+  act.appendChild(verify);
+  addSimTeachBtn(q,act);
+}
+function addSimTeachBtn(q,act){
+  const t=document.createElement('button'); t.className='btn ghost small'; t.innerHTML='📖 Me ensina';
+  t.onclick=()=>{ SIM.assistedAny=true; sfx.click();
+    const fb=$('simFeedback'); fb.className='feedback hint show';
+    let exp=q.explain||'';
+    if(q.sub==='prog'){
+      exp=programExplain(q);
+    } else if(q.mode===3 && q.mix){ const t2=q.times; const per=periodUniciclo(t2); let avg=0;
+      for(const k in q.mix){ avg+=(q.mix[k]/100)*instrTime(k,t2); } avg=Math.round(avg*100)/100;
+      const sp=Math.round((per/avg)*100)/100;
+      exp=`Uniciclo = ${per} ns (lw). Média multiciclo = Σ(fração×tempo) = ${avg} ns. Speedup = ${per}/${avg} = ${sp}×.`; }
+    fb.innerHTML=`📖 ${exp}`;
+  };
+  act.appendChild(t);
+}
+function finishSim(){
+  clearInterval(SIM.timer);
+  // calcula nota: cada questão = 10/total; assistida = 0 (invalidada)
+  const total=SIM.queue.length;
+  let correctCount=0; const perTopic={Q2:[0,0],Q3a:[0,0],Q3b:[0,0],Q4:[0,0],QProg:[0,0]};
+  SIM.results.forEach(r=>{
+    const ok = r.assisted ? false : r.ok;
+    if(ok) correctCount++;
+    if(perTopic[r.q.topic]){ perTopic[r.q.topic][1]++; if(ok) perTopic[r.q.topic][0]++; }
+  });
+  const grade=Math.round((correctCount/total)*100)/10;
+  // salva histórico
+  save.simBest=Math.max(save.simBest,grade);
+  const entry={date:new Date().toLocaleDateString('pt-BR'),score:grade,perTopic:{}};
+  for(const k in perTopic){ const [c,tot]=perTopic[k]; entry.perTopic[k]=tot?Math.round(c/tot*100)+'%':'—'; }
+  save.simHistory.push(entry); if(save.simHistory.length>3) save.simHistory.shift();
+  persist();
+  // renderiza resultado
+  $('simGrade').textContent=grade.toFixed(1);
+  $('simGrade').className='sim-grade '+(grade>=6?'pass':'fail');
+  $('simResTitle').textContent=grade>=6?'Aprovado! 🎉':'Continue treinando 💪';
+  $('simResEmoji').textContent=grade>=6?'🎉':'📊';
+  $('simResSub').textContent=`${correctCount} de ${total} questões corretas · Melhor nota: ${save.simBest.toFixed(1)}`;
+  $('simTopics').innerHTML=Object.keys(perTopic).map(k=>{
+    const [c,tot]=perTopic[k]; const pct=tot?Math.round(c/tot*100):0;
+    return `<div class="sim-topic ${pct>=50?'good':'bad'}">${k}<b>${tot?pct+'%':'—'}</b></div>`;
+  }).join('');
+  // gabarito comentado
+  $('simGabarito').innerHTML=SIM.results.map((r,i)=>{
+    const ok=r.assisted?false:r.ok;
+    let exp=r.q.explain||'';
+    if(r.q.sub==='prog'){
+      exp=programExplain(r.q);
+    } else if(r.q.mode===3 && r.q.mix){ const t2=r.q.times; const per=periodUniciclo(t2); let avg=0;
+      for(const k in r.q.mix){ avg+=(r.q.mix[k]/100)*instrTime(k,t2); } avg=Math.round(avg*100)/100;
+      const sp=Math.round((per/avg)*100)/100; exp=`Uniciclo=${per} · Média=${avg} · Speedup=${sp}×`; }
+    return `<div class="gab-item"><div class="gab-q"><b>${i+1}.</b> [${r.q.topic||'—'}] <span class="${ok?'gab-ok':'gab-fail'}">${ok?'✓ Correto':'✗ '+(r.assisted?'(usou ajuda)':'Incorreto')}</span></div><div class="gab-exp">${exp}</div></div>`;
+  }).join('');
+  showScreen('scr-sim-result');
+}
+function showSimSetup(){
+  $('simBestInfo').innerHTML=save.simBest>0
+    ?`🏆 Melhor nota: <b>${save.simBest.toFixed(1)}/10</b>${save.simHistory.length?` · Últimas: ${save.simHistory.map(h=>h.score.toFixed(1)).join(', ')}`:''}`
+    :'Sem simulados ainda. Boa sorte no primeiro!';
+  showScreen('scr-sim-setup');
+}
+
+// ---- Ligações de botões / boot ----
+function boot(){
+  refreshHUD();
+  // Home
+  $('btnStart').onclick=()=>{ sfx.click(); renderLevels(); showScreen('scr-levels'); };
+  $('btnFree').onclick=()=>{ sfx.click(); startFree(); };
+  $('btnProvaInf').onclick=()=>{ sfx.click(); startProvaInfinita(); };
+  $('btnSimulado').onclick=()=>{ sfx.click(); showSimSetup(); };
+  $('btnLoad').onclick=()=>{ sfx.click(); renderLevels(); showScreen('scr-levels'); toast('💾 Progresso carregado', `Nível ${save.unlocked}, ${save.xp} XP.`); };
+  $('btnTutorial').onclick=()=>{ sfx.click(); tutIdx=0; renderTutorial(); showScreen('scr-tutorial'); };
+  $('btnLearn').onclick=()=>{ sfx.click(); renderAcademy(); showScreen('scr-learn'); };
+  $('btnAch2').onclick=()=>{ sfx.click(); renderAchievements(); showScreen('scr-ach'); };
+  $('btnReset').onclick=()=>{
+    if(confirm('Apagar todo o progresso (XP, níveis, conquistas)?')){
+      save=JSON.parse(JSON.stringify(DEFAULT_SAVE)); persist(); toast('🗑 Progresso apagado','Recomeçando do zero.');
+    }
+  };
+  // Tutorial
+  $('tutPrev').onclick=()=>{ if(tutIdx>0){tutIdx--; renderTutorial(); sfx.click();} };
+  $('tutNext').onclick=()=>{ if(tutIdx<TUTORIAL.length-1){tutIdx++; renderTutorial(); sfx.click();} else { sfx.click(); renderLevels(); showScreen('scr-levels'); } };
+  // Academia / Lições
+  $('learnBack').onclick=()=>{ sfx.click(); showScreen('scr-home'); };
+  $('learnToPractice').onclick=()=>{ sfx.click(); renderLevels(); showScreen('scr-levels'); };
+  $('lessonPrev').onclick=()=>{ if(LS.i>0){ LS.i--; renderLessonSlide(); sfx.click(); } };
+  $('lessonNext').onclick=()=>{
+    const ch=LESSONS[LS.ch];
+    if(LS.i<ch.slides.length-1){ LS.i++; renderLessonSlide(); sfx.click(); }
+    else { finishChapter(); }
+  };
+  $('lessonExit').onclick=()=>{ sfx.click(); renderAcademy(); showScreen('scr-learn'); };
+  // HUD / topo
+  $('learnToggle').onclick=()=>{
+    save.learnMode=!save.learnMode; persist(); sfx.click();
+    toast(save.learnMode?'🎓 Modo Aprendiz':'📝 Modo Prova',
+      save.learnMode?'O jogo te ensina: botão "Me ensina" grátis.':'Sem ajuda grátis; dicas custam XP.');
+    if(document.getElementById('scr-game').classList.contains('active')) renderQuestion();
+  };
+  $('muteBtn').onclick=()=>{ save.muted=!save.muted; persist(); if(!save.muted) sfx.click(); };
+  $('homeBtn').onclick=()=>{ sfx.click(); refreshHUD(); showScreen('scr-home'); };
+  // Resultado
+  $('resMap').onclick=()=>{ sfx.click(); renderLevels(); showScreen('scr-levels'); };
+  // Conquistas
+  $('achBack').onclick=()=>{ sfx.click(); showScreen('scr-home'); };
+  // Glossário
+  $('glBtn').onclick=()=>{ sfx.click(); openGlossary(); };
+  $('glClose').onclick=()=>{ closeGlossary(); };
+  $('glOverlay').onclick=(e)=>{ if(e.target===$('glOverlay')) closeGlossary(); };
+  $('glSearch').oninput=()=>renderGlossary();
+  // Simulado
+  $('simSetupBack').onclick=()=>{ sfx.click(); showScreen('scr-home'); };
+  $('simStartReal').onclick=()=>{ sfx.click(); startSim(true); };
+  $('simStartTreino').onclick=()=>{ sfx.click(); startSim(false); };
+  $('simRetry').onclick=()=>{ sfx.click(); showSimSetup(); };
+  $('simHome').onclick=()=>{ sfx.click(); refreshHUD(); showScreen('scr-home'); };
+}
+boot();
+</script>
+</body>
+</html>
