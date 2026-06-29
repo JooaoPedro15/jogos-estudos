@@ -1062,6 +1062,16 @@ function loseLife(){
   G.lives--; updateLivesHUD();
   if(G.lives<=0){ failLevel(); }
 }
+function addWrongNextButton(){
+  if(document.getElementById('scr-result').classList.contains('active')) return;
+  if(!G.free && G.lives<=0) return;
+  const act=$('qActions'); act.innerHTML='';
+  const nx=document.createElement('button');
+  nx.className='btn green';
+  nx.textContent = (G.idx+1>=G.queue.length && !G.free) ? '🏁 Finalizar nível' : 'Próxima →';
+  nx.onclick=nextQuestion;
+  act.appendChild(nx);
+}
 function winLevel(){
   sfx.win();
   if(G.level>=save.unlocked && save.unlocked<LEVELS.length){ save.unlocked=G.level+1; }
@@ -2225,7 +2235,7 @@ function renderM5mc(q,body,act){
     const ok=sel===q.correct;
     const fb=$('feedback');
     if(ok){ fb.className='feedback ok show'; fb.innerHTML=`✅ <b>Correto!</b> ${q.explain}`; q.explainOK=q.explain; bumpMastery(q.topic,true); questionSolved(); }
-    else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Incorreto.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); }
+    else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Incorreto.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); addWrongNextButton(); }
   };
   act.appendChild(verify);
 }
@@ -2243,7 +2253,7 @@ function renderM5tf(q,body,act){
       btns.querySelectorAll('.tf-btn').forEach(x=>{ if((x.dataset.v==='true')===q.correct) x.classList.add('right'); });
       const fb=$('feedback');
       if(ok){ fb.className='feedback ok show'; fb.innerHTML=`✅ <b>Correto!</b> ${q.explain}`; q.explainOK=q.explain; bumpMastery(q.topic,true); questionSolved(); }
-      else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Incorreto.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); }
+      else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Incorreto.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); addWrongNextButton(); }
     };
     btns.appendChild(b);
   });
@@ -2262,7 +2272,7 @@ function renderM5ar(q,body,act){
       row.querySelectorAll('.ar-btn').forEach(x=>{ if((x.dataset.v==='true')===q.correct) x.classList.add('right'); });
       const fb=$('feedback');
       if(ok){ fb.className='feedback ok show'; fb.innerHTML=`✅ <b>Correto!</b> ${q.explain}`; q.explainOK=q.explain; bumpMastery(q.topic,true); questionSolved(); }
-      else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Incorreto.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); }
+      else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Incorreto.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); addWrongNextButton(); }
     };
     row.appendChild(b);
   });
@@ -2299,7 +2309,7 @@ function renderM5tbl(q,body,act){
       sel.disabled=true;
     });
     if(allOk){ fb.className='feedback ok show'; fb.innerHTML=`✅ <b>Correto!</b> ${q.explain}`; q.explainOK=q.explain; bumpMastery(q.topic,true); questionSolved(); }
-    else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Alguns sinais errados.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); }
+    else{ fb.className='feedback err show'; fb.innerHTML=`❌ <b>Alguns sinais errados.</b> ${q.explain}`; sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); addWrongNextButton(); }
   };
   act.appendChild(verify);
 }
@@ -2315,7 +2325,7 @@ function renderM5prog(q,body,act){
     } else {
       fb.className='feedback err show';
       fb.innerHTML=`❌ <b>Revise a tabela.</b> ${programExplain(q)}`;
-      sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife();
+      sfx.err(); bumpMastery(q.topic,false); G.errInQ++; loseLife(); addWrongNextButton();
     }
   });
 }

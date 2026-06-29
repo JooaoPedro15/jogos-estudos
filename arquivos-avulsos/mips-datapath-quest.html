@@ -1080,6 +1080,20 @@ function showRunContinue(label, fn){
   const act=$('qActions'); act.innerHTML='';
   const nx=document.createElement('button'); nx.className='btn green'; nx.textContent=label; nx.onclick=fn; act.appendChild(nx);
 }
+function addWrongNextButton(){
+  if(document.getElementById('scr-result').classList.contains('active')) return;
+  if(RUN.active){
+    showRunContinue('Continuar →', ()=>renderQuestion());
+    return;
+  }
+  if(!G.free && G.lives<=0) return;
+  const act=$('qActions'); act.innerHTML='';
+  const nx=document.createElement('button');
+  nx.className='btn green';
+  nx.textContent = (G.idx+1>=G.queue.length && !G.free) ? '🏁 Finalizar nível' : 'Próxima →';
+  nx.onclick=nextQuestion;
+  act.appendChild(nx);
+}
 function advanceBossPhase(){
   toast('Boss Final','Boss sera implementado na proxima etapa da run.');
   RUN.boss=false;
@@ -1631,6 +1645,7 @@ function failAsm(msg){
   if(RUN.active) runLoseLife(); else loseLife();
   const fb=$('feedback'); fb.className='feedback err show'; fb.innerHTML='&#10060; '+msg;
   sfx.err();
+  addWrongNextButton();
 }
 
 /* ===========================================================================
