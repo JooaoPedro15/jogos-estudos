@@ -2,12 +2,12 @@ import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
 
 import type { ChallengeStep } from '../../types/challenge';
-import type { EncounterProgress, StepAnswer } from '../../roguelike/stepEngine';
+import type { StepAnswer, StepProgress } from '../../evaluators/stepEvaluator';
 
 export type StepPanelProps = {
   step: ChallengeStep;
-  progress: EncounterProgress;
-  /** Número total de etapas do desafio atual, para exibir "etapa X/N". */
+  progress: StepProgress;
+  /** Numero total de etapas do desafio atual, para exibir "etapa X/N". */
   totalSteps: number;
   onAnswer: (answer: StepAnswer) => void;
 };
@@ -19,7 +19,6 @@ export type StepPanelProps = {
  */
 export function StepPanel({ step, progress, totalSteps, onAnswer }: StepPanelProps) {
   const stepNumber = Math.min(progress.stepIndex + 1, totalSteps);
-  const hintRevealed = step.hint && progress.revealedHintStepIds.includes(step.id);
 
   return (
     <section className="step-panel" aria-label="Etapa do desafio">
@@ -32,12 +31,6 @@ export function StepPanel({ step, progress, totalSteps, onAnswer }: StepPanelPro
 
       <p className="step-prompt">{step.prompt}</p>
 
-      {hintRevealed ? (
-        <p className="step-hint" role="note">
-          <strong>Dica:</strong> {step.hint}
-        </p>
-      ) : null}
-
       <StepBody step={step} progress={progress} onAnswer={onAnswer} />
     </section>
   );
@@ -45,7 +38,7 @@ export function StepPanel({ step, progress, totalSteps, onAnswer }: StepPanelPro
 
 type StepBodyProps = {
   step: ChallengeStep;
-  progress: EncounterProgress;
+  progress: StepProgress;
   onAnswer: (answer: StepAnswer) => void;
 };
 
@@ -59,6 +52,8 @@ function StepBody({ step, progress, onAnswer }: StepBodyProps) {
       return <GapStepBody step={step} onAnswer={onAnswer} />;
     case 'blocos':
       return <BlockStepBody step={step} onAnswer={onAnswer} />;
+    case 'clique':
+      return <ClickStepBody step={step} onAnswer={onAnswer} />;
     case 'revisao':
       return <ReviewStepBody step={step} onAnswer={onAnswer} />;
     default: {
@@ -71,13 +66,12 @@ function StepBody({ step, progress, onAnswer }: StepBodyProps) {
 
 type ChoiceStepBodyProps = {
   step: Extract<ChallengeStep, { kind: 'interpretar' | 'simular' | 'complexidade' }>;
-  progress: EncounterProgress;
+  progress: StepProgress;
   onAnswer: (answer: StepAnswer) => void;
 };
 
-function ChoiceStepBody({ step, progress, onAnswer }: ChoiceStepBodyProps) {
-  const eliminatedIds = progress.eliminatedOptionIds[step.id] ?? [];
-  const visibleOptions = step.options.filter((option) => !eliminatedIds.includes(option.id));
+function ChoiceStepBody({ step, onAnswer }: ChoiceStepBodyProps) {
+  const visibleOptions = step.options;
 
   return (
     <div className="choice-grid" role="group" aria-label="Alternativas">
@@ -91,6 +85,69 @@ function ChoiceStepBody({ step, progress, onAnswer }: ChoiceStepBodyProps) {
           {option.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+type ClickStepBodyProps = {
+  step: Extract<ChallengeStep, { kind: 'clique' }>;
+  onAnswer: (answer: StepAnswer) => void;
+};
+
+function ClickStepBody({ step, onAnswer }: ClickStepBodyProps) {
+  const [nodeIds, setNodeIds] = useState<string[]>([]);
+  const maxClicks = step.maxClicks ?? step.targetNodeIds.length;
+
+  const handlePick = (nodeId: string) => {
+    setNodeIds((current) => {
+      if (step.selectionMode !== 'ordered' && current.includes(nodeId)) {
+        return current.filter((candidate) => candidate !== nodeId);
+      }
+
+      if (current.length >= maxClicks) {
+        return current;
+      }
+
+      return [...current, nodeId];
+    });
+  };
+
+  const handleSubmit = () => {
+    if (nodeIds.length === 0) {
+      return;
+    }
+
+    onAnswer({ kind: 'click', nodeIds });
+  };
+
+  return (
+    <div className="click-step">
+      <div className="click-targets" role="group" aria-label="Nos selecionaveis">
+        {step.targetNodeIds.map((nodeId) => {
+          const selected = nodeIds.includes(nodeId);
+
+          return (
+            <button
+              key={nodeId}
+              type="button"
+              className={`node-choice${selected ? ' is-selected' : ''}`}
+              aria-pressed={selected}
+              onClick={() => handlePick(nodeId)}
+            >
+              {nodeId}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        className="icon-command primary"
+        onClick={handleSubmit}
+        disabled={nodeIds.length === 0}
+      >
+        Confirmar selecao
+      </button>
     </div>
   );
 }

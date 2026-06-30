@@ -10,6 +10,7 @@ import type { ChallengeStep, ClickStep } from '../types/challenge';
  */
 export type StepProgress = {
   challengeId: string;
+  totalSteps?: number;
   stepIndex: number;
   resolvedStepIds: string[];
   stepErrors: Record<string, number>;
@@ -40,9 +41,10 @@ export const BASE_STEP_SCORE = 10;
 const DEFAULT_CORRECT_FEEDBACK = 'Resposta correta.';
 const DEFAULT_WRONG_FEEDBACK = 'Resposta incorreta. Reveja o raciocinio da etapa.';
 
-export function createStepProgress(challengeId: string): StepProgress {
+export function createStepProgress(challengeId: string, totalSteps?: number): StepProgress {
   return {
     challengeId,
+    ...(totalSteps === undefined ? {} : { totalSteps }),
     stepIndex: 0,
     resolvedStepIds: [],
     stepErrors: {},
@@ -67,12 +69,15 @@ function resolveCorrect(
 ): { progress: StepProgress; result: StepResult } {
   const isReview = step.kind === 'revisao';
   const scoreDelta = isReview ? 0 : BASE_STEP_SCORE;
+  const nextStepIndex = progress.stepIndex + 1;
+  const complete = isProgressComplete(progress, nextStepIndex);
 
   const next: StepProgress = {
     ...progress,
-    stepIndex: progress.stepIndex + 1,
+    stepIndex: nextStepIndex,
     resolvedStepIds: [...progress.resolvedStepIds, step.id],
     score: progress.score + scoreDelta,
+    complete,
   };
 
   const result: StepResult = {
@@ -81,7 +86,7 @@ function resolveCorrect(
     scoreDelta,
     activePath: step.activePath,
     activeNodeId: step.activeNodeId,
-    complete: false,
+    complete,
   };
 
   return { progress: next, result };
@@ -91,14 +96,18 @@ function resolveWrong(
   progress: StepProgress,
   step: ChallengeStep,
 ): { progress: StepProgress; result: StepResult } {
+  const nextStepIndex = progress.stepIndex + 1;
+  const complete = isProgressComplete(progress, nextStepIndex);
+
   const next: StepProgress = {
     ...progress,
-    stepIndex: progress.stepIndex + 1,
+    stepIndex: nextStepIndex,
     resolvedStepIds: [...progress.resolvedStepIds, step.id],
     stepErrors: {
       ...progress.stepErrors,
       [step.id]: (progress.stepErrors[step.id] ?? 0) + 1,
     },
+    complete,
   };
 
   const result: StepResult = {
@@ -108,10 +117,14 @@ function resolveWrong(
     scoreDelta: 0,
     activePath: step.activePath,
     activeNodeId: step.activeNodeId,
-    complete: false,
+    complete,
   };
 
   return { progress: next, result };
+}
+
+function isProgressComplete(progress: StepProgress, nextStepIndex: number): boolean {
+  return progress.totalSteps !== undefined && nextStepIndex >= progress.totalSteps;
 }
 
 function buildWrongFeedback(step: ChallengeStep): string {

@@ -1,410 +1,494 @@
-import {
-  Coins,
-  HeartPulse,
-  Play,
-  Plus,
-  RotateCcw,
-  Sparkles,
-  Trophy,
-  Zap,
-} from 'lucide-react';
+import { Play, RotateCcw, Sparkles, Trophy } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 
-import { cardById } from '../cards/cardLibrary';
-import type { CardId } from '../cards/cardLibrary';
-import { passiveLibrary } from '../cards/passiveLibrary';
-import type { PassiveId } from '../cards/passiveLibrary';
+import { challengeBank } from '../challenges/challengeBank';
 import {
-  chooseCardReward,
-  choosePassiveReward,
-  createNewRun,
-  getCardEnergyCost,
-  getCurrentEncounter,
-  playCard,
-  resolveEncounter,
-} from '../roguelike/runEngine';
-import type { RunState } from '../roguelike/runState';
-import { getEncounterChallenge } from '../roguelike/encounterFactory';
-import type { StructureKind } from '../types/challenge';
+  structureCatalog,
+  unlockedStructureIds,
+  type StructureCatalogItem,
+} from '../domain/structures/catalog';
+import {
+  createStepProgress,
+  resolveStep,
+  type StepAnswer,
+  type StepProgress,
+  type StepResult,
+} from '../evaluators/stepEvaluator';
+import type { Challenge, StructureKind } from '../types/challenge';
+import { StepPanel } from './components/StepPanel';
+import { StructureDiagram } from './components/StructureDiagram';
 import './App.css';
 
+type Mode = 'library' | 'trail' | 'lab' | 'errors' | 'simulado';
+
+const DEFAULT_STRUCTURE: StructureKind = 'abb';
+
+const modeLabels: Record<Mode, string> = {
+  library: 'Biblioteca',
+  trail: 'Trilha',
+  lab: 'Laboratorio',
+  errors: 'Caderno',
+  simulado: 'Simulado',
+};
+
 export default function App() {
-  const [run, setRun] = useState<RunState>(() => createNewRun());
-  const encounter = getCurrentEncounter(run);
-  const challenge = encounter ? getEncounterChallenge(encounter) : undefined;
-  const playedCards = run.playedCardIds.map((cardId) => cardById[cardId]);
-  const passiveRewards = useMemo(
-    () => passiveLibrary.filter((passive) => !run.passiveIds.includes(passive.id)).slice(0, 3),
-    [run.passiveIds],
+  const [mode, setMode] = useState<Mode>('library');
+  const [selectedStructure, setSelectedStructure] = useState<StructureKind>(DEFAULT_STRUCTURE);
+  const [activeChallengeId, setActiveChallengeId] = useState(
+    () => getFirstChallenge(DEFAULT_STRUCTURE)?.id ?? '',
   );
+  const [progressByChallenge, setProgressByChallenge] = useState<Record<string, StepProgress>>({});
+  const [lastResult, setLastResult] = useState<StepResult | undefined>();
+
+  const selectedChallenges = useMemo(
+    () => challengeBank.filter((challenge) => challenge.structure === selectedStructure),
+    [selectedStructure],
+  );
+  const activeChallenge =
+    selectedChallenges.find((challenge) => challenge.id === activeChallengeId) ??
+    selectedChallenges[0];
+  const activeProgress = activeChallenge
+    ? progressByChallenge[activeChallenge.id] ??
+      createStepProgress(activeChallenge.id, activeChallenge.steps.length)
+    : undefined;
+
+  const handleOpenTrail = (structureId: StructureKind) => {
+    if (!unlockedStructureIds.includes(structureId)) {
+      return;
+    }
+
+    const firstChallenge = getFirstChallenge(structureId);
+    setSelectedStructure(structureId);
+    setActiveChallengeId(firstChallenge?.id ?? '');
+    setLastResult(undefined);
+    setMode('trail');
+  };
+
+  const handleSelectChallenge = (challenge: Challenge) => {
+    setActiveChallengeId(challenge.id);
+    setProgressByChallenge((current) => ({
+      ...current,
+      [challenge.id]: current[challenge.id] ?? createStepProgress(challenge.id, challenge.steps.length),
+    }));
+    setLastResult(undefined);
+  };
+
+  const handleRestartChallenge = () => {
+    if (!activeChallenge) {
+      return;
+    }
+
+    setProgressByChallenge((current) => ({
+      ...current,
+      [activeChallenge.id]: createStepProgress(activeChallenge.id, activeChallenge.steps.length),
+    }));
+    setLastResult(undefined);
+  };
+
+  const handleAnswer = (answer: StepAnswer) => {
+    if (!activeChallenge || !activeProgress) {
+      return;
+    }
+
+    const step = activeChallenge.steps[activeProgress.stepIndex];
+    if (!step) {
+      return;
+    }
+
+    const { progress, result } = resolveStep(activeProgress, step, answer);
+    setProgressByChallenge((current) => ({ ...current, [activeChallenge.id]: progress }));
+    setLastResult(result);
+  };
 
   return (
-    <main className="game-shell">
-      <aside className="run-rail" aria-label="Run">
+    <main className="domain-shell">
+      <aside className="domain-sidebar" aria-label="Navegacao principal">
         <div>
           <p className="eyebrow">AEDS II</p>
-          <h1>Run de Algoritmos</h1>
+          <h1>Estruturas</h1>
         </div>
 
-        <div className="run-progress" aria-label="Progresso">
-          <span>{`Encontro ${Math.min(run.encounterIndex + 1, run.encounters.length)}/${run.encounters.length}`}</span>
-          <div className="progress-track">
-            <span
-              style={{
-                width: `${((run.encounterIndex + 1) / run.encounters.length) * 100}%`,
-              }}
-            />
-          </div>
-        </div>
+        <nav className="mode-tabs" aria-label="Modos">
+          {(Object.keys(modeLabels) as Mode[]).map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={mode === item ? 'mode-tab is-active' : 'mode-tab'}
+              onClick={() => setMode(item)}
+            >
+              {modeLabels[item]}
+            </button>
+          ))}
+        </nav>
 
-        <div className="hud-grid" aria-label="Estado da run">
-          <Stat icon={<HeartPulse size={18} />} label={`Foco ${run.focus}/${run.maxFocus}`} />
-          <Stat icon={<Zap size={18} />} label={`Energia ${run.energy}/${run.maxEnergy}`} />
-          <Stat icon={<Coins size={18} />} label={`Moedas ${run.coins}`} />
-          <Stat icon={<Trophy size={18} />} label={`Score ${run.score}`} />
+        <div className="mastery-summary" aria-label="Resumo de dominio">
+          <strong>{`${getCompletedCount(progressByChallenge)} etapas feitas`}</strong>
+          <span>{`${getScoreTotal(progressByChallenge)} XP de pratica`}</span>
         </div>
-
-        <div className="passive-list" aria-label="Passivas">
-          <h2>Passivas</h2>
-          {run.passiveIds.length === 0 ? (
-            <p>Nenhuma passiva ativa.</p>
-          ) : (
-            <ul>
-              {run.passiveIds.map((passiveId) => (
-                <li key={passiveId}>{passiveLabel(passiveId)}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <button className="icon-command ghost" type="button" onClick={() => setRun(createNewRun())}>
-          <RotateCcw size={18} />
-          Reiniciar
-        </button>
       </aside>
 
-      <section className="game-board" aria-label="Tabuleiro">
-        {run.phase === 'victory' || run.phase === 'defeat' ? (
-          <FinalPanel run={run} onRestart={() => setRun(createNewRun())} />
-        ) : (
-          <>
-            <header className="encounter-header">
-              <div>
-                <p className="eyebrow">{encounterLabel(encounter?.kind)}</p>
-                <h2>{challenge?.title ?? 'Encontro concluido'}</h2>
-              </div>
-              <button
-                className="icon-command primary"
-                type="button"
-                onClick={() => setRun((currentRun) => resolveEncounter(currentRun))}
-                disabled={run.phase !== 'encounter'}
-              >
-                <Play size={18} />
-                Resolver encontro
-              </button>
-            </header>
+      <section className="domain-workspace">
+        {mode === 'library' ? <LibraryView onOpenTrail={handleOpenTrail} /> : null}
 
-            <div className="encounter-layout">
-              <section className="prompt-panel" aria-label="Questao">
-                {challenge ? (
-                  <>
-                    <StructureSketch structure={challenge.structure} />
-                    <p className="statement">{challenge.statement}</p>
-                    <pre>{challenge.providedCode}</pre>
-                  </>
-                ) : null}
-              </section>
+        {mode === 'trail' ? (
+          <TrailView
+            selectedStructure={selectedStructure}
+            selectedChallenges={selectedChallenges}
+            activeChallenge={activeChallenge}
+            activeProgress={activeProgress}
+            lastResult={lastResult}
+            onOpenTrail={handleOpenTrail}
+            onSelectChallenge={handleSelectChallenge}
+            onRestartChallenge={handleRestartChallenge}
+            onAnswer={handleAnswer}
+          />
+        ) : null}
 
-              <section className="play-zone" aria-label="Sequencia jogada">
-                <div className="played-strip">
-                  <h3>Sequencia</h3>
-                  {playedCards.length === 0 ? (
-                    <p className="empty-state">Nenhuma carta jogada.</p>
-                  ) : (
-                    <ol>
-                      {playedCards.map((card, index) => (
-                        <li key={`${card.id}-${index}`}>{card.name}</li>
-                      ))}
-                    </ol>
-                  )}
-                </div>
-
-                {run.lastResult ? (
-                  <div className="feedback-panel" aria-live="polite">
-                    <strong>{run.lastResult.feedback}</strong>
-                    <span>{`Score ${run.lastResult.scoreAwarded}`}</span>
-                    {run.lastResult.activeCombos.length > 0 ? (
-                      <span>
-                        Combo:{' '}
-                        {run.lastResult.activeCombos.map((combo) => combo.name).join(', ')}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {run.phase === 'reward' && encounter ? (
-                  <RewardPanel
-                    rewardCardIds={encounter.rewardCardIds}
-                    passiveRewardIds={passiveRewards.map((passive) => passive.id)}
-                    onChooseCard={(cardId) =>
-                      setRun((currentRun) => chooseCardReward(currentRun, cardId))
-                    }
-                    onChoosePassive={(passiveId) =>
-                      setRun((currentRun) => choosePassiveReward(currentRun, passiveId))
-                    }
-                  />
-                ) : null}
-              </section>
-            </div>
-
-            <section className="hand-zone" aria-label="Mao">
-              <div className="section-heading">
-                <h3>Mao</h3>
-                <span>{`${run.handCardIds.length} cartas`}</span>
-              </div>
-
-              <div className="card-grid">
-                {run.handCardIds.map((cardId, index) => (
-                  <PlayCardButton
-                    key={`${cardId}-${index}`}
-                    run={run}
-                    cardId={cardId}
-                    onPlay={() => setRun((currentRun) => playCard(currentRun, cardId))}
-                  />
-                ))}
-              </div>
-            </section>
-          </>
-        )}
+        {mode === 'lab' ? <LabView selectedStructure={selectedStructure} /> : null}
+        {mode === 'errors' ? (
+          <ErrorBookView progressByChallenge={progressByChallenge} onOpenTrail={() => setMode('trail')} />
+        ) : null}
+        {mode === 'simulado' ? <SimuladoView onStart={() => setMode('trail')} /> : null}
       </section>
     </main>
   );
 }
 
-type StatProps = {
-  icon: ReactNode;
-  label: string;
+type LibraryViewProps = {
+  onOpenTrail: (structureId: StructureKind) => void;
 };
 
-function Stat({ icon, label }: StatProps) {
+function LibraryView({ onOpenTrail }: LibraryViewProps) {
   return (
-    <div className="stat-pill">
-      {icon}
-      <span>{label}</span>
-    </div>
+    <section className="library-view" aria-label="Biblioteca de estruturas">
+      <header className="workspace-header">
+        <div>
+          <p className="eyebrow">Biblioteca</p>
+          <h2>Escolha uma estrutura</h2>
+        </div>
+        <span className="header-pill">2 liberadas / 7 em breve</span>
+      </header>
+
+      <ul className="structure-grid">
+        {structureCatalog.map((structure) => {
+          const unlocked = structure.status === 'liberada';
+          const challengeCount = getChallengeCount(structure.id);
+
+          return (
+            <li key={structure.id} className="structure-item">
+              <button
+                type="button"
+                className={`structure-card family-${structure.family}`}
+                aria-label={
+                  unlocked
+                    ? `Abrir trilha de ${structure.shortName}`
+                    : `${structure.shortName} em breve`
+                }
+                onClick={() => onOpenTrail(structure.id)}
+                disabled={!unlocked}
+              >
+                <span className="structure-topline">
+                  <span>{structure.family}</span>
+                  <StatusPill structure={structure} />
+                </span>
+                <strong>{structure.name}</strong>
+                <span className="structure-description">{structure.description}</span>
+                <span className="structure-metrics">
+                  <span>{`${challengeCount} desafios`}</span>
+                  <span>{`${structure.phaseCount} fases`}</span>
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
-type PlayCardButtonProps = {
-  run: RunState;
-  cardId: CardId;
-  onPlay: () => void;
+type TrailViewProps = {
+  selectedStructure: StructureKind;
+  selectedChallenges: Challenge[];
+  activeChallenge: Challenge | undefined;
+  activeProgress: StepProgress | undefined;
+  lastResult: StepResult | undefined;
+  onOpenTrail: (structureId: StructureKind) => void;
+  onSelectChallenge: (challenge: Challenge) => void;
+  onRestartChallenge: () => void;
+  onAnswer: (answer: StepAnswer) => void;
 };
 
-function PlayCardButton({ run, cardId, onPlay }: PlayCardButtonProps) {
-  const card = cardById[cardId];
-  const energyCost = getCardEnergyCost(run, cardId);
-  const disabled = run.phase !== 'encounter' || energyCost > run.energy;
+function TrailView({
+  selectedStructure,
+  selectedChallenges,
+  activeChallenge,
+  activeProgress,
+  lastResult,
+  onOpenTrail,
+  onSelectChallenge,
+  onRestartChallenge,
+  onAnswer,
+}: TrailViewProps) {
+  const selected = getStructure(selectedStructure);
+  const currentStep = activeChallenge?.steps[activeProgress?.stepIndex ?? 0];
 
   return (
-    <button
-      className={`play-card ${card.category}`}
-      type="button"
-      aria-label={`Jogar ${card.name}`}
-      onClick={onPlay}
-      disabled={disabled}
-    >
-      <span className="card-meta">
-        <span>{card.category}</span>
-        <span>{`${energyCost}E`}</span>
-      </span>
-      <strong>{card.name}</strong>
-      <code>{card.code}</code>
-    </button>
-  );
-}
+    <section className="trail-view" aria-label="Trilha selecionada">
+      <header className="workspace-header">
+        <div>
+          <p className="eyebrow">Trilha</p>
+          <h2>{`Trilha de ${selected?.shortName ?? 'estrutura'}`}</h2>
+        </div>
 
-type RewardPanelProps = {
-  rewardCardIds: readonly CardId[];
-  passiveRewardIds: readonly PassiveId[];
-  onChooseCard: (cardId: CardId) => void;
-  onChoosePassive: (passiveId: PassiveId) => void;
-};
+        <div className="structure-switcher" aria-label="Estruturas liberadas">
+          {structureCatalog
+            .filter((structure) => structure.status === 'liberada')
+            .map((structure) => (
+              <button
+                key={structure.id}
+                type="button"
+                className={structure.id === selectedStructure ? 'switch-chip is-active' : 'switch-chip'}
+                onClick={() => onOpenTrail(structure.id)}
+              >
+                {structure.shortName}
+              </button>
+            ))}
+        </div>
+      </header>
 
-function RewardPanel({
-  rewardCardIds,
-  passiveRewardIds,
-  onChooseCard,
-  onChoosePassive,
-}: RewardPanelProps) {
-  return (
-    <section className="reward-panel" aria-label="Recompensas">
-      <div className="section-heading">
-        <h3>Escolha uma recompensa</h3>
-        <Sparkles size={18} />
-      </div>
+      <div className="trail-layout">
+        <aside className="phase-list" aria-label="Fases com conteudo">
+          <h3>Fases disponiveis</h3>
+          <ol>
+            {selectedChallenges.map((challenge, index) => (
+              <li key={challenge.id}>
+                <button
+                  type="button"
+                  className={challenge.id === activeChallenge?.id ? 'phase-button is-active' : 'phase-button'}
+                  onClick={() => onSelectChallenge(challenge)}
+                >
+                  <span>{`Fase ${index + 1}`}</span>
+                  <strong>{challenge.title}</strong>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </aside>
 
-      <div className="reward-grid">
-        {rewardCardIds.map((cardId) => {
-          const card = cardById[cardId];
+        <section className="challenge-workbench" aria-label="Fase atual">
+          {activeChallenge && activeProgress ? (
+            <>
+              <div className="challenge-context">
+                <div className="challenge-copy">
+                  <p className="eyebrow">{activeChallenge.pattern}</p>
+                  <h3>{activeChallenge.title}</h3>
+                  <p>{activeChallenge.statement}</p>
+                </div>
 
-          return (
-            <button
-              key={cardId}
-              className="reward-option"
-              type="button"
-              aria-label={`Adicionar ${card.name}`}
-              onClick={() => onChooseCard(cardId)}
-            >
-              <Plus size={18} />
-              <span>
-                <strong>{card.name}</strong>
-                <small>{card.concept}</small>
-              </span>
-            </button>
-          );
-        })}
+                <StructureDiagram
+                  structure={activeChallenge.structure}
+                  activePath={lastResult?.activePath ?? activeChallenge.activePath}
+                  activeNodeId={lastResult?.activeNodeId ?? activeChallenge.activeNodeId}
+                />
+              </div>
 
-        {passiveRewardIds.map((passiveId) => {
-          const passive = passiveLibrary.find((item) => item.id === passiveId);
+              <details className="code-panel">
+                <summary>Codigo fornecido</summary>
+                <pre>{activeChallenge.providedCode}</pre>
+              </details>
 
-          if (!passive) {
-            return null;
-          }
+              {currentStep && !activeProgress.complete ? (
+                <StepPanel
+                  step={currentStep}
+                  progress={activeProgress}
+                  totalSteps={activeChallenge.steps.length}
+                  onAnswer={onAnswer}
+                />
+              ) : (
+                <CompletionPanel progress={activeProgress} onRestart={onRestartChallenge} />
+              )}
 
-          return (
-            <button
-              key={passive.id}
-              className="reward-option passive"
-              type="button"
-              aria-label={`Ativar ${passive.name}`}
-              onClick={() => onChoosePassive(passive.id)}
-            >
-              <Sparkles size={18} />
-              <span>
-                <strong>{passive.name}</strong>
-                <small>{passive.description}</small>
-              </span>
-            </button>
-          );
-        })}
+              {lastResult ? <FeedbackPanel result={lastResult} /> : null}
+            </>
+          ) : (
+            <EmptyTrail />
+          )}
+        </section>
       </div>
     </section>
   );
 }
 
-type FinalPanelProps = {
-  run: RunState;
+function CompletionPanel({
+  progress,
+  onRestart,
+}: {
+  progress: StepProgress;
   onRestart: () => void;
-};
-
-function FinalPanel({ run, onRestart }: FinalPanelProps) {
-  const won = run.phase === 'victory';
-
+}) {
   return (
-    <section className="final-panel" aria-label={won ? 'Vitoria' : 'Derrota'}>
-      <Trophy size={40} />
-      <p className="eyebrow">{won ? 'Run vencida' : 'Run encerrada'}</p>
-      <h2>{won ? 'Guardiao de AEDS II derrotado' : 'Foco zerado'}</h2>
-      <p>{`Score final ${run.score} com ${run.coins} moedas.`}</p>
-      <button className="icon-command primary" type="button" onClick={onRestart}>
-        <RotateCcw size={18} />
-        Reiniciar run
+    <section className="completion-panel" aria-label="Fase concluida">
+      <Trophy size={30} aria-hidden="true" />
+      <div>
+        <p className="eyebrow">Fase concluida</p>
+        <h3>{`${progress.score} XP nesta fase`}</h3>
+      </div>
+      <button type="button" className="icon-command ghost" onClick={onRestart}>
+        <RotateCcw size={18} aria-hidden="true" />
+        Refazer fase
       </button>
     </section>
   );
 }
 
-function StructureSketch({ structure }: { structure: StructureKind }) {
-  if (structure === 'doidona') {
-    return (
-      <svg className="structure-sketch" viewBox="0 0 360 160" role="img" aria-label="Doidona">
-        <circle cx="44" cy="78" r="18" />
-        <circle cx="100" cy="46" r="18" />
-        <circle cx="100" cy="110" r="18" />
-        <path d="M60 70 L84 54 M61 86 L84 102 M118 46 H150 M118 110 H150" />
-        <rect x="150" y="28" width="40" height="30" rx="4" />
-        <rect x="150" y="92" width="40" height="30" rx="4" />
-        <path d="M190 43 H226 M190 107 H226" />
-        <rect x="226" y="28" width="40" height="30" rx="4" />
-        <rect x="226" y="92" width="40" height="30" rx="4" />
-        <path d="M266 43 C288 43, 286 76, 306 76 H332 M266 107 C288 107, 286 76, 306 76" />
-        <rect x="306" y="62" width="30" height="28" rx="4" />
-        <text x="38" y="84">No</text>
-        <text x="154" y="48">T1</text>
-        <text x="230" y="48">T2</text>
-        <text x="302" y="112">lista</text>
-      </svg>
-    );
-  }
-
-  if (structure === 'hash') {
-    return (
-      <svg className="structure-sketch" viewBox="0 0 360 160" role="img" aria-label="Hash">
-        {[0, 1, 2, 3, 4].map((index) => (
-          <rect key={index} x={26 + index * 42} y="36" width="34" height="34" rx="4" />
-        ))}
-        <path d="M152 70 C190 110, 230 112, 266 96" />
-        <rect x="260" y="80" width="34" height="28" rx="4" />
-        <rect x="300" y="80" width="34" height="28" rx="4" />
-        <text x="28" y="118">area principal + reserva</text>
-      </svg>
-    );
-  }
-
-  if (structure === 'trie') {
-    return (
-      <svg className="structure-sketch" viewBox="0 0 360 160" role="img" aria-label="TRIE">
-        <circle cx="54" cy="76" r="18" />
-        <circle cx="130" cy="46" r="18" />
-        <circle cx="206" cy="46" r="18" />
-        <circle cx="282" cy="46" r="18" />
-        <circle cx="130" cy="106" r="18" />
-        <circle cx="206" cy="106" r="18" />
-        <path d="M71 69 L113 52 M147 46 H189 M223 46 H265 M71 84 L113 100 M147 106 H189" />
-        <text x="48" y="82">S</text>
-        <text x="124" y="52">T</text>
-        <text x="200" y="52">O</text>
-        <text x="276" y="52">P</text>
-        <text x="124" y="112">A</text>
-        <text x="200" y="112">P</text>
-      </svg>
-    );
-  }
-
-  const nodeClass = structure === 'alvinegra' ? ' rb' : '';
+function FeedbackPanel({ result }: { result: StepResult }) {
+  const title = result.correct ? 'Resposta correta.' : 'Resposta incorreta.';
+  const shouldShowFeedback = result.feedback !== title;
 
   return (
-    <svg className={`structure-sketch${nodeClass}`} viewBox="0 0 360 160" role="img" aria-label="Arvore">
-      <path d="M180 38 L98 90 M180 38 L262 90 M98 90 L58 132 M98 90 L138 132 M262 90 L222 132 M262 90 L302 132" />
-      {[180, 98, 262, 58, 138, 222, 302].map((x, index) => {
-        const y = index === 0 ? 38 : index < 3 ? 90 : 132;
-        const label = ['40', '20', '60', '10', '30', '50', '70'][index];
-
-        return (
-          <g key={`${x}-${y}`} className={index % 2 === 0 ? 'node-dark' : 'node-light'}>
-            <circle cx={x} cy={y} r="18" />
-            <text x={x - 8} y={y + 5}>{label}</text>
-          </g>
-        );
-      })}
-    </svg>
+    <aside
+      className={result.correct ? 'feedback-panel is-correct' : 'feedback-panel is-wrong'}
+      aria-live="polite"
+      aria-label="Feedback da etapa"
+    >
+      <strong>{title}</strong>
+      {shouldShowFeedback ? <span>{result.feedback}</span> : null}
+      {result.scoreDelta > 0 ? <span>{`+${result.scoreDelta} XP`}</span> : null}
+    </aside>
   );
 }
 
-function passiveLabel(passiveId: PassiveId): string {
-  return passiveLibrary.find((passive) => passive.id === passiveId)?.name ?? passiveId;
+function LabView({ selectedStructure }: { selectedStructure: StructureKind }) {
+  const selected = getStructure(selectedStructure);
+
+  return (
+    <section className="utility-view" aria-label="Laboratorio">
+      <header className="workspace-header">
+        <div>
+          <p className="eyebrow">Laboratorio</p>
+          <h2>{selected?.shortName ?? 'Estrutura'}</h2>
+        </div>
+      </header>
+
+      <div className="tool-surface">
+        <StructureDiagram structure={selectedStructure} />
+        <div className="lab-controls" aria-label="Controles do laboratorio">
+          {['Inserir', 'Remover', 'Pesquisar', 'Passo anterior', 'Proximo passo'].map((label) => (
+            <button key={label} type="button" className="icon-command ghost" disabled>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }
 
-function encounterLabel(kind: string | undefined): string {
-  if (kind === 'boss') {
-    return 'Chefe';
-  }
+function ErrorBookView({
+  progressByChallenge,
+  onOpenTrail,
+}: {
+  progressByChallenge: Record<string, StepProgress>;
+  onOpenTrail: () => void;
+}) {
+  const errors = Object.values(progressByChallenge).flatMap((progress) =>
+    Object.entries(progress.stepErrors).map(([stepId, count]) => ({
+      challengeId: progress.challengeId,
+      stepId,
+      count,
+    })),
+  );
 
-  if (kind === 'elite') {
-    return 'Elite';
-  }
+  return (
+    <section className="utility-view" aria-label="Caderno de erros">
+      <header className="workspace-header">
+        <div>
+          <p className="eyebrow">Caderno</p>
+          <h2>Erros registrados</h2>
+        </div>
+        <button type="button" className="icon-command primary" onClick={onOpenTrail}>
+          <Play size={18} aria-hidden="true" />
+          Revisar na trilha
+        </button>
+      </header>
 
-  return 'Encontro';
+      {errors.length === 0 ? (
+        <p className="empty-state">Nenhum erro registrado nesta sessao.</p>
+      ) : (
+        <ul className="error-list">
+          {errors.map((error) => (
+            <li key={`${error.challengeId}-${error.stepId}`}>
+              <strong>{error.stepId}</strong>
+              <span>{`${error.count} tentativa(s)`}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function SimuladoView({ onStart }: { onStart: () => void }) {
+  return (
+    <section className="utility-view" aria-label="Simulado">
+      <header className="workspace-header">
+        <div>
+          <p className="eyebrow">Simulado</p>
+          <h2>Treino curto</h2>
+        </div>
+        <button type="button" className="icon-command primary" onClick={onStart}>
+          <Sparkles size={18} aria-hidden="true" />
+          Comecar
+        </button>
+      </header>
+
+      <ol className="simulado-list">
+        {challengeBank.slice(0, 4).map((challenge) => (
+          <li key={challenge.id}>
+            <strong>{challenge.title}</strong>
+            <span>{challenge.structure}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function EmptyTrail() {
+  return (
+    <section className="empty-trail" aria-label="Sem fase">
+      <p className="empty-state">Nenhuma fase disponivel para esta estrutura.</p>
+    </section>
+  );
+}
+
+function StatusPill({ structure }: { structure: StructureCatalogItem }) {
+  return (
+    <span className={structure.status === 'liberada' ? 'status-pill is-open' : 'status-pill'}>
+      {structure.status === 'liberada' ? 'liberada' : 'em breve'}
+    </span>
+  );
+}
+
+function getFirstChallenge(structureId: StructureKind): Challenge | undefined {
+  return challengeBank.find((challenge) => challenge.structure === structureId);
+}
+
+function getStructure(structureId: StructureKind): StructureCatalogItem | undefined {
+  return structureCatalog.find((structure) => structure.id === structureId);
+}
+
+function getChallengeCount(structureId: StructureKind): number {
+  return challengeBank.filter((challenge) => challenge.structure === structureId).length;
+}
+
+function getCompletedCount(progressByChallenge: Record<string, StepProgress>): number {
+  return Object.values(progressByChallenge).reduce(
+    (total, progress) => total + progress.resolvedStepIds.length,
+    0,
+  );
+}
+
+function getScoreTotal(progressByChallenge: Record<string, StepProgress>): number {
+  return Object.values(progressByChallenge).reduce((total, progress) => total + progress.score, 0);
 }

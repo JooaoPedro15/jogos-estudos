@@ -1,16 +1,33 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import App from './App';
 
-// Smoke test do shell contra o novo engine de quiz. A interação completa do
-// encontro (responder etapas pela UI nova) é coberta na Fase 2 pelo frontend,
-// quando App.tsx e seus componentes forem recompostos sobre o contrato do engine.
-test('renders the run shell with the first encounter and HUD', () => {
+test('abre na biblioteca de dominio com as 9 estruturas do recorte', () => {
   render(<App />);
 
   expect(screen.getByRole('main')).toBeInTheDocument();
-  expect(screen.getByRole('heading', { name: 'Run de Algoritmos' })).toBeInTheDocument();
-  expect(screen.getByText('Pesquisar elemento em ABB')).toBeInTheDocument();
-  expect(screen.getByText('Foco 3/3')).toBeInTheDocument();
-  expect(screen.getByText('Energia 4/4')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Estruturas' })).toBeInTheDocument();
+
+  const library = screen.getByRole('region', { name: 'Biblioteca de estruturas' });
+  expect(within(library).getAllByRole('listitem')).toHaveLength(9);
+
+  expect(screen.getByRole('button', { name: 'Abrir trilha de ABB' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'AVL em breve' })).toBeDisabled();
+});
+
+test('entra na trilha de ABB e responde a primeira etapa do quiz', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: 'Abrir trilha de ABB' }));
+
+  expect(screen.getByRole('heading', { name: 'Trilha de ABB' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Pesquisar elemento em ABB' })).toBeInTheDocument();
+  expect(screen.getByText('Etapa 1/4')).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: 'Valores menores ficam em esq e maiores em dir.' }));
+
+  expect(screen.getByText('Resposta correta.')).toBeInTheDocument();
+  expect(screen.getByText('Etapa 2/4')).toBeInTheDocument();
 });

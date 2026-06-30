@@ -207,6 +207,23 @@ describe('resolveStep — revisao', () => {
   });
 });
 
+describe('resolveStep — conclusao', () => {
+  it('marca progresso e resultado como completos quando a ultima etapa e resolvida', () => {
+    const progress = {
+      ...createStepProgress('c', 4),
+      stepIndex: 3,
+      resolvedStepIds: ['s1', 's2', 's3'],
+    };
+
+    const { progress: next, result } = resolveStep(progress, reviewStep, {
+      kind: 'review',
+    });
+
+    expect(next.complete).toBe(true);
+    expect(result.complete).toBe(true);
+  });
+});
+
 describe('resolveStep — pureza', () => {
   it('nao muta o progresso de entrada', () => {
     const progress = createStepProgress('c');

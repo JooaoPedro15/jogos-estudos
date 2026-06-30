@@ -110,6 +110,8 @@ prompts-privados/
 *.ai.local.md
 claude.local.md
 agents.local.md
+**/docs/PROMPT-CONTINUACAO.md
+**/docs/superpowers/
 
 # -----------------------------------------------------------------------------
 # Private academic material

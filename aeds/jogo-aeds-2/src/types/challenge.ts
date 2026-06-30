@@ -2,9 +2,11 @@ export type StructureKind =
   | 'binaria'
   | 'abb'
   | 'avl'
+  | 'arv234'
   | 'alvinegra'
   | 'hash'
   | 'trie'
+  | 'patricia'
   | 'doidona';
 
 export type ReasoningPattern =
