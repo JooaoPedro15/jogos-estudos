@@ -38,7 +38,7 @@ export const structureCatalog = [
     family: 'arvore',
     description: 'Fator de balanceamento, alturas e rotacoes.',
     phaseCount: 10,
-    status: 'em-breve',
+    status: 'liberada',
   },
   {
     id: 'arv234',
@@ -47,7 +47,7 @@ export const structureCatalog = [
     family: 'arvore',
     description: 'Nos multiplo-caminho, divisao e promocao.',
     phaseCount: 10,
-    status: 'em-breve',
+    status: 'liberada',
   },
   {
     id: 'alvinegra',
@@ -56,7 +56,7 @@ export const structureCatalog = [
     family: 'arvore',
     description: 'Cores, tipo quatro, recoloracao e rotacoes.',
     phaseCount: 10,
-    status: 'em-breve',
+    status: 'liberada',
   },
   {
     id: 'hash',
@@ -65,7 +65,7 @@ export const structureCatalog = [
     family: 'hash',
     description: 'Area principal, reserva, rehash e colisao.',
     phaseCount: 10,
-    status: 'em-breve',
+    status: 'liberada',
   },
   {
     id: 'trie',
@@ -74,7 +74,7 @@ export const structureCatalog = [
     family: 'trie',
     description: 'Palavras, prefixos, folha e caminhos por caractere.',
     phaseCount: 10,
-    status: 'em-breve',
+    status: 'liberada',
   },
   {
     id: 'patricia',
@@ -83,7 +83,7 @@ export const structureCatalog = [
     family: 'trie',
     description: 'Bits, compressao de caminhos e decisao por indice.',
     phaseCount: 10,
-    status: 'em-breve',
+    status: 'liberada',
   },
   {
     id: 'doidona',
@@ -92,7 +92,7 @@ export const structureCatalog = [
     family: 'hibrida',
     description: 'Camadas com arvore, tabelas e listas encadeadas.',
     phaseCount: 10,
-    status: 'em-breve',
+    status: 'liberada',
   },
 ] as const satisfies readonly StructureCatalogItem[];
 

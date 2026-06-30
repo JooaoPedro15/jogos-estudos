@@ -399,18 +399,45 @@ pre {
   font-weight: 800;
 }
 
+.diagram-caption {
+  fill: #5d6964;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .diagram-node.is-active circle,
 .diagram-node.is-active rect {
   fill: #f0c760;
   stroke: #9d6a14;
 }
 
+.diagram-node.node-black circle,
 .structure-sketch.rb .node-dark circle {
   fill: #222826;
 }
 
+.diagram-node.node-black text,
 .structure-sketch.rb .node-dark text {
   fill: #ffffff;
+}
+
+.diagram-node.node-white circle,
+.diagram-node.node-terminal circle {
+  fill: #ffffff;
+}
+
+.diagram-node.slot-reserved rect {
+  fill: #fff3d5;
+}
+
+.diagram-node.slot-collision rect {
+  fill: #ffe4dd;
+  stroke: #b96b4f;
+}
+
+.diagram-node.slot-occupied rect {
+  fill: #e7f1ee;
 }
 
 .step-panel,

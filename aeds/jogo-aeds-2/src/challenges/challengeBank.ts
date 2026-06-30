@@ -1149,4 +1149,297 @@ class Doidona {
       },
     ],
   },
+  {
+    id: 'arv234-divisao-raiz-01',
+    title: 'Dividir no cheio em arvore 2-3-4',
+    pattern: 'verificar-propriedade-global',
+    structure: 'arv234',
+    difficulty: 'medio',
+    statement:
+      'Considere uma arvore 2-3-4 em que cada no pode guardar ate tres chaves ordenadas. Explique quando um no cheio deve ser dividido e qual chave sobe para o pai.',
+    providedCode: `class No234 {
+  int[] chaves;
+  No234[] filhos;
+  int n;
+
+  boolean cheio() {
+    return n == 3;
+  }
+}`,
+    visualStateId: 'arv234-basica-01',
+    steps: [
+      {
+        id: 'arv234-divisao-raiz-01-s1',
+        kind: 'interpretar',
+        prompt: 'Em uma arvore 2-3-4, quando um no esta cheio?',
+        options: [
+          { id: 'a', label: 'Quando possui 3 chaves.' },
+          { id: 'b', label: 'Quando possui exatamente 2 filhos.' },
+          { id: 'c', label: 'Quando a raiz esta vazia.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'arv234-divisao-raiz-01-s2',
+        kind: 'simular',
+        prompt: 'Ao dividir o no [20|40|60], qual chave mediana sobe?',
+        options: [
+          { id: 'a', label: '40' },
+          { id: 'b', label: '20' },
+          { id: 'c', label: '60' },
+        ],
+        correctOptionId: 'a',
+        activeNodeId: 'n20-40',
+      },
+      {
+        id: 'arv234-divisao-raiz-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a divisao conceitual de um no cheio.',
+        blocks: [
+          { id: 'mediana', label: 'identificar a chave mediana', order: 1 },
+          { id: 'subir', label: 'promover a mediana para o pai', order: 2 },
+          { id: 'separar', label: 'separar chaves menores e maiores em dois nos', order: 3 },
+        ],
+        correctOrder: ['mediana', 'subir', 'separar'],
+      },
+      {
+        id: 'arv234-divisao-raiz-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e o custo de uma insercao em arvore 2-3-4 balanceada?',
+        options: [
+          { id: 'a', label: 'O(log n), pois a altura permanece balanceada.' },
+          { id: 'b', label: 'O(n), pois sempre divide todos os nos.' },
+          { id: 'c', label: 'O(1), pois cada no tem poucas chaves.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(log n)',
+      explanation: 'A arvore 2-3-4 mantem altura logaritmica; cada nivel faz trabalho constante.',
+    },
+    commonMistakes: [
+      {
+        id: 'arv234-subir-extremo',
+        title: 'Promover uma chave extrema',
+        description: 'Na divisao, sobe a chave mediana; promover extremo quebra a ordem dos intervalos.',
+      },
+    ],
+  },
+  {
+    id: 'arv234-pesquisar-chave-01',
+    title: 'Pesquisar chave em no 2-3-4',
+    pattern: 'seguir-um-caminho',
+    structure: 'arv234',
+    difficulty: 'facil',
+    statement:
+      'Dado um no 2-3-4 com chaves ordenadas, escolha o intervalo correto antes de descer para o filho. A pesquisa compara dentro do no e segue apenas um caminho.',
+    providedCode: `boolean pesquisar(int x, No234 i) {
+  if (i == null) return false;
+  // compare x com as chaves do no
+  // escolha o filho do intervalo correto
+}`,
+    visualStateId: 'arv234-basica-01',
+    steps: [
+      {
+        id: 'arv234-pesquisar-chave-01-s1',
+        kind: 'interpretar',
+        prompt: 'O que as chaves dentro do no 2-3-4 definem?',
+        options: [
+          { id: 'a', label: 'Intervalos ordenados para decidir o filho.' },
+          { id: 'b', label: 'Cores de uma arvore alvinegra.' },
+          { id: 'c', label: 'Indices de uma tabela hash.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'arv234-pesquisar-chave-01-s2',
+        kind: 'simular',
+        prompt: 'Se o no possui [20|40] e buscamos 55, qual lado deve ser seguido?',
+        options: [
+          { id: 'a', label: 'O intervalo maior que 40.' },
+          { id: 'b', label: 'O intervalo menor que 20.' },
+          { id: 'c', label: 'Parar com falso imediatamente.' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n20-40', 'n50-60'],
+      },
+      {
+        id: 'arv234-pesquisar-chave-01-s3',
+        kind: 'lacuna',
+        prompt: 'Complete a condicao do ultimo intervalo: if (x ___ maiorChave).',
+        gapId: 'maior-intervalo',
+        answers: [{ id: 'gt', answer: '>', aliases: ['maior que'] }],
+      },
+      {
+        id: 'arv234-pesquisar-chave-01-s4',
+        kind: 'complexidade',
+        prompt: 'Por que a pesquisa e logaritmica em uma 2-3-4 balanceada?',
+        options: [
+          { id: 'a', label: 'Porque desce um nivel por comparacao de intervalo.' },
+          { id: 'b', label: 'Porque examina todos os filhos de todos os nos.' },
+          { id: 'c', label: 'Porque nao usa comparacoes.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(log n)',
+      explanation: 'A pesquisa percorre um caminho da raiz ate uma folha em uma arvore balanceada.',
+    },
+    commonMistakes: [
+      {
+        id: 'arv234-descer-todos-filhos',
+        title: 'Descer por todos os filhos',
+        description: 'As chaves do no escolhem um unico intervalo; pesquisar todos os filhos perde a propriedade.',
+      },
+    ],
+  },
+  {
+    id: 'patricia-decisao-bit-01',
+    title: 'Decidir pelo bit em PATRICIA',
+    pattern: 'navegar-por-camadas',
+    structure: 'patricia',
+    difficulty: 'medio',
+    statement:
+      'Em uma arvore PATRICIA, nos internos guardam o indice do bit usado para decidir o proximo ramo. Simule a pesquisa seguindo os bits indicados.',
+    providedCode: `class NoPatricia {
+  int bit;
+  String chave;
+  NoPatricia esq, dir;
+
+  boolean externo() {
+    return esq == null && dir == null;
+  }
+}`,
+    visualStateId: 'patricia-bit-01',
+    steps: [
+      {
+        id: 'patricia-decisao-bit-01-s1',
+        kind: 'interpretar',
+        prompt: 'O que um no interno de PATRICIA armazena para guiar a busca?',
+        options: [
+          { id: 'a', label: 'O indice do bit que sera testado.' },
+          { id: 'b', label: 'A altura AVL do no.' },
+          { id: 'c', label: 'A quantidade de colisoes hash.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'patricia-decisao-bit-01-s2',
+        kind: 'simular',
+        prompt: 'No diagrama, qual e o primeiro teste antes de chegar em BAR?',
+        options: [
+          { id: 'a', label: 'bit2' },
+          { id: 'b', label: 'folha ASA' },
+          { id: 'c', label: 'bit9' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['bit2', 'bar'],
+      },
+      {
+        id: 'patricia-decisao-bit-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a pesquisa em PATRICIA.',
+        blocks: [
+          { id: 'testar', label: 'testar o bit indicado pelo no interno', order: 1 },
+          { id: 'descer', label: 'descer para esquerda ou direita', order: 2 },
+          { id: 'comparar', label: 'ao chegar na folha, comparar a chave inteira', order: 3 },
+        ],
+        correctOrder: ['testar', 'descer', 'comparar'],
+      },
+      {
+        id: 'patricia-decisao-bit-01-s4',
+        kind: 'complexidade',
+        prompt: 'A busca depende principalmente de qual medida?',
+        options: [
+          { id: 'a', label: 'Do numero de bits testados no caminho.' },
+          { id: 'b', label: 'Da quantidade de folhas brancas.' },
+          { id: 'c', label: 'Do tamanho da area de reserva.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(k), onde k e a quantidade de bits relevantes testados',
+      explanation: 'A busca segue os bits indicados pelos nos internos e confirma a chave na folha.',
+    },
+    commonMistakes: [
+      {
+        id: 'patricia-nao-comparar-folha',
+        title: 'Nao comparar a chave na folha',
+        description: 'Chegar a uma folha candidata nao basta; e preciso conferir se a chave inteira e a buscada.',
+      },
+    ],
+  },
+  {
+    id: 'patricia-prefixo-compressao-01',
+    title: 'Entender compressao de caminhos em PATRICIA',
+    pattern: 'analisar-complexidade',
+    structure: 'patricia',
+    difficulty: 'medio',
+    statement:
+      'PATRICIA comprime caminhos de TRIE que nao criam ramificacao. Explique por que os nos internos testam apenas bits discriminantes.',
+    providedCode: `// Em vez de guardar cada caractere como um nivel,
+// PATRICIA guarda apenas pontos de decisao.
+class NoPatricia {
+  int bit;
+  NoPatricia esq, dir;
+}`,
+    visualStateId: 'patricia-bit-01',
+    steps: [
+      {
+        id: 'patricia-prefixo-compressao-01-s1',
+        kind: 'interpretar',
+        prompt: 'Qual caminho a PATRICIA evita guardar explicitamente?',
+        options: [
+          { id: 'a', label: 'Caminhos sem ramificacao util.' },
+          { id: 'b', label: 'Todos os caminhos com folhas.' },
+          { id: 'c', label: 'A raiz da arvore.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'patricia-prefixo-compressao-01-s2',
+        kind: 'simular',
+        prompt: 'No diagrama, por que ASA e ATO ainda precisam de bit4?',
+        options: [
+          { id: 'a', label: 'Porque compartilham prefixo e divergem em um bit posterior.' },
+          { id: 'b', label: 'Porque sao iguais.' },
+          { id: 'c', label: 'Porque estao em uma tabela hash.' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['bit2', 'bit4'],
+      },
+      {
+        id: 'patricia-prefixo-compressao-01-s3',
+        kind: 'lacuna',
+        prompt: 'Complete: PATRICIA guarda apenas bits de ___.',
+        gapId: 'bits-decisao',
+        answers: [{ id: 'decisao', answer: 'decisao', aliases: ['decisão', 'ramificacao'] }],
+      },
+      {
+        id: 'patricia-prefixo-compressao-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual beneficio a compressao busca?',
+        options: [
+          { id: 'a', label: 'Reduzir nos intermediarios que nao decidem nada.' },
+          { id: 'b', label: 'Transformar a busca em O(1) sempre.' },
+          { id: 'c', label: 'Remover a comparacao final da chave.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(k), com menos nos intermediarios que uma TRIE comum',
+      explanation: 'A compressao elimina niveis sem decisao, mas a busca ainda segue bits discriminantes.',
+    },
+    commonMistakes: [
+      {
+        id: 'patricia-confundir-trie-completa',
+        title: 'Tratar como TRIE sem compressao',
+        description: 'PATRICIA nao precisa materializar todo prefixo; ela guarda pontos de decisao.',
+      },
+    ],
+  },
 ] satisfies Challenge[];

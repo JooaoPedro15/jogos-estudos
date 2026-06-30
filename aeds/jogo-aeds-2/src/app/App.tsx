@@ -14,6 +14,7 @@ import {
   type StepProgress,
   type StepResult,
 } from '../evaluators/stepEvaluator';
+import { sampleVisualStates } from '../structures/sampleStructures';
 import type { Challenge, StructureKind } from '../types/challenge';
 import { StepPanel } from './components/StepPanel';
 import { StructureDiagram } from './components/StructureDiagram';
@@ -159,6 +160,9 @@ type LibraryViewProps = {
 };
 
 function LibraryView({ onOpenTrail }: LibraryViewProps) {
+  const releasedCount = structureCatalog.filter((structure) => structure.status === 'liberada').length;
+  const pendingCount = structureCatalog.length - releasedCount;
+
   return (
     <section className="library-view" aria-label="Biblioteca de estruturas">
       <header className="workspace-header">
@@ -166,7 +170,7 @@ function LibraryView({ onOpenTrail }: LibraryViewProps) {
           <p className="eyebrow">Biblioteca</p>
           <h2>Escolha uma estrutura</h2>
         </div>
-        <span className="header-pill">2 liberadas / 7 em breve</span>
+        <span className="header-pill">{`${releasedCount} liberadas / ${pendingCount} em breve`}</span>
       </header>
 
       <ul className="structure-grid">
@@ -287,6 +291,7 @@ function TrailView({
 
                 <StructureDiagram
                   structure={activeChallenge.structure}
+                  visualState={sampleVisualStates[activeChallenge.visualStateId]}
                   activePath={lastResult?.activePath ?? activeChallenge.activePath}
                   activeNodeId={lastResult?.activeNodeId ?? activeChallenge.activeNodeId}
                 />
@@ -360,6 +365,7 @@ function FeedbackPanel({ result }: { result: StepResult }) {
 
 function LabView({ selectedStructure }: { selectedStructure: StructureKind }) {
   const selected = getStructure(selectedStructure);
+  const firstChallenge = getFirstChallenge(selectedStructure);
 
   return (
     <section className="utility-view" aria-label="Laboratorio">
@@ -371,7 +377,10 @@ function LabView({ selectedStructure }: { selectedStructure: StructureKind }) {
       </header>
 
       <div className="tool-surface">
-        <StructureDiagram structure={selectedStructure} />
+        <StructureDiagram
+          structure={selectedStructure}
+          visualState={firstChallenge ? sampleVisualStates[firstChallenge.visualStateId] : undefined}
+        />
         <div className="lab-controls" aria-label="Controles do laboratorio">
           {['Inserir', 'Remover', 'Pesquisar', 'Passo anterior', 'Proximo passo'].map((label) => (
             <button key={label} type="button" className="icon-command ghost" disabled>

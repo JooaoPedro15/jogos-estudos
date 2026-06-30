@@ -8,9 +8,11 @@ const mvpStructures: StructureKind[] = [
   'binaria',
   'abb',
   'avl',
+  'arv234',
   'alvinegra',
   'hash',
   'trie',
+  'patricia',
   'doidona',
 ];
 
@@ -25,6 +27,10 @@ const requiredChallengeIds = [
   'hash-rehash-colisao-01',
   'trie-pesquisar-palavra-01',
   'trie-verificar-prefixo-01',
+  'arv234-divisao-raiz-01',
+  'arv234-pesquisar-chave-01',
+  'patricia-decisao-bit-01',
+  'patricia-prefixo-compressao-01',
   'binaria-ismax-01',
   'binaria-maior-caminho-01',
   'doidona-pesquisar-palavra-01',

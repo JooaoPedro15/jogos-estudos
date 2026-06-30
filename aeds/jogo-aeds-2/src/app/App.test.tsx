@@ -13,7 +13,8 @@ test('abre na biblioteca de dominio com as 9 estruturas do recorte', () => {
   expect(within(library).getAllByRole('listitem')).toHaveLength(9);
 
   expect(screen.getByRole('button', { name: 'Abrir trilha de ABB' })).toBeEnabled();
-  expect(screen.getByRole('button', { name: 'AVL em breve' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Abrir trilha de AVL' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Abrir trilha de PATRICIA' })).toBeEnabled();
 });
 
 test('entra na trilha de ABB e responde a primeira etapa do quiz', async () => {
@@ -30,4 +31,17 @@ test('entra na trilha de ABB e responde a primeira etapa do quiz', async () => {
 
   expect(screen.getByText('Resposta correta.')).toBeInTheDocument();
   expect(screen.getByText('Etapa 2/4')).toBeInTheDocument();
+});
+
+test('usa o visualStateId do desafio para trocar o diagrama da estrutura', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: 'Abrir trilha de Arvore Binaria' }));
+
+  const diagram = screen.getByRole('img', { name: 'Diagrama de arvore' });
+  expect(within(diagram).getByText('8')).toBeInTheDocument();
+  expect(within(diagram).getByText('3')).toBeInTheDocument();
+  expect(within(diagram).getByText('10')).toBeInTheDocument();
+  expect(within(diagram).queryByText('40')).not.toBeInTheDocument();
 });

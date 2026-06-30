@@ -142,6 +142,47 @@ export const sampleVisualStates: Record<string, VisualState> = {
       },
     },
   },
+  'arv234-basica-01': {
+    id: 'arv234-basica-01',
+    kind: 'tree',
+    root: {
+      id: 'n20-40',
+      label: '20|40',
+      left: {
+        id: 'n10',
+        label: '10',
+      },
+      right: {
+        id: 'n50-60',
+        label: '50|60',
+        left: { id: 'n30', label: '30' },
+        right: { id: 'n70', label: '70' },
+      },
+    },
+  },
+  'patricia-bit-01': {
+    id: 'patricia-bit-01',
+    kind: 'trie',
+    root: {
+      id: 'bit2',
+      char: 'bit2',
+      children: [
+        {
+          id: 'bit4',
+          char: 'bit4',
+          children: [
+            { id: 'asa', char: 'ASA', folha: true },
+            { id: 'ato', char: 'ATO', folha: true },
+          ],
+        },
+        {
+          id: 'bar',
+          char: 'BAR',
+          folha: true,
+        },
+      ],
+    },
+  },
   'doidona-camadas-01': {
     id: 'doidona-camadas-01',
     kind: 'hybrid',
