@@ -23,6 +23,7 @@ export type ChallengeStepKind =
   | 'lacuna'
   | 'blocos'
   | 'complexidade'
+  | 'clique'
   | 'revisao';
 
 export type ChallengeType =
@@ -105,7 +106,14 @@ export type ReviewStep = ChallengeStepBase & {
   solutionNotes: string[];
 };
 
-export type ChallengeStep = ChoiceStep | GapStep | BlockStep | ReviewStep;
+export type ClickStep = ChallengeStepBase & {
+  kind: 'clique';
+  targetNodeIds: string[];
+  maxClicks?: number;
+  selectionMode?: 'ordered' | 'unordered';
+};
+
+export type ChallengeStep = ChoiceStep | GapStep | BlockStep | ReviewStep | ClickStep;
 
 export type Challenge = {
   id: string;
