@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 
 import { challengeBank } from './challengeBank';
 import { sampleVisualStates } from '../structures/sampleStructures';
-import type { StructureKind } from '../types/challenge';
+import type { ChallengeStep, StructureKind } from '../types/challenge';
 
 const mvpStructures: StructureKind[] = [
   'binaria',
@@ -19,23 +19,43 @@ const mvpStructures: StructureKind[] = [
 const requiredChallengeIds = [
   'abb-pesquisar-01',
   'abb-contar-folhas-01',
+  'abb-lista3-eh-abb-03',
   'avl-fator-01',
   'avl-verificar-balanceamento-01',
+  'avl-lista3-recalcular-alturas-10',
   'alvinegra-contar-brancos-01',
   'alvinegra-tipo-quatro-01',
+  'alvinegra-lista3-verifica-cores-13',
   'hash-pesquisar-reserva-01',
   'hash-rehash-colisao-01',
+  'hash-lista3-reserva-27',
   'trie-pesquisar-palavra-01',
   'trie-verificar-prefixo-01',
+  'trie-lista3-inserir-palavra-18',
   'arv234-divisao-raiz-01',
   'arv234-pesquisar-chave-01',
+  'arv234-lista3-folhas-mesma-altura-12',
   'patricia-decisao-bit-01',
   'patricia-prefixo-compressao-01',
+  'patricia-lista3-eh-patricia-24',
   'binaria-ismax-01',
   'binaria-maior-caminho-01',
+  'binaria-lista3-estritamente-binaria-05',
   'doidona-pesquisar-palavra-01',
   'doidona-inserir-camadas-01',
+  'doidona-lista3-par-impar-38',
+  'doidona-lista3-hash-abb-25',
 ];
+
+function hasDiagramChoice(steps: ChallengeStep[]) {
+  return steps.some((step) => {
+    if (step.kind !== 'interpretar' && step.kind !== 'simular' && step.kind !== 'complexidade') {
+      return false;
+    }
+
+    return step.options.some((option) => option.visualStateId && sampleVisualStates[option.visualStateId]);
+  });
+}
 
 describe('challengeBank', () => {
   test('contains at least two challenges for each MVP structure', () => {
@@ -82,5 +102,34 @@ describe('challengeBank', () => {
     }
 
     expect(actualIds.size).toBeGreaterThanOrEqual(requiredChallengeIds.length);
+  });
+
+  test('fits the prova 3 list into phases with the requested 60/30/10 focus split', () => {
+    const listChallenges = challengeBank.filter(
+      (challenge) => challenge.source?.label === 'lista-aeds2-prova3.pdf',
+    );
+    const countsByFocus = listChallenges.reduce<Record<string, number>>((counts, challenge) => {
+      const focus = challenge.focus ?? 'sem-foco';
+      counts[focus] = (counts[focus] ?? 0) + 1;
+      return counts;
+    }, {});
+    const structures = new Set(listChallenges.map((challenge) => challenge.structure));
+
+    expect(listChallenges).toHaveLength(10);
+    expect(countsByFocus).toMatchObject({ codigo: 6, desenho: 3, conceito: 1 });
+    expect(structures.size).toBeGreaterThanOrEqual(8);
+  });
+
+  test('contains drawing-selection phases backed by real visual states', () => {
+    const drawingChallenges = challengeBank.filter((challenge) => challenge.focus === 'desenho');
+
+    expect(drawingChallenges.length).toBeGreaterThanOrEqual(3);
+
+    for (const challenge of drawingChallenges) {
+      expect(
+        hasDiagramChoice(challenge.steps as ChallengeStep[]),
+        `${challenge.id} should ask the student to choose a diagram`,
+      ).toBe(true);
+    }
   });
 });

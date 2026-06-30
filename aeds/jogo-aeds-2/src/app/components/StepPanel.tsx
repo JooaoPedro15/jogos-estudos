@@ -1,8 +1,10 @@
 import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
 
+import { sampleVisualStates } from '../../structures/sampleStructures';
 import type { ChallengeStep } from '../../types/challenge';
 import type { StepAnswer, StepProgress } from '../../evaluators/stepEvaluator';
+import { StructureDiagram } from './StructureDiagram';
 
 export type StepPanelProps = {
   step: ChallengeStep;
@@ -10,14 +12,28 @@ export type StepPanelProps = {
   /** Numero total de etapas do desafio atual, para exibir "etapa X/N". */
   totalSteps: number;
   onAnswer: (answer: StepAnswer) => void;
+  /**
+   * Quando informados, a etapa `clique` usa selecao controlada externamente
+   * (o diagrama SVG clicavel fica no nivel acima, no TrailView). O ClickStepBody
+   * passa a mostrar apenas o resumo da selecao e o botao de confirmar.
+   */
+  clickSelection?: string[];
+  onToggleClickNode?: (nodeId: string) => void;
 };
 
 /**
- * Renderiza a etapa atual do encontro de acordo com `step.kind` e dispara
+ * Renderiza a etapa atual do desafio de acordo com `step.kind` e dispara
  * `onAnswer` com o `StepAnswer` correspondente. Cada variante é totalmente
  * operável por teclado (botões nativos, input de texto, foco visível via CSS).
  */
-export function StepPanel({ step, progress, totalSteps, onAnswer }: StepPanelProps) {
+export function StepPanel({
+  step,
+  progress,
+  totalSteps,
+  onAnswer,
+  clickSelection,
+  onToggleClickNode,
+}: StepPanelProps) {
   const stepNumber = Math.min(progress.stepIndex + 1, totalSteps);
 
   return (
@@ -31,7 +47,13 @@ export function StepPanel({ step, progress, totalSteps, onAnswer }: StepPanelPro
 
       <p className="step-prompt">{step.prompt}</p>
 
-      <StepBody step={step} progress={progress} onAnswer={onAnswer} />
+      <StepBody
+        step={step}
+        progress={progress}
+        onAnswer={onAnswer}
+        clickSelection={clickSelection}
+        onToggleClickNode={onToggleClickNode}
+      />
     </section>
   );
 }
@@ -40,9 +62,17 @@ type StepBodyProps = {
   step: ChallengeStep;
   progress: StepProgress;
   onAnswer: (answer: StepAnswer) => void;
+  clickSelection?: string[];
+  onToggleClickNode?: (nodeId: string) => void;
 };
 
-function StepBody({ step, progress, onAnswer }: StepBodyProps) {
+function StepBody({
+  step,
+  progress,
+  onAnswer,
+  clickSelection,
+  onToggleClickNode,
+}: StepBodyProps) {
   switch (step.kind) {
     case 'interpretar':
     case 'simular':
@@ -53,7 +83,14 @@ function StepBody({ step, progress, onAnswer }: StepBodyProps) {
     case 'blocos':
       return <BlockStepBody step={step} onAnswer={onAnswer} />;
     case 'clique':
-      return <ClickStepBody step={step} onAnswer={onAnswer} />;
+      return (
+        <ClickStepBody
+          step={step}
+          onAnswer={onAnswer}
+          clickSelection={clickSelection}
+          onToggleClickNode={onToggleClickNode}
+        />
+      );
     case 'revisao':
       return <ReviewStepBody step={step} onAnswer={onAnswer} />;
     default: {
@@ -75,16 +112,26 @@ function ChoiceStepBody({ step, onAnswer }: ChoiceStepBodyProps) {
 
   return (
     <div className="choice-grid" role="group" aria-label="Alternativas">
-      {visibleOptions.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          className="choice-option"
-          onClick={() => onAnswer({ kind: 'choice', optionId: option.id })}
-        >
-          {option.label}
-        </button>
-      ))}
+      {visibleOptions.map((option) => {
+        const visualState = option.visualStateId ? sampleVisualStates[option.visualStateId] : undefined;
+
+        return (
+          <button
+            key={option.id}
+            type="button"
+            className={`choice-option${visualState ? ' has-diagram' : ''}`}
+            aria-label={option.label}
+            onClick={() => onAnswer({ kind: 'choice', optionId: option.id })}
+          >
+            <span>{option.label}</span>
+            {visualState ? (
+              <span className="choice-diagram" aria-hidden="true">
+                <StructureDiagram structure="abb" visualState={visualState} />
+              </span>
+            ) : null}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -92,9 +139,34 @@ function ChoiceStepBody({ step, onAnswer }: ChoiceStepBodyProps) {
 type ClickStepBodyProps = {
   step: Extract<ChallengeStep, { kind: 'clique' }>;
   onAnswer: (answer: StepAnswer) => void;
+  clickSelection?: string[];
+  onToggleClickNode?: (nodeId: string) => void;
 };
 
-function ClickStepBody({ step, onAnswer }: ClickStepBodyProps) {
+function ClickStepBody({ step, onAnswer, clickSelection, onToggleClickNode }: ClickStepBodyProps) {
+  // Selecao controlada externamente: o diagrama SVG clicavel esta no TrailView.
+  // Aqui mostramos apenas o resumo da selecao e o botao de confirmar.
+  if (clickSelection !== undefined) {
+    return (
+      <div className="click-step is-controlled">
+        <p className="click-selection-summary">
+          {clickSelection.length === 0
+            ? 'Clique nos elementos do desenho acima.'
+            : `${clickSelection.length} selecionado(s): ${clickSelection.join(', ')}`}
+        </p>
+        <button
+          type="button"
+          className="icon-command primary"
+          onClick={() => onAnswer({ kind: 'click', nodeIds: clickSelection })}
+          disabled={clickSelection.length === 0}
+        >
+          Confirmar selecao
+        </button>
+      </div>
+    );
+  }
+
+  // Fallback: sem diagrama interativo, mostra botoes de texto.
   const [nodeIds, setNodeIds] = useState<string[]>([]);
   const maxClicks = step.maxClicks ?? step.targetNodeIds.length;
 
@@ -110,14 +182,6 @@ function ClickStepBody({ step, onAnswer }: ClickStepBodyProps) {
 
       return [...current, nodeId];
     });
-  };
-
-  const handleSubmit = () => {
-    if (nodeIds.length === 0) {
-      return;
-    }
-
-    onAnswer({ kind: 'click', nodeIds });
   };
 
   return (
@@ -143,7 +207,7 @@ function ClickStepBody({ step, onAnswer }: ClickStepBodyProps) {
       <button
         type="button"
         className="icon-command primary"
-        onClick={handleSubmit}
+        onClick={() => onAnswer({ kind: 'click', nodeIds })}
         disabled={nodeIds.length === 0}
       >
         Confirmar selecao

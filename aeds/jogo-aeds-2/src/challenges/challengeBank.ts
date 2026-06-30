@@ -1,5 +1,10 @@
 import type { Challenge } from '../types/challenge';
 
+const prova3Source = (question: string) => ({
+  label: 'lista-aeds2-prova3.pdf',
+  question,
+});
+
 export const challengeBank = [
   {
     id: 'abb-pesquisar-01',
@@ -1439,6 +1444,807 @@ class NoPatricia {
         id: 'patricia-confundir-trie-completa',
         title: 'Tratar como TRIE sem compressao',
         description: 'PATRICIA nao precisa materializar todo prefixo; ela guarda pontos de decisao.',
+      },
+    ],
+  },
+  {
+    id: 'abb-lista3-eh-abb-03',
+    title: 'Escolher desenho correto da ABB',
+    pattern: 'verificar-propriedade-global',
+    structure: 'abb',
+    difficulty: 'medio',
+    statement:
+      'Questao 3 da lista: implemente ehABB() sem copiar elementos para vetor. Antes do codigo, escolha o desenho que realmente respeita a propriedade global de ABB.',
+    providedCode: `class No {
+  int elemento;
+  No esq, dir;
+}
+
+class Arvore {
+  private No raiz;
+
+  boolean ehABB() {
+    return ehABB(raiz, Integer.MIN_VALUE, Integer.MAX_VALUE);
+  }
+
+  private boolean ehABB(No i, int min, int max) {
+    // complete a verificacao global
+  }
+}`,
+    visualStateId: 'abb-invalida-01',
+    focus: 'desenho',
+    source: prova3Source('Questao 3'),
+    steps: [
+      {
+        id: 'abb-lista3-eh-abb-03-s1',
+        kind: 'interpretar',
+        prompt: 'Qual desenho respeita a regra de ABB em todos os nos?',
+        options: [
+          { id: 'a', label: 'Desenho A', visualStateId: 'abb-basica-01' },
+          { id: 'b', label: 'Desenho B', visualStateId: 'abb-invalida-01' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'abb-lista3-eh-abb-03-s2',
+        kind: 'clique',
+        prompt: 'No desenho principal, clique no no que ja prova a violacao da ABB.',
+        targetNodeIds: ['n50'],
+        maxClicks: 1,
+      },
+      {
+        id: 'abb-lista3-eh-abb-03-s3',
+        kind: 'lacuna',
+        prompt: 'Complete a guarda global: se i.elemento <= min || i.elemento >= max, retorne ___.',
+        gapId: 'retorno-violacao-abb',
+        answers: [{ id: 'false', answer: 'false', aliases: ['falso'] }],
+      },
+      {
+        id: 'abb-lista3-eh-abb-03-s4',
+        kind: 'complexidade',
+        prompt: 'Por que a verificacao sem vetor continua linear?',
+        options: [
+          { id: 'a', label: 'Porque cada no e visitado uma vez carregando limites min/max.' },
+          { id: 'b', label: 'Porque a ABB sempre tem altura logaritmica.' },
+          { id: 'c', label: 'Porque basta olhar a raiz e seus dois filhos.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'A validacao visita todos os nos uma vez e passa limites de faixa por parametro.',
+    },
+    commonMistakes: [
+      {
+        id: 'abb-local-sem-limite',
+        title: 'Conferir apenas pai e filho',
+        description: 'Comparar somente com o pai nao detecta valores fora da faixa herdada pelos ancestrais.',
+      },
+    ],
+  },
+  {
+    id: 'avl-lista3-recalcular-alturas-10',
+    title: 'Recalcular alturas em AVL',
+    pattern: 'retornar-de-baixo-para-cima',
+    structure: 'avl',
+    difficulty: 'medio',
+    statement:
+      'Questao 10 da lista: percorra uma AVL e atualize o campo altura de cada no. Folha deve ficar com altura 0 e arvore vazia com -1.',
+    providedCode: `class NoAVL {
+  int elemento;
+  NoAVL esq, dir;
+  int altura;
+}
+
+class ArvoreAVL {
+  private NoAVL raiz;
+
+  void recalcularAlturas() {
+    recalcularAlturas(raiz);
+  }
+
+  private int recalcularAlturas(NoAVL i) {
+    // complete retornando a nova altura
+  }
+}`,
+    visualStateId: 'avl-rotacao-01',
+    focus: 'codigo',
+    source: prova3Source('Questao 10'),
+    steps: [
+      {
+        id: 'avl-lista3-recalcular-alturas-10-s1',
+        kind: 'interpretar',
+        prompt: 'Qual ordem garante que a altura dos filhos ja foi calculada?',
+        options: [
+          { id: 'a', label: 'Pos-ordem: esquerda, direita, no atual.' },
+          { id: 'b', label: 'Pre-ordem: no atual, esquerda, direita.' },
+          { id: 'c', label: 'Apenas percorrer pela direita.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'avl-lista3-recalcular-alturas-10-s2',
+        kind: 'lacuna',
+        prompt: 'Complete o caso base: if (i == null) return ___.',
+        gapId: 'altura-nulo',
+        answers: [{ id: 'menos-um', answer: '-1', aliases: ['menos 1'] }],
+      },
+      {
+        id: 'avl-lista3-recalcular-alturas-10-s3',
+        kind: 'blocos',
+        prompt: 'Ordene o nucleo do metodo privado.',
+        blocks: [
+          { id: 'esq', label: 'int he = recalcularAlturas(i.esq);', order: 1 },
+          { id: 'dir', label: 'int hd = recalcularAlturas(i.dir);', order: 2 },
+          { id: 'atribui', label: 'i.altura = 1 + Math.max(he, hd);', order: 3 },
+          { id: 'retorna', label: 'return i.altura;', order: 4 },
+        ],
+        correctOrder: ['esq', 'dir', 'atribui', 'retorna'],
+      },
+      {
+        id: 'avl-lista3-recalcular-alturas-10-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e o custo para recalcular todas as alturas?',
+        options: [
+          { id: 'a', label: 'O(n), pois todos os nos precisam ser atualizados.' },
+          { id: 'b', label: 'O(log n), pois AVL e balanceada.' },
+          { id: 'c', label: 'O(1), pois altura ja esta no no.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'Mesmo balanceada, a rotina recalcula o campo de todos os nos exatamente uma vez.',
+    },
+    commonMistakes: [
+      {
+        id: 'avl-altura-antes-dos-filhos',
+        title: 'Atualizar antes dos filhos',
+        description: 'A altura do no depende das alturas finais das duas subarvores.',
+      },
+    ],
+  },
+  {
+    id: 'alvinegra-lista3-verifica-cores-13',
+    title: 'Implementar verificacao de cores',
+    pattern: 'verificar-propriedade-global',
+    structure: 'alvinegra',
+    difficulty: 'dificil',
+    statement:
+      'Questao 13 da lista: implemente verificaCores() para garantir que no vermelho nao tem filho vermelho e que todos os caminhos mantem a mesma quantidade de nos pretos.',
+    providedCode: `class NoAN {
+  boolean cor; // true = preto, false = vermelho
+  int elemento;
+  NoAN esq, dir;
+}
+
+class ArvoreAlvinegra {
+  private NoAN raiz;
+
+  boolean verificaCores() {
+    return alturaPretaOuErro(raiz) >= 0;
+  }
+
+  private int alturaPretaOuErro(NoAN i) {
+    // retorne -1 quando encontrar violacao
+  }
+}`,
+    visualStateId: 'alvinegra-brancos-01',
+    focus: 'codigo',
+    source: prova3Source('Questao 13'),
+    steps: [
+      {
+        id: 'alvinegra-lista3-verifica-cores-13-s1',
+        kind: 'interpretar',
+        prompt: 'Qual retorno ajuda a propagar erro sem variavel global?',
+        options: [
+          { id: 'a', label: '-1 para violacao, altura preta para caso valido.' },
+          { id: 'b', label: '0 para todo no visitado.' },
+          { id: 'c', label: 'O elemento do no atual.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'alvinegra-lista3-verifica-cores-13-s2',
+        kind: 'lacuna',
+        prompt: 'Complete a checagem local: se i e vermelho e algum filho vermelho, retorne ___.',
+        gapId: 'erro-vermelho',
+        answers: [{ id: 'erro', answer: '-1' }],
+      },
+      {
+        id: 'alvinegra-lista3-verifica-cores-13-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a validacao de altura preta.',
+        blocks: [
+          { id: 'esq', label: 'int e = alturaPretaOuErro(i.esq);', order: 1 },
+          { id: 'dir', label: 'int d = alturaPretaOuErro(i.dir);', order: 2 },
+          { id: 'compara', label: 'se e < 0 || d < 0 || e != d, retorne -1', order: 3 },
+          { id: 'soma', label: 'retorne e + (i.cor ? 1 : 0)', order: 4 },
+        ],
+        correctOrder: ['esq', 'dir', 'compara', 'soma'],
+      },
+      {
+        id: 'alvinegra-lista3-verifica-cores-13-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e o custo da verificacao completa?',
+        options: [
+          { id: 'a', label: 'O(n), visitando cada no uma vez.' },
+          { id: 'b', label: 'O(log n), apenas pelo caminho da busca.' },
+          { id: 'c', label: 'O(n log n), recalculando altura a cada no.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'A rotina combina validacao local e altura preta em uma unica travessia pos-ordem.',
+    },
+    commonMistakes: [
+      {
+        id: 'alvinegra-contar-por-caminho-separado',
+        title: 'Recontar caminhos muitas vezes',
+        description: 'Recalcular a quantidade de pretos para cada no pode transformar a solucao em custo maior.',
+      },
+    ],
+  },
+  {
+    id: 'hash-lista3-reserva-27',
+    title: 'Codificar hash com reserva AVL',
+    pattern: 'navegar-por-camadas',
+    structure: 'hash',
+    difficulty: 'dificil',
+    statement:
+      'Questao 27 da lista: implemente inserir, pesquisar, remover e mostrar em uma hash T1 com lista T2, onde cada celula de T2 possui uma AVL para colisoes.',
+    providedCode: `class Celula {
+  int indice;
+  ArvoreAVL reserva;
+  Celula prox;
+}
+
+class EstruturaAVLHash {
+  int[] T1;
+  Celula inicioT2;
+
+  void inserir(int x) {
+    int pos = hash(x);
+    // se T1[pos] estiver livre, insira em T1
+    // caso contrario, use rehash(x) para escolher a celula de T2
+  }
+}`,
+    visualStateId: 'hash-reserva-01',
+    focus: 'codigo',
+    source: prova3Source('Questao 27'),
+    steps: [
+      {
+        id: 'hash-lista3-reserva-27-s1',
+        kind: 'interpretar',
+        prompt: 'Quando uma chave deve ir para a AVL dentro de T2?',
+        options: [
+          { id: 'a', label: 'Quando a posicao hash em T1 ja esta ocupada.' },
+          { id: 'b', label: 'Quando a chave e menor que a raiz da AVL.' },
+          { id: 'c', label: 'Quando T1 esta completamente vazia.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'hash-lista3-reserva-27-s2',
+        kind: 'lacuna',
+        prompt: 'Complete a primeira linha da insercao: int pos = ___(x);',
+        gapId: 'hash-principal',
+        answers: [{ id: 'hash', answer: 'hash', aliases: ['hash(int)'] }],
+      },
+      {
+        id: 'hash-lista3-reserva-27-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a logica de pesquisar(x).',
+        blocks: [
+          { id: 'pos', label: 'calcular pos = hash(x)', order: 1 },
+          { id: 't1', label: 'se T1[pos] == x, retorne true', order: 2 },
+          { id: 'reserva', label: 'localizar celula rehash(x) na lista T2', order: 3 },
+          { id: 'avl', label: 'pesquisar x na AVL da celula', order: 4 },
+        ],
+        correctOrder: ['pos', 't1', 'reserva', 'avl'],
+      },
+      {
+        id: 'hash-lista3-reserva-27-s4',
+        kind: 'complexidade',
+        prompt: 'Com poucas colisoes e AVL balanceada, como fica a busca?',
+        options: [
+          { id: 'a', label: 'O(1) esperado em T1, mais O(log c) se cair na reserva.' },
+          { id: 'b', label: 'O(n) sempre, porque hash nao ajuda.' },
+          { id: 'c', label: 'O(log m) sempre, por causa do tamanho da tabela.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(1) esperado em T1; O(log c) na AVL de reserva',
+      explanation: 'A tabela tenta acesso direto; colisoes ficam agrupadas em arvores balanceadas por celula.',
+    },
+    commonMistakes: [
+      {
+        id: 'hash-reserva-ignorar-rehash',
+        title: 'Jogar toda colisao na mesma reserva',
+        description: 'Sem rehash ou indice de reserva, a T2 perde distribuicao e concentra colisoes.',
+      },
+    ],
+  },
+  {
+    id: 'trie-lista3-inserir-palavra-18',
+    title: 'Implementar insercao em TRIE',
+    pattern: 'seguir-um-caminho',
+    structure: 'trie',
+    difficulty: 'medio',
+    statement:
+      'Questao 18 da lista: implemente inserir(String s) criando nos quando necessario e marcando fim no ultimo caractere.',
+    providedCode: `class NoTrie {
+  NoTrie[] filho = new NoTrie[26];
+  boolean fim;
+}
+
+class ArvoreTrie {
+  private NoTrie raiz = new NoTrie();
+
+  void inserir(String s) {
+    NoTrie atual = raiz;
+    // percorra os caracteres de s
+  }
+}`,
+    visualStateId: 'trie-stop-sapo-01',
+    focus: 'codigo',
+    source: prova3Source('Questao 18'),
+    steps: [
+      {
+        id: 'trie-lista3-inserir-palavra-18-s1',
+        kind: 'interpretar',
+        prompt: 'Como transformar um caractere minusculo em indice 0..25?',
+        options: [
+          { id: 'a', label: "int idx = s.charAt(i) - 'a';" },
+          { id: 'b', label: 'int idx = s.length();' },
+          { id: 'c', label: 'int idx = raiz.fim ? 1 : 0;' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'trie-lista3-inserir-palavra-18-s2',
+        kind: 'blocos',
+        prompt: 'Ordene o corpo do for de insercao.',
+        blocks: [
+          { id: 'indice', label: "int idx = s.charAt(i) - 'a';", order: 1 },
+          { id: 'criar', label: 'se atual.filho[idx] == null, crie novo NoTrie', order: 2 },
+          { id: 'descer', label: 'atual = atual.filho[idx];', order: 3 },
+        ],
+        correctOrder: ['indice', 'criar', 'descer'],
+      },
+      {
+        id: 'trie-lista3-inserir-palavra-18-s3',
+        kind: 'lacuna',
+        prompt: 'Depois do laco, complete: atual.___ = true;',
+        gapId: 'marca-palavra',
+        answers: [{ id: 'fim', answer: 'fim' }],
+      },
+      {
+        id: 'trie-lista3-inserir-palavra-18-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e a complexidade em funcao de |s|?',
+        options: [
+          { id: 'a', label: 'O(|s|), um passo por caractere.' },
+          { id: 'b', label: 'O(26^|s|), pois ha 26 filhos.' },
+          { id: 'c', label: 'O(n), onde n e sempre a tabela inteira.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(|s|)',
+      explanation: 'A insercao percorre os caracteres da palavra uma unica vez.',
+    },
+    commonMistakes: [
+      {
+        id: 'trie-nao-marcar-fim',
+        title: 'Criar caminho sem marcar fim',
+        description: 'Sem fim = true no ultimo no, pesquisar palavra exata nao reconhece a palavra inserida.',
+      },
+    ],
+  },
+  {
+    id: 'binaria-lista3-estritamente-binaria-05',
+    title: 'Escolher arvore estritamente binaria',
+    pattern: 'verificar-propriedade-global',
+    structure: 'binaria',
+    difficulty: 'facil',
+    statement:
+      'Questao 5 da lista: uma arvore binaria e estritamente binaria se todo no possui 0 ou 2 filhos. Escolha o desenho correto e complete a verificacao.',
+    providedCode: `class No {
+  int elemento;
+  No esq, dir;
+}
+
+class Arvore {
+  private No raiz;
+
+  boolean ehEstritamenteBinaria() {
+    return ehEstritamenteBinaria(raiz);
+  }
+
+  private boolean ehEstritamenteBinaria(No i) {
+    // nenhum no pode ter apenas um filho
+  }
+}`,
+    visualStateId: 'binaria-ismax-01',
+    focus: 'desenho',
+    source: prova3Source('Questao 5'),
+    steps: [
+      {
+        id: 'binaria-lista3-estritamente-binaria-05-s1',
+        kind: 'interpretar',
+        prompt: 'Qual desenho e estritamente binario?',
+        options: [
+          { id: 'a', label: 'Desenho A', visualStateId: 'binaria-estrita-01' },
+          { id: 'b', label: 'Desenho B', visualStateId: 'binaria-ismax-01' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'binaria-lista3-estritamente-binaria-05-s2',
+        kind: 'clique',
+        prompt: 'No desenho principal, clique em um no que quebra a regra por ter apenas um filho.',
+        targetNodeIds: ['n6'],
+        maxClicks: 1,
+      },
+      {
+        id: 'binaria-lista3-estritamente-binaria-05-s3',
+        kind: 'lacuna',
+        prompt: 'Complete a verificacao de folha: if (i.esq == null && i.dir == null) return ___.',
+        gapId: 'folha-estrita',
+        answers: [{ id: 'true', answer: 'true', aliases: ['verdadeiro'] }],
+      },
+      {
+        id: 'binaria-lista3-estritamente-binaria-05-s4',
+        kind: 'complexidade',
+        prompt: 'Por que o metodo percorre toda a arvore no pior caso?',
+        options: [
+          { id: 'a', label: 'Porque a violacao pode estar em qualquer no.' },
+          { id: 'b', label: 'Porque somente a raiz importa.' },
+          { id: 'c', label: 'Porque uma arvore binaria sempre e ABB.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'No pior caso, todos os nos precisam ser conferidos ate provar que nenhum tem um unico filho.',
+    },
+    commonMistakes: [
+      {
+        id: 'binaria-estrita-confundir-com-cheia',
+        title: 'Confundir estrita com completa',
+        description: 'Estritamente binaria fala da quantidade de filhos por no, nao de preencher todos os niveis.',
+      },
+    ],
+  },
+  {
+    id: 'arv234-lista3-folhas-mesma-altura-12',
+    title: 'Escolher folhas no mesmo nivel',
+    pattern: 'verificar-propriedade-global',
+    structure: 'arv234',
+    difficulty: 'medio',
+    statement:
+      'Questao 12 da lista: verifique se todas as folhas de uma 2-3-4 estao na mesma altura, uma propriedade essencial da estrutura.',
+    providedCode: `class No234 {
+  int qtdChaves;
+  int chave1, chave2, chave3;
+  No234 f0, f1, f2, f3;
+}
+
+class Arvore234 {
+  No234 raiz;
+
+  boolean folhasMesmaAltura() {
+    // descubra a altura da primeira folha
+    // e compare as demais folhas
+  }
+}`,
+    visualStateId: 'arv234-folhas-desiguais-01',
+    focus: 'desenho',
+    source: prova3Source('Questao 12'),
+    steps: [
+      {
+        id: 'arv234-lista3-folhas-mesma-altura-12-s1',
+        kind: 'interpretar',
+        prompt: 'Qual desenho representa folhas no mesmo nivel?',
+        options: [
+          { id: 'a', label: 'Desenho A', visualStateId: 'arv234-folhas-mesmo-nivel-01' },
+          { id: 'b', label: 'Desenho B', visualStateId: 'arv234-folhas-desiguais-01' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'arv234-lista3-folhas-mesma-altura-12-s2',
+        kind: 'clique',
+        prompt: 'No desenho principal, clique em uma folha que esta em profundidade diferente.',
+        targetNodeIds: ['n30'],
+        maxClicks: 1,
+      },
+      {
+        id: 'arv234-lista3-folhas-mesma-altura-12-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a estrategia recursiva.',
+        blocks: [
+          { id: 'folha', label: 'ao achar a primeira folha, guarde a profundidade esperada', order: 1 },
+          { id: 'filhos', label: 'percorra somente os filhos validos do no 2-3-4', order: 2 },
+          { id: 'compara', label: 'para cada outra folha, compare com a profundidade esperada', order: 3 },
+        ],
+        correctOrder: ['folha', 'filhos', 'compara'],
+      },
+      {
+        id: 'arv234-lista3-folhas-mesma-altura-12-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e o custo no pior caso?',
+        options: [
+          { id: 'a', label: 'O(n), pois todos os nos podem precisar ser visitados.' },
+          { id: 'b', label: 'O(1), pois basta a raiz.' },
+          { id: 'c', label: 'O(log n) sempre, sem visitar folhas.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'A verificacao precisa encontrar folhas e comparar profundidades ao longo da arvore.',
+    },
+    commonMistakes: [
+      {
+        id: 'arv234-comparar-so-dois-lados',
+        title: 'Ignorar filhos intermediarios',
+        description: 'Em uma 2-3-4, o no pode ter mais de dois filhos validos; todos entram na verificacao.',
+      },
+    ],
+  },
+  {
+    id: 'doidona-lista3-par-impar-38',
+    title: 'Codificar paridade em estrutura hibrida',
+    pattern: 'navegar-por-camadas',
+    structure: 'doidona',
+    difficulty: 'medio',
+    statement:
+      'Questao 38 da lista: chaves pares vao para uma AVL e chaves impares vao para uma TRIE usando a representacao decimal como string.',
+    providedCode: `class EstruturaParImpar {
+  private ArvoreAVL arvorePares;
+  private ArvoreTrie trieImpares;
+
+  void inserir(int x) {
+    if (/* par */) {
+      arvorePares.inserir(x);
+    } else {
+      trieImpares.inserir(String.valueOf(x));
+    }
+  }
+
+  boolean pesquisar(int x) {
+    // escolha a estrutura pela paridade
+  }
+}`,
+    visualStateId: 'doidona-camadas-01',
+    focus: 'codigo',
+    source: prova3Source('Questao 38'),
+    steps: [
+      {
+        id: 'doidona-lista3-par-impar-38-s1',
+        kind: 'interpretar',
+        prompt: 'Para onde vai a chave 42?',
+        options: [
+          { id: 'a', label: 'Para arvorePares, pois 42 e par.' },
+          { id: 'b', label: 'Para trieImpares, pois tem dois digitos.' },
+          { id: 'c', label: 'Para as duas estruturas.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'doidona-lista3-par-impar-38-s2',
+        kind: 'lacuna',
+        prompt: 'Complete a condicao de paridade: if (x ___ 2 == 0).',
+        gapId: 'mod-par',
+        answers: [{ id: 'mod', answer: '%', aliases: ['mod'] }],
+      },
+      {
+        id: 'doidona-lista3-par-impar-38-s3',
+        kind: 'blocos',
+        prompt: 'Ordene pesquisar(int x).',
+        blocks: [
+          { id: 'par', label: 'se x % 2 == 0', order: 1 },
+          { id: 'avl', label: 'retorne arvorePares.pesquisar(x)', order: 2 },
+          { id: 'trie', label: 'caso contrario, pesquise String.valueOf(x) na TRIE', order: 3 },
+        ],
+        correctOrder: ['par', 'avl', 'trie'],
+      },
+      {
+        id: 'doidona-lista3-par-impar-38-s4',
+        kind: 'complexidade',
+        prompt: 'Como analisar a busca?',
+        options: [
+          { id: 'a', label: 'Pares custam O(hAVL); impares custam O(digitos).' },
+          { id: 'b', label: 'Tudo custa O(1), pois so testa paridade.' },
+          { id: 'c', label: 'Tudo custa O(n), sempre percorre as duas estruturas.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(hAVL) para pares; O(d) para impares',
+      explanation: 'A paridade decide a estrutura; d e a quantidade de digitos da chave convertida para string.',
+    },
+    commonMistakes: [
+      {
+        id: 'doidona-par-impar-pesquisar-duas',
+        title: 'Pesquisar nas duas estruturas',
+        description: 'A regra de paridade ja determina onde a chave deve estar.',
+      },
+    ],
+  },
+  {
+    id: 'doidona-lista3-hash-abb-25',
+    title: 'Codificar doidona hash mais ABB',
+    pattern: 'navegar-por-camadas',
+    structure: 'doidona',
+    difficulty: 'dificil',
+    statement:
+      'Questao 25 da lista: use T1 como area principal e T2 como lista de celulas, cada uma com uma ABB de inteiros para colisoes.',
+    providedCode: `class NoABB {
+  int elemento;
+  NoABB esq, dir;
+}
+
+class Celula {
+  int indice;
+  NoABB raiz;
+  Celula prox;
+}
+
+class EstruturaDoidona {
+  private T1 t1;
+  private T2 t2;
+
+  boolean pesquisar(int x) {
+    // olhe T1 primeiro; se colidiu, procure na ABB da celula em T2
+  }
+}`,
+    visualStateId: 'doidona-camadas-01',
+    focus: 'codigo',
+    source: prova3Source('Questao 25'),
+    steps: [
+      {
+        id: 'doidona-lista3-hash-abb-25-s1',
+        kind: 'interpretar',
+        prompt: 'O que deve acontecer quando T1[hash(x)] ja esta ocupada?',
+        options: [
+          { id: 'a', label: 'Enviar x para a ABB dentro da celula correta em T2.' },
+          { id: 'b', label: 'Descartar x para manter T1 simples.' },
+          { id: 'c', label: 'Trocar o valor antigo por x sem guardar colisao.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'doidona-lista3-hash-abb-25-s2',
+        kind: 'blocos',
+        prompt: 'Ordene a insercao com colisao.',
+        blocks: [
+          { id: 'hash', label: 'calcular pos = hash(x)', order: 1 },
+          { id: 't1-livre', label: 'se T1[pos] livre, inserir em T1', order: 2 },
+          { id: 'rehash', label: 'se ocupada, calcular indiceReserva = rehash(x)', order: 3 },
+          { id: 'abb', label: 'inserir x na ABB da celula de T2', order: 4 },
+        ],
+        correctOrder: ['hash', 't1-livre', 'rehash', 'abb'],
+      },
+      {
+        id: 'doidona-lista3-hash-abb-25-s3',
+        kind: 'lacuna',
+        prompt: 'Complete a busca secundaria: return pesquisarABB(celula.___, x);',
+        gapId: 'raiz-abb-reserva',
+        answers: [{ id: 'raiz', answer: 'raiz' }],
+      },
+      {
+        id: 'doidona-lista3-hash-abb-25-s4',
+        kind: 'complexidade',
+        prompt: 'Qual analise descreve melhor o pior caso da reserva?',
+        options: [
+          { id: 'a', label: 'Pode chegar a O(h) na ABB da celula, e h pode ser linear.' },
+          { id: 'b', label: 'Sempre O(1), mesmo com colisao.' },
+          { id: 'c', label: 'Sempre O(log n), pois qualquer ABB e balanceada.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(1) esperado em T1; O(h) na ABB de reserva',
+      explanation: 'A area principal e direta, mas a ABB de colisao depende da altura h da arvore daquela celula.',
+    },
+    commonMistakes: [
+      {
+        id: 'doidona-abb-assumir-balanceada',
+        title: 'Assumir ABB balanceada sem garantia',
+        description: 'A questao usa ABB simples na reserva; sem AVL, h pode crescer ate a quantidade de colisoes.',
+      },
+    ],
+  },
+  {
+    id: 'patricia-lista3-eh-patricia-24',
+    title: 'Reconhecer PATRICIA valida',
+    pattern: 'analisar-complexidade',
+    structure: 'patricia',
+    difficulty: 'medio',
+    statement:
+      'Questao 24 da lista: uma TRIE compactada e PATRICIA valida quando nao ha no interno com rotulo vazio nem no interno com apenas um filho.',
+    providedCode: `class NoPatricia {
+  String rotulo;
+  NoPatricia[] filhos;
+  boolean fim;
+}
+
+class ArvorePatricia {
+  private NoPatricia raiz;
+
+  boolean ehPatricia() {
+    return ehPatricia(raiz, true);
+  }
+}`,
+    visualStateId: 'patricia-bit-01',
+    focus: 'conceito',
+    source: prova3Source('Questao 24'),
+    steps: [
+      {
+        id: 'patricia-lista3-eh-patricia-24-s1',
+        kind: 'interpretar',
+        prompt: 'Qual situacao indica que ainda existe compressao possivel?',
+        options: [
+          { id: 'a', label: 'No interno com apenas um filho.' },
+          { id: 'b', label: 'Folha marcada como fim.' },
+          { id: 'c', label: 'No interno com dois filhos divergentes.' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'patricia-lista3-eh-patricia-24-s2',
+        kind: 'simular',
+        prompt: 'No desenho, por que bit4 deve continuar existindo?',
+        options: [
+          { id: 'a', label: 'Porque separa ASA de ATO em um ponto de decisao real.' },
+          { id: 'b', label: 'Porque todo caractere precisa de um nivel proprio.' },
+          { id: 'c', label: 'Porque PATRICIA nao tem folhas.' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['bit2', 'bit4'],
+      },
+      {
+        id: 'patricia-lista3-eh-patricia-24-s3',
+        kind: 'lacuna',
+        prompt: 'Complete: um no interno com apenas ___ filho deve invalidar a PATRICIA.',
+        gapId: 'filho-unico',
+        answers: [{ id: 'um', answer: 'um', aliases: ['1'] }],
+      },
+      {
+        id: 'patricia-lista3-eh-patricia-24-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e o custo de validar todos os nos da PATRICIA?',
+        options: [
+          { id: 'a', label: 'O(n), visitando cada no uma vez.' },
+          { id: 'b', label: 'O(1), pois so olha a raiz.' },
+          { id: 'c', label: 'O(k) apenas no tamanho de uma palavra buscada.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'A validacao precisa percorrer todos os nos para achar rotulos vazios ou internos com um unico filho.',
+    },
+    commonMistakes: [
+      {
+        id: 'patricia-conceito-um-filho',
+        title: 'Aceitar no interno com um filho',
+        description: 'Esse caso mostra que o caminho ainda poderia ser compactado.',
       },
     ],
   },

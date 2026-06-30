@@ -1,5 +1,5 @@
-import { Play, RotateCcw, Sparkles, Trophy } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Play, Plus, RotateCcw, Search, Sparkles, StepBack, StepForward, Trash2, Trophy } from 'lucide-react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import { challengeBank } from '../challenges/challengeBank';
 import {
@@ -235,6 +235,28 @@ function TrailView({
 }: TrailViewProps) {
   const selected = getStructure(selectedStructure);
   const currentStep = activeChallenge?.steps[activeProgress?.stepIndex ?? 0];
+  const isClickStep = currentStep?.kind === 'clique';
+  const clickMax =
+    currentStep?.kind === 'clique' ? currentStep.maxClicks ?? currentStep.targetNodeIds.length : 0;
+  const [clickSelection, setClickSelection] = useState<string[]>([]);
+
+  // Reseta a selecao sempre que muda de etapa ou de desafio.
+  const stepKey = activeChallenge?.id && activeProgress ? `${activeChallenge.id}-${activeProgress.stepIndex}` : '';
+  useEffect(() => {
+    setClickSelection([]);
+  }, [stepKey]);
+
+  const handleToggleClickNode = (nodeId: string) => {
+    setClickSelection((current) => {
+      if (current.includes(nodeId)) {
+        return current.filter((candidate) => candidate !== nodeId);
+      }
+      if (clickMax > 0 && current.length >= clickMax) {
+        return current;
+      }
+      return [...current, nodeId];
+    });
+  };
 
   return (
     <section className="trail-view" aria-label="Trilha selecionada">
@@ -287,6 +309,11 @@ function TrailView({
                   <p className="eyebrow">{activeChallenge.pattern}</p>
                   <h3>{activeChallenge.title}</h3>
                   <p>{activeChallenge.statement}</p>
+                  {activeChallenge.source ? (
+                    <p className="challenge-source">
+                      {`Origem: ${activeChallenge.source.label} - ${activeChallenge.source.question}`}
+                    </p>
+                  ) : null}
                 </div>
 
                 <StructureDiagram
@@ -294,6 +321,8 @@ function TrailView({
                   visualState={sampleVisualStates[activeChallenge.visualStateId]}
                   activePath={lastResult?.activePath ?? activeChallenge.activePath}
                   activeNodeId={lastResult?.activeNodeId ?? activeChallenge.activeNodeId}
+                  selectedNodeIds={isClickStep ? clickSelection : undefined}
+                  onNodeClick={isClickStep ? handleToggleClickNode : undefined}
                 />
               </div>
 
@@ -308,6 +337,8 @@ function TrailView({
                   progress={activeProgress}
                   totalSteps={activeChallenge.steps.length}
                   onAnswer={onAnswer}
+                  clickSelection={isClickStep ? clickSelection : undefined}
+                  onToggleClickNode={isClickStep ? handleToggleClickNode : undefined}
                 />
               ) : (
                 <CompletionPanel progress={activeProgress} onRestart={onRestartChallenge} />
@@ -366,6 +397,36 @@ function FeedbackPanel({ result }: { result: StepResult }) {
 function LabView({ selectedStructure }: { selectedStructure: StructureKind }) {
   const selected = getStructure(selectedStructure);
   const firstChallenge = getFirstChallenge(selectedStructure);
+  const inputId = useId();
+  const [value, setValue] = useState('');
+  const [history, setHistory] = useState<string[]>([]);
+  const [activeHistoryIndex, setActiveHistoryIndex] = useState(0);
+
+  useEffect(() => {
+    setValue('');
+    setHistory([]);
+    setActiveHistoryIndex(0);
+  }, [selectedStructure]);
+
+  const registerOperation = (action: 'Inserir' | 'Remover' | 'Pesquisar') => {
+    const rawValue = value.trim();
+    const formattedValue = rawValue.length > 0 ? rawValue : selected?.shortName ?? 'valor';
+    const entry = `${action} ${formattedValue}`;
+
+    setHistory((current) => {
+      const next = [...current, entry];
+      setActiveHistoryIndex(next.length - 1);
+      return next;
+    });
+  };
+
+  const handlePrevious = () => {
+    setActiveHistoryIndex((current) => Math.max(0, current - 1));
+  };
+
+  const handleNext = () => {
+    setActiveHistoryIndex((current) => Math.min(history.length - 1, current + 1));
+  };
 
   return (
     <section className="utility-view" aria-label="Laboratorio">
@@ -381,12 +442,63 @@ function LabView({ selectedStructure }: { selectedStructure: StructureKind }) {
           structure={selectedStructure}
           visualState={firstChallenge ? sampleVisualStates[firstChallenge.visualStateId] : undefined}
         />
-        <div className="lab-controls" aria-label="Controles do laboratorio">
-          {['Inserir', 'Remover', 'Pesquisar', 'Passo anterior', 'Proximo passo'].map((label) => (
-            <button key={label} type="button" className="icon-command ghost" disabled>
-              {label}
+        <div className="lab-workspace">
+          <label className="lab-input" htmlFor={inputId}>
+            <span>Valor da operacao</span>
+            <input
+              id={inputId}
+              type="text"
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              placeholder="ex.: 42"
+            />
+          </label>
+
+          <div className="lab-controls" aria-label="Controles do laboratorio">
+            <button type="button" className="icon-command ghost" onClick={() => registerOperation('Inserir')}>
+              <Plus size={18} aria-hidden="true" />
+              Inserir
             </button>
-          ))}
+            <button type="button" className="icon-command ghost" onClick={() => registerOperation('Remover')}>
+              <Trash2 size={18} aria-hidden="true" />
+              Remover
+            </button>
+            <button type="button" className="icon-command ghost" onClick={() => registerOperation('Pesquisar')}>
+              <Search size={18} aria-hidden="true" />
+              Pesquisar
+            </button>
+            <button
+              type="button"
+              className="icon-command ghost"
+              onClick={handlePrevious}
+              disabled={history.length === 0 || activeHistoryIndex === 0}
+            >
+              <StepBack size={18} aria-hidden="true" />
+              Passo anterior
+            </button>
+            <button
+              type="button"
+              className="icon-command ghost"
+              onClick={handleNext}
+              disabled={history.length === 0 || activeHistoryIndex >= history.length - 1}
+            >
+              <StepForward size={18} aria-hidden="true" />
+              Proximo passo
+            </button>
+          </div>
+
+          <ol className="lab-history" aria-label="Historico do laboratorio">
+            {history.length === 0 ? (
+              <li className="empty-state">Nenhuma operacao executada.</li>
+            ) : (
+              history.map((entry, index) => (
+                <li key={`${entry}-${index}`} className={index === activeHistoryIndex ? 'is-active' : ''}>
+                  <span>{`Passo ${index + 1}`}</span>
+                  <strong>{entry}</strong>
+                </li>
+              ))
+            )}
+          </ol>
         </div>
       </div>
     </section>

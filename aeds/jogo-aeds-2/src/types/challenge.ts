@@ -35,9 +35,17 @@ export type ChallengeType =
   | 'simulacao'
   | 'complexidade';
 
+export type ChallengeFocus = 'codigo' | 'desenho' | 'conceito';
+
+export type ChallengeSource = {
+  label: string;
+  question: string;
+};
+
 export type ChoiceOption = {
   id: string;
   label: string;
+  visualStateId?: string;
   correct?: boolean;
   feedback?: string;
 };
@@ -131,6 +139,8 @@ export type Challenge = {
   complexity: ComplexityAnswer;
   commonMistakes: CommonMistake[];
   type?: ChallengeType;
+  focus?: ChallengeFocus;
+  source?: ChallengeSource;
   transferGroupId?: string;
   // Editable starting point for coding interactions in later tasks.
   starterCode?: string;

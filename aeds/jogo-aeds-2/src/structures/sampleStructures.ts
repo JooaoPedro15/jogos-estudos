@@ -21,6 +21,26 @@ export const sampleVisualStates: Record<string, VisualState> = {
       },
     },
   },
+  'abb-invalida-01': {
+    id: 'abb-invalida-01',
+    kind: 'tree',
+    root: {
+      id: 'n40',
+      label: '40',
+      left: {
+        id: 'n50',
+        label: '50',
+        left: { id: 'n10', label: '10' },
+        right: { id: 'n30', label: '30' },
+      },
+      right: {
+        id: 'n20',
+        label: '20',
+        left: { id: 'n60', label: '60' },
+        right: { id: 'n70', label: '70' },
+      },
+    },
+  },
   'avl-rotacao-01': {
     id: 'avl-rotacao-01',
     kind: 'tree',
@@ -142,6 +162,26 @@ export const sampleVisualStates: Record<string, VisualState> = {
       },
     },
   },
+  'binaria-estrita-01': {
+    id: 'binaria-estrita-01',
+    kind: 'tree',
+    root: {
+      id: 'n8',
+      label: '8',
+      left: {
+        id: 'n3',
+        label: '3',
+        left: { id: 'n1', label: '1' },
+        right: { id: 'n6', label: '6' },
+      },
+      right: {
+        id: 'n10',
+        label: '10',
+        left: { id: 'n9', label: '9' },
+        right: { id: 'n14', label: '14' },
+      },
+    },
+  },
   'arv234-basica-01': {
     id: 'arv234-basica-01',
     kind: 'tree',
@@ -152,6 +192,31 @@ export const sampleVisualStates: Record<string, VisualState> = {
         id: 'n10',
         label: '10',
       },
+      right: {
+        id: 'n50-60',
+        label: '50|60',
+        left: { id: 'n30', label: '30' },
+        right: { id: 'n70', label: '70' },
+      },
+    },
+  },
+  'arv234-folhas-mesmo-nivel-01': {
+    id: 'arv234-folhas-mesmo-nivel-01',
+    kind: 'tree',
+    root: {
+      id: 'n20-40',
+      label: '20|40',
+      left: { id: 'n10', label: '10' },
+      right: { id: 'n50-60', label: '50|60' },
+    },
+  },
+  'arv234-folhas-desiguais-01': {
+    id: 'arv234-folhas-desiguais-01',
+    kind: 'tree',
+    root: {
+      id: 'n20-40',
+      label: '20|40',
+      left: { id: 'n10', label: '10' },
       right: {
         id: 'n50-60',
         label: '50|60',

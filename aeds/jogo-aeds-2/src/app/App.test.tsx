@@ -45,3 +45,37 @@ test('usa o visualStateId do desafio para trocar o diagrama da estrutura', async
   expect(within(diagram).getByText('10')).toBeInTheDocument();
   expect(within(diagram).queryByText('40')).not.toBeInTheDocument();
 });
+
+test('laboratorio executa operacoes sem ficar bloqueado', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: 'Laboratorio' }));
+
+  const valueInput = screen.getByRole('textbox', { name: 'Valor da operacao' });
+  const insertButton = screen.getByRole('button', { name: 'Inserir' });
+  const removeButton = screen.getByRole('button', { name: 'Remover' });
+  const searchButton = screen.getByRole('button', { name: 'Pesquisar' });
+
+  expect(valueInput).toBeEnabled();
+  expect(insertButton).toBeEnabled();
+  expect(removeButton).toBeEnabled();
+  expect(searchButton).toBeEnabled();
+
+  await user.type(valueInput, '42');
+  await user.click(insertButton);
+
+  expect(screen.getByText('Inserir 42')).toBeInTheDocument();
+});
+
+test('renderiza fase de desenho com alternativas visuais da lista', async () => {
+  const user = userEvent.setup();
+  render(<App />);
+
+  await user.click(screen.getByRole('button', { name: 'Abrir trilha de ABB' }));
+  await user.click(screen.getByRole('button', { name: /Escolher desenho correto da ABB/ }));
+
+  expect(screen.getByRole('heading', { name: 'Escolher desenho correto da ABB' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Desenho A' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Desenho B' })).toBeInTheDocument();
+});

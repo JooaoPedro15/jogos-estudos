@@ -339,6 +339,16 @@ h3 {
   line-height: 1.48;
 }
 
+.challenge-source {
+  padding: 8px 10px;
+  color: #4b5a55;
+  background: #eef3f1;
+  border: 1px solid #d6dfda;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .code-panel {
   background: #ffffff;
   border: 1px solid #d6dfda;
@@ -410,6 +420,27 @@ pre {
 .diagram-node.is-active rect {
   fill: #f0c760;
   stroke: #9d6a14;
+}
+
+.diagram-node.is-clickable {
+  cursor: pointer;
+}
+
+.diagram-node.is-clickable circle,
+.diagram-node.is-clickable rect {
+  stroke-width: 3;
+}
+
+.diagram-node.is-clickable:focus-visible circle,
+.diagram-node.is-clickable:focus-visible rect,
+.diagram-node.is-selected circle,
+.diagram-node.is-selected rect {
+  fill: #0f7b6c;
+  stroke: #073f38;
+}
+
+.diagram-node.is-selected text {
+  fill: #ffffff;
 }
 
 .diagram-node.node-black circle,
@@ -497,6 +528,28 @@ pre {
   background: #f9fbfa;
   border: 1px solid #cfdbd6;
   font-weight: 800;
+}
+
+.choice-option.has-diagram {
+  display: grid;
+  gap: 8px;
+  min-height: 172px;
+  padding: 9px;
+}
+
+.choice-option.has-diagram > span:first-child {
+  font-size: 0.84rem;
+  text-transform: uppercase;
+}
+
+.choice-diagram {
+  display: block;
+  pointer-events: none;
+}
+
+.choice-diagram .structure-sketch {
+  min-height: 118px;
+  border-radius: 6px;
 }
 
 .node-choice.is-selected {
@@ -604,6 +657,57 @@ pre {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 9px;
   align-content: start;
+}
+
+.lab-workspace {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.lab-input {
+  display: grid;
+  gap: 6px;
+  color: #44504c;
+  font-weight: 900;
+}
+
+.lab-input input {
+  min-height: 40px;
+  padding: 8px 10px;
+  color: #1f2825;
+  background: #ffffff;
+  border: 1px solid #bdcbc5;
+  border-radius: 8px;
+}
+
+.lab-history {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-history li {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  background: #f8faf9;
+  border: 1px solid #dbe3df;
+  border-radius: 8px;
+}
+
+.lab-history li.is-active {
+  border-color: #0f7b6c;
+  box-shadow: inset 4px 0 0 #0f7b6c;
+}
+
+.lab-history span {
+  color: #6b7773;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .error-list,
