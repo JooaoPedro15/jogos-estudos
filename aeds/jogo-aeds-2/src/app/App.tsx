@@ -16,8 +16,17 @@ import {
 } from '../evaluators/stepEvaluator';
 import { sampleVisualStates } from '../structures/sampleStructures';
 import type { Challenge, StructureKind } from '../types/challenge';
+import type { VisualState } from '../types/structures';
 import { StepPanel } from './components/StepPanel';
 import { StructureDiagram } from './components/StructureDiagram';
+import {
+  buildLabOperation as buildTreeLabOperation,
+  createInitialLabTree,
+  treeToVisualState,
+  type LabAction,
+  type LabOperation,
+  type LabTreeNode,
+} from './labSimulation';
 import './App.css';
 
 type Mode = 'library' | 'trail' | 'lab' | 'errors' | 'simulado';
@@ -42,7 +51,7 @@ export default function App() {
   const [lastResult, setLastResult] = useState<StepResult | undefined>();
 
   const selectedChallenges = useMemo(
-    () => challengeBank.filter((challenge) => challenge.structure === selectedStructure),
+    () => getOrderedChallenges(selectedStructure),
     [selectedStructure],
   );
   const activeChallenge =
@@ -293,7 +302,11 @@ function TrailView({
                   className={challenge.id === activeChallenge?.id ? 'phase-button is-active' : 'phase-button'}
                   onClick={() => onSelectChallenge(challenge)}
                 >
-                  <span>{`Fase ${index + 1}`}</span>
+                  <span className="phase-meta">
+                    <span>{`Fase ${index + 1}`}</span>
+                    {challenge.source ? <span className="phase-source-badge">Lista Prova 3</span> : null}
+                    {challenge.focus ? <span className={`phase-focus-badge focus-${challenge.focus}`}>{getFocusLabel(challenge.focus)}</span> : null}
+                  </span>
                   <strong>{challenge.title}</strong>
                 </button>
               </li>
@@ -306,7 +319,15 @@ function TrailView({
             <>
               <div className="challenge-context">
                 <div className="challenge-copy">
-                  <p className="eyebrow">{activeChallenge.pattern}</p>
+                  <div className="challenge-kicker">
+                    <span className="eyebrow">{activeChallenge.pattern}</span>
+                    {activeChallenge.source ? <span className="phase-source-badge">Lista Prova 3</span> : null}
+                    {activeChallenge.focus ? (
+                      <span className={`phase-focus-badge focus-${activeChallenge.focus}`}>
+                        {getFocusLabel(activeChallenge.focus)}
+                      </span>
+                    ) : null}
+                  </div>
                   <h3>{activeChallenge.title}</h3>
                   <p>{activeChallenge.statement}</p>
                   {activeChallenge.source ? (
@@ -396,36 +417,48 @@ function FeedbackPanel({ result }: { result: StepResult }) {
 
 function LabView({ selectedStructure }: { selectedStructure: StructureKind }) {
   const selected = getStructure(selectedStructure);
-  const firstChallenge = getFirstChallenge(selectedStructure);
   const inputId = useId();
   const [value, setValue] = useState('');
-  const [history, setHistory] = useState<string[]>([]);
-  const [activeHistoryIndex, setActiveHistoryIndex] = useState(0);
+  const [labTree, setLabTree] = useState<LabTreeNode | undefined>(() => createInitialLabTree());
+  const [operations, setOperations] = useState<LabOperation[]>([]);
+  const [activeOperationIndex, setActiveOperationIndex] = useState(0);
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const activeOperation = operations[activeOperationIndex];
+  const activeStep = activeOperation?.steps[activeStepIndex];
 
   useEffect(() => {
     setValue('');
-    setHistory([]);
-    setActiveHistoryIndex(0);
+    setLabTree(createInitialLabTree());
+    setOperations([]);
+    setActiveOperationIndex(0);
+    setActiveStepIndex(0);
   }, [selectedStructure]);
 
-  const registerOperation = (action: 'Inserir' | 'Remover' | 'Pesquisar') => {
+  const registerOperation = (action: LabAction) => {
     const rawValue = value.trim();
-    const formattedValue = rawValue.length > 0 ? rawValue : selected?.shortName ?? 'valor';
-    const entry = `${action} ${formattedValue}`;
+    const operation =
+      buildCourseLabOperation(action, rawValue, selectedStructure, labTree) ??
+      buildTreeLabOperation(action, rawValue, labTree);
 
-    setHistory((current) => {
-      const next = [...current, entry];
-      setActiveHistoryIndex(next.length - 1);
+    setOperations((current) => {
+      const next = [...current, operation];
+      setActiveOperationIndex(next.length - 1);
+      setActiveStepIndex(0);
       return next;
     });
+    setLabTree(operation.nextTree);
   };
 
   const handlePrevious = () => {
-    setActiveHistoryIndex((current) => Math.max(0, current - 1));
+    setActiveStepIndex((current) => Math.max(0, current - 1));
   };
 
   const handleNext = () => {
-    setActiveHistoryIndex((current) => Math.min(history.length - 1, current + 1));
+    if (!activeOperation) {
+      return;
+    }
+
+    setActiveStepIndex((current) => Math.min(activeOperation.steps.length - 1, current + 1));
   };
 
   return (
@@ -440,7 +473,9 @@ function LabView({ selectedStructure }: { selectedStructure: StructureKind }) {
       <div className="tool-surface">
         <StructureDiagram
           structure={selectedStructure}
-          visualState={firstChallenge ? sampleVisualStates[firstChallenge.visualStateId] : undefined}
+          visualState={activeStep?.visualState ?? getLabInitialVisualState(selectedStructure, labTree)}
+          activePath={activeStep?.activePath}
+          activeNodeId={activeStep?.activeNodeId}
         />
         <div className="lab-workspace">
           <label className="lab-input" htmlFor={inputId}>
@@ -467,11 +502,15 @@ function LabView({ selectedStructure }: { selectedStructure: StructureKind }) {
               <Search size={18} aria-hidden="true" />
               Pesquisar
             </button>
+            <button type="button" className="icon-command ghost" onClick={() => registerOperation('Balancear')}>
+              <RotateCcw size={18} aria-hidden="true" />
+              Balancear
+            </button>
             <button
               type="button"
               className="icon-command ghost"
               onClick={handlePrevious}
-              disabled={history.length === 0 || activeHistoryIndex === 0}
+              disabled={!activeOperation || activeStepIndex === 0}
             >
               <StepBack size={18} aria-hidden="true" />
               Passo anterior
@@ -480,21 +519,40 @@ function LabView({ selectedStructure }: { selectedStructure: StructureKind }) {
               type="button"
               className="icon-command ghost"
               onClick={handleNext}
-              disabled={history.length === 0 || activeHistoryIndex >= history.length - 1}
+              disabled={!activeOperation || activeStepIndex >= activeOperation.steps.length - 1}
             >
               <StepForward size={18} aria-hidden="true" />
               Proximo passo
             </button>
           </div>
 
+          <section className="lab-animation" aria-label="Animacao do laboratorio">
+            {activeOperation && activeStep ? (
+              <>
+                <span className="lab-step-counter">{`Passo ${activeStepIndex + 1} de ${activeOperation.steps.length}`}</span>
+                <h3>{activeStep.title}</h3>
+                <p>{activeStep.description}</p>
+                <div className="lab-step-track" aria-hidden="true">
+                  <span style={{ width: `${((activeStepIndex + 1) / activeOperation.steps.length) * 100}%` }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="lab-step-counter">Pronto para animar</span>
+                <h3>Escolha uma operacao</h3>
+                <p>Use inserir, remover, pesquisar ou balancear para ver a arvore mudar passo a passo.</p>
+              </>
+            )}
+          </section>
+
           <ol className="lab-history" aria-label="Historico do laboratorio">
-            {history.length === 0 ? (
+            {operations.length === 0 ? (
               <li className="empty-state">Nenhuma operacao executada.</li>
             ) : (
-              history.map((entry, index) => (
-                <li key={`${entry}-${index}`} className={index === activeHistoryIndex ? 'is-active' : ''}>
+              operations.map((operation, index) => (
+                <li key={operation.id} className={index === activeOperationIndex ? 'is-active' : ''}>
                   <span>{`Passo ${index + 1}`}</span>
-                  <strong>{entry}</strong>
+                  <strong>{operation.label}</strong>
                 </li>
               ))
             )}
@@ -592,7 +650,7 @@ function StatusPill({ structure }: { structure: StructureCatalogItem }) {
 }
 
 function getFirstChallenge(structureId: StructureKind): Challenge | undefined {
-  return challengeBank.find((challenge) => challenge.structure === structureId);
+  return getOrderedChallenges(structureId)[0];
 }
 
 function getStructure(structureId: StructureKind): StructureCatalogItem | undefined {
@@ -601,6 +659,452 @@ function getStructure(structureId: StructureKind): StructureCatalogItem | undefi
 
 function getChallengeCount(structureId: StructureKind): number {
   return challengeBank.filter((challenge) => challenge.structure === structureId).length;
+}
+
+function getOrderedChallenges(structureId: StructureKind): Challenge[] {
+  return challengeBank
+    .filter((challenge) => challenge.structure === structureId)
+    .sort((first, second) => getChallengePriority(first) - getChallengePriority(second));
+}
+
+function getChallengePriority(challenge: Challenge): number {
+  if (challenge.source?.label === 'lista-aeds2-prova3.pdf') {
+    return 0;
+  }
+
+  return 1;
+}
+
+function getFocusLabel(focus: NonNullable<Challenge['focus']>): string {
+  const labels: Record<NonNullable<Challenge['focus']>, string> = {
+    codigo: 'Codigo',
+    desenho: 'Desenho',
+    conceito: 'Conceito',
+  };
+
+  return labels[focus];
+}
+
+function getLabInitialVisualState(
+  selectedStructure: StructureKind,
+  labTree: LabTreeNode | undefined,
+): VisualState {
+  const visualStateByStructure: Partial<Record<StructureKind, string>> = {
+    lista: 'lista-simples-01',
+    pilha: 'pilha-flexivel-01',
+    ordenacao: 'ordenacao-selecao-01',
+  };
+  const visualStateId = visualStateByStructure[selectedStructure];
+
+  return visualStateId ? sampleVisualStates[visualStateId] : treeToVisualState(labTree);
+}
+
+function buildCourseLabOperation(
+  action: LabAction,
+  rawValue: string,
+  selectedStructure: StructureKind,
+  labTree: LabTreeNode | undefined,
+): LabOperation | undefined {
+  const value = rawValue.trim() || getDefaultLabValue(selectedStructure);
+
+  if (selectedStructure === 'lista') {
+    return {
+      id: `lista-${action}-${value}-${Date.now()}`,
+      label: `${action} ${value}`,
+      nextTree: labTree,
+      steps: getListaLabSteps(action, value),
+    };
+  }
+
+  if (selectedStructure === 'pilha') {
+    return {
+      id: `pilha-${action}-${value}-${Date.now()}`,
+      label: `${action} ${value}`,
+      nextTree: labTree,
+      steps: getPilhaLabSteps(action, value),
+    };
+  }
+
+  if (selectedStructure === 'ordenacao') {
+    return {
+      id: `ordenacao-${action}-${value}-${Date.now()}`,
+      label: action === 'Balancear' ? 'Reorganizar vetor' : `${action} ${value}`,
+      nextTree: labTree,
+      steps: getOrdenacaoLabSteps(action, value),
+    };
+  }
+
+  return undefined;
+}
+
+function getDefaultLabValue(selectedStructure: StructureKind): string {
+  const values: Partial<Record<StructureKind, string>> = {
+    lista: '5',
+    pilha: '40',
+    ordenacao: '5',
+  };
+
+  return values[selectedStructure] ?? '0';
+}
+
+function getListaLabSteps(action: LabAction, value: string): LabOperation['steps'] {
+  if (action === 'Inserir') {
+    return [
+      {
+        title: `Criar celula ${value}`,
+        description: 'A lista simples cria uma nova celula antes de mexer nos ponteiros existentes.',
+        visualState: sampleVisualStates['lista-simples-01'],
+        activeNodeId: 'cabeca',
+      },
+      {
+        title: 'Apontar para o antigo inicio',
+        description: 'tmp.prox recebe primeiro.prox para preservar o restante da lista.',
+        visualState: sampleVisualStates['lista-simples-01'],
+        activePath: ['cabeca', 'c10'],
+      },
+      {
+        title: 'Religar primeiro.prox',
+        description: 'A celula cabeca passa a apontar para a nova celula.',
+        visualState: sampleVisualStates['lista-inserir-inicio-correto-01'],
+        activePath: ['cabeca', 'c5'],
+        activeNodeId: 'c5',
+      },
+      {
+        title: 'Lista atualizada',
+        description: `${value} aparece no inicio logico sem perder as celulas antigas.`,
+        visualState: sampleVisualStates['lista-inserir-inicio-correto-01'],
+        activePath: ['cabeca', 'c5', 'c10'],
+        activeNodeId: 'c5',
+      },
+    ];
+  }
+
+  if (action === 'Remover') {
+    return [
+      {
+        title: 'Localizar anterior',
+        description: 'Para remover uma posicao interna, a lista precisa parar na celula anterior.',
+        visualState: sampleVisualStates['lista-simples-01'],
+        activeNodeId: 'c10',
+      },
+      {
+        title: 'Guardar removida',
+        description: 'tmp recebe i.prox, que e a celula que vai sair.',
+        visualState: sampleVisualStates['lista-simples-01'],
+        activePath: ['c10', 'c20'],
+        activeNodeId: 'c20',
+      },
+      {
+        title: 'Religar ponteiros',
+        description: 'i.prox passa a apontar para tmp.prox, pulando a celula removida.',
+        visualState: sampleVisualStates['lista-simples-01'],
+        activePath: ['c10', 'c30'],
+      },
+      {
+        title: 'Retornar elemento',
+        description: 'A funcao devolve o elemento guardado antes de descartar a celula.',
+        visualState: sampleVisualStates['lista-simples-01'],
+        activeNodeId: 'c20',
+      },
+    ];
+  }
+
+  if (action === 'Pesquisar') {
+    return [
+      {
+        title: 'Comecar apos a cabeca',
+        description: 'A celula cabeca nao armazena dado util, entao a busca parte de primeiro.prox.',
+        visualState: sampleVisualStates['lista-simples-01'],
+        activeNodeId: 'cabeca',
+      },
+      {
+        title: 'Comparar com 10',
+        description: `${value} e comparado com o primeiro elemento real da lista.`,
+        visualState: sampleVisualStates['lista-simples-01'],
+        activePath: ['cabeca', 'c10'],
+        activeNodeId: 'c10',
+      },
+      {
+        title: 'Avancar pelo prox',
+        description: 'Enquanto nao encontrar o valor, a busca segue pelo campo prox.',
+        visualState: sampleVisualStates['lista-simples-01'],
+        activePath: ['cabeca', 'c10', 'c20'],
+        activeNodeId: 'c20',
+      },
+      {
+        title: 'Parar no fim ou no valor',
+        description: 'A busca termina ao encontrar o elemento ou ao chegar em null.',
+        visualState: sampleVisualStates['lista-simples-01'],
+        activePath: ['cabeca', 'c10', 'c20', 'c30'],
+        activeNodeId: 'c30',
+      },
+    ];
+  }
+
+  return [
+    {
+      title: 'Revisar encadeamento',
+      description: 'Listas simples nao balanceiam; aqui o foco e conferir se os ponteiros continuam alcancaveis.',
+      visualState: sampleVisualStates['lista-simples-01'],
+      activePath: ['cabeca', 'c10', 'c20', 'c30'],
+    },
+    {
+      title: 'Checar primeiro',
+      description: 'primeiro deve continuar apontando para a celula cabeca.',
+      visualState: sampleVisualStates['lista-simples-01'],
+      activeNodeId: 'cabeca',
+    },
+    {
+      title: 'Checar ultimo',
+      description: 'ultimo deve apontar para a ultima celula real.',
+      visualState: sampleVisualStates['lista-simples-01'],
+      activeNodeId: 'c30',
+    },
+    {
+      title: 'Estrutura consistente',
+      description: 'Todos os nos reais continuam acessiveis seguindo prox.',
+      visualState: sampleVisualStates['lista-simples-01'],
+      activePath: ['cabeca', 'c10', 'c20', 'c30'],
+    },
+  ];
+}
+
+function getPilhaLabSteps(action: LabAction, value: string): LabOperation['steps'] {
+  if (action === 'Inserir') {
+    return [
+      {
+        title: `Criar celula ${value}`,
+        description: 'O push cria uma celula que vai virar o novo topo.',
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activeNodeId: 'topo',
+      },
+      {
+        title: 'Apontar para o topo antigo',
+        description: 'tmp.prox recebe topo para preservar a pilha existente.',
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activePath: ['topo', 'c20', 'c10'],
+      },
+      {
+        title: 'Atualizar topo',
+        description: 'topo passa a apontar para tmp.',
+        visualState: sampleVisualStates['pilha-push-correto-01'],
+        activeNodeId: 'topo',
+      },
+      {
+        title: 'Push concluido',
+        description: `${value} sera o proximo valor removido por pop.`,
+        visualState: sampleVisualStates['pilha-push-correto-01'],
+        activePath: ['topo', 'c30'],
+      },
+    ];
+  }
+
+  if (action === 'Remover') {
+    return [
+      {
+        title: 'Ler o topo',
+        description: 'A pilha remove sempre o elemento mais recente.',
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activeNodeId: 'topo',
+      },
+      {
+        title: 'Guardar resposta',
+        description: 'resp recebe topo.elemento antes do ponteiro topo mudar.',
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activeNodeId: 'topo',
+      },
+      {
+        title: 'Avancar topo',
+        description: 'topo = topo.prox faz a segunda celula virar o novo topo.',
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activePath: ['topo', 'c20'],
+        activeNodeId: 'c20',
+      },
+      {
+        title: 'Pop concluido',
+        description: 'A funcao retorna o valor removido sem caminhar ate a base.',
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activeNodeId: 'c20',
+      },
+    ];
+  }
+
+  if (action === 'Pesquisar') {
+    return [
+      {
+        title: 'Comecar no topo',
+        description: 'Uma busca auxiliar pode percorrer a pilha sem alterar topo.',
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activeNodeId: 'topo',
+      },
+      {
+        title: 'Comparar celula atual',
+        description: `${value} e comparado com topo.elemento.`,
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activeNodeId: 'topo',
+      },
+      {
+        title: 'Seguir prox',
+        description: 'A busca usa um ponteiro auxiliar para nao destruir a pilha.',
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activePath: ['topo', 'c20'],
+        activeNodeId: 'c20',
+      },
+      {
+        title: 'Terminar em null',
+        description: 'Se o valor nao aparecer, o auxiliar chega ao fim da cadeia.',
+        visualState: sampleVisualStates['pilha-flexivel-01'],
+        activePath: ['topo', 'c20', 'c10'],
+        activeNodeId: 'c10',
+      },
+    ];
+  }
+
+  return [
+    {
+      title: 'Conferir topo',
+      description: 'Pilhas nao balanceiam; a propriedade importante e LIFO.',
+      visualState: sampleVisualStates['pilha-flexivel-01'],
+      activeNodeId: 'topo',
+    },
+    {
+      title: 'Conferir ordem',
+      description: 'O caminho topo -> base mostra a ordem de remocao.',
+      visualState: sampleVisualStates['pilha-flexivel-01'],
+      activePath: ['topo', 'c20', 'c10'],
+    },
+    {
+      title: 'Evitar remover pela base',
+      description: 'Mexer na base transformaria o comportamento em outro TAD.',
+      visualState: sampleVisualStates['pilha-flexivel-01'],
+      activeNodeId: 'c10',
+    },
+    {
+      title: 'Estrutura consistente',
+      description: 'Toda operacao principal continua O(1) quando trabalha no topo.',
+      visualState: sampleVisualStates['pilha-flexivel-01'],
+      activeNodeId: 'topo',
+    },
+  ];
+}
+
+function getOrdenacaoLabSteps(action: LabAction, value: string): LabOperation['steps'] {
+  if (action === 'Inserir') {
+    return [
+      {
+        title: `Guardar pivo ${value}`,
+        description: 'Na insercao, o valor temporario e guardado antes dos deslocamentos.',
+        visualState: sampleVisualStates['ordenacao-insercao-errado-01'],
+        activeNodeId: 'v2',
+      },
+      {
+        title: 'Comparar com o prefixo',
+        description: 'Enquanto o elemento anterior for maior que o pivo, ele anda para a direita.',
+        visualState: sampleVisualStates['ordenacao-insercao-errado-01'],
+        activePath: ['v1', 'v2'],
+      },
+      {
+        title: 'Abrir espaco',
+        description: 'Os valores maiores sao deslocados sem perder o pivo.',
+        visualState: sampleVisualStates['ordenacao-insercao-correto-01'],
+        activePath: ['v2', 'v3'],
+      },
+      {
+        title: 'Prefixo ordenado',
+        description: 'O pivo entra na posicao correta do trecho ja ordenado.',
+        visualState: sampleVisualStates['ordenacao-insercao-correto-01'],
+        activePath: ['v0', 'v1', 'v2'],
+        activeNodeId: 'v2',
+      },
+    ];
+  }
+
+  if (action === 'Pesquisar') {
+    return [
+      {
+        title: 'Ler indice inicial',
+        description: 'A simulacao compara posicoes do vetor uma a uma.',
+        visualState: sampleVisualStates['ordenacao-selecao-01'],
+        activeNodeId: 'v0',
+      },
+      {
+        title: 'Comparar candidato',
+        description: `${value} e comparado com os elementos do vetor.`,
+        visualState: sampleVisualStates['ordenacao-selecao-01'],
+        activePath: ['v0', 'v1'],
+        activeNodeId: 'v1',
+      },
+      {
+        title: 'Avancar indice',
+        description: 'Sem tabela auxiliar, a busca sequencial segue ate achar ou acabar.',
+        visualState: sampleVisualStates['ordenacao-selecao-01'],
+        activePath: ['v0', 'v1', 'v2'],
+        activeNodeId: 'v2',
+      },
+      {
+        title: 'Resultado',
+        description: 'O custo da busca sequencial em vetor e O(n).',
+        visualState: sampleVisualStates['ordenacao-selecao-01'],
+        activePath: ['v0', 'v1', 'v2', 'v3', 'v4'],
+      },
+    ];
+  }
+
+  if (action === 'Remover') {
+    return [
+      {
+        title: 'Localizar posicao',
+        description: 'Em vetor, remover exige achar o indice do elemento.',
+        visualState: sampleVisualStates['ordenacao-selecao-01'],
+        activeNodeId: 'v1',
+      },
+      {
+        title: 'Deslocar esquerda',
+        description: 'Os elementos posteriores andam uma casa para fechar o buraco.',
+        visualState: sampleVisualStates['ordenacao-selecao-01'],
+        activePath: ['v1', 'v2', 'v3', 'v4'],
+      },
+      {
+        title: 'Reduzir tamanho logico',
+        description: 'A variavel n diminui; a capacidade do array nao precisa mudar.',
+        visualState: sampleVisualStates['ordenacao-selecao-01'],
+        activeNodeId: 'v4',
+      },
+      {
+        title: 'Remocao analisada',
+        description: 'A operacao custa O(n) pelo deslocamento.',
+        visualState: sampleVisualStates['ordenacao-selecao-01'],
+        activePath: ['v1', 'v2', 'v3', 'v4'],
+      },
+    ];
+  }
+
+  return [
+    {
+      title: 'Escolher pivo',
+      description: 'No quicksort, o pivo separa valores menores e maiores.',
+      visualState: sampleVisualStates['ordenacao-particao-01'],
+      activeNodeId: 'v2',
+    },
+    {
+      title: 'Avancar ponteiros',
+      description: 'i avanca da esquerda e j recua da direita procurando inversoes.',
+      visualState: sampleVisualStates['ordenacao-particao-01'],
+      activePath: ['v0', 'v1', 'v3', 'v4'],
+    },
+    {
+      title: 'Trocar quando necessario',
+      description: 'Elementos do lado errado sao trocados antes das chamadas recursivas.',
+      visualState: sampleVisualStates['ordenacao-particao-01'],
+      activePath: ['v1', 'v3'],
+    },
+    {
+      title: 'Particao concluida',
+      description: 'A particao nao ordena tudo sozinha; ela prepara as duas chamadas recursivas.',
+      visualState: sampleVisualStates['ordenacao-particao-01'],
+      activePath: ['v0', 'v1', 'v2', 'v3', 'v4'],
+    },
+  ];
 }
 
 function getCompletedCount(progressByChallenge: Record<string, StepProgress>): number {

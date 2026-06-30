@@ -1,4 +1,7 @@
 export type StructureKind =
+  | 'lista'
+  | 'pilha'
+  | 'ordenacao'
   | 'binaria'
   | 'abb'
   | 'avl'

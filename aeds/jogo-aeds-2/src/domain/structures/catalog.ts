@@ -6,13 +6,40 @@ export type StructureCatalogItem = {
   id: StructureKind;
   name: string;
   shortName: string;
-  family: 'arvore' | 'hash' | 'trie' | 'hibrida';
+  family: 'linear' | 'ordenacao' | 'arvore' | 'hash' | 'trie' | 'hibrida';
   description: string;
   phaseCount: number;
   status: StructureStatus;
 };
 
 export const structureCatalog = [
+  {
+    id: 'lista',
+    name: 'Listas',
+    shortName: 'Lista',
+    family: 'linear',
+    description: 'Lista sequencial, lista simples, lista dupla, celula cabeca e posicoes.',
+    phaseCount: 10,
+    status: 'liberada',
+  },
+  {
+    id: 'pilha',
+    name: 'Pilhas',
+    shortName: 'Pilha',
+    family: 'linear',
+    description: 'Push, pop, topo, pilha sequencial e pilha flexivel.',
+    phaseCount: 10,
+    status: 'liberada',
+  },
+  {
+    id: 'ordenacao',
+    name: 'Ordenacao',
+    shortName: 'Ordenacao',
+    family: 'ordenacao',
+    description: 'Selecao, insercao, quicksort, mergesort, heapsort e analise de custo.',
+    phaseCount: 10,
+    status: 'liberada',
+  },
   {
     id: 'binaria',
     name: 'Arvore Binaria',

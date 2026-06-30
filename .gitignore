@@ -112,6 +112,9 @@ claude.local.md
 agents.local.md
 **/docs/PROMPT-CONTINUACAO.md
 **/docs/superpowers/
+**/docs/*.local.md
+**/docs/rascunhos/
+**/docs/material-extraido/
 
 # -----------------------------------------------------------------------------
 # Private academic material

@@ -2,6 +2,7 @@ import type { KeyboardEvent } from 'react';
 
 import type {
   HashVisualState,
+  HybridLayerView,
   HybridVisualState,
   TreeNodeView,
   TreeVisualState,
@@ -247,6 +248,39 @@ function HybridDiagram({
   selected: HighlightSet;
   onNodeClick?: (nodeId: string) => void;
 }) {
+  if (visualState.id.startsWith('lista-')) {
+    return (
+      <LinkedListDiagram
+        visualState={visualState}
+        highlighted={highlighted}
+        selected={selected}
+        onNodeClick={onNodeClick}
+      />
+    );
+  }
+
+  if (visualState.id.startsWith('pilha-')) {
+    return (
+      <StackDiagram
+        visualState={visualState}
+        highlighted={highlighted}
+        selected={selected}
+        onNodeClick={onNodeClick}
+      />
+    );
+  }
+
+  if (visualState.id.startsWith('ordenacao-')) {
+    return (
+      <ArrayDiagram
+        visualState={visualState}
+        highlighted={highlighted}
+        selected={selected}
+        onNodeClick={onNodeClick}
+      />
+    );
+  }
+
   const width = 360;
   const gap = 10;
   const layerWidth = (width - 40 - gap * (visualState.layers.length - 1)) / visualState.layers.length;
@@ -288,6 +322,306 @@ function HybridDiagram({
       })}
     </svg>
   );
+}
+
+function LinkedListDiagram({
+  visualState,
+  highlighted,
+  selected,
+  onNodeClick,
+}: {
+  visualState: HybridVisualState;
+  highlighted: HighlightSet;
+  selected: HighlightSet;
+  onNodeClick?: (nodeId: string) => void;
+}) {
+  const connected = visualState.layers.filter((layer) => !layer.items.some((item) => item.includes('solta')));
+  const loose = visualState.layers.filter((layer) => layer.items.some((item) => item.includes('solta')));
+  const spacing = connected.length > 4 ? 82 : 94;
+  const startX = connected.length > 4 ? 38 : 44;
+  const y = 88;
+
+  return (
+    <svg className="structure-sketch list-sketch" viewBox="0 0 420 190" role="img" aria-label="Diagrama de lista">
+      <defs>
+        <marker id="arrow-list" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" />
+        </marker>
+      </defs>
+      <text className="diagram-caption" x="22" y="24">
+        lista encadeada com celula cabeca
+      </text>
+
+      {connected.map((layer, index) => {
+        const x = startX + index * spacing;
+        const nextX = startX + (index + 1) * spacing;
+
+        return index < connected.length - 1 ? (
+          <path
+            key={`${layer.id}-arrow`}
+            className="list-link"
+            d={`M${x + 34} ${y} C${x + 48} ${y - 10}, ${nextX - 48} ${y - 10}, ${nextX - 34} ${y}`}
+            markerEnd="url(#arrow-list)"
+          />
+        ) : null;
+      })}
+
+      {connected.length > 0 ? (
+        <>
+          <path
+            className="list-link list-null-link"
+            d={`M${startX + (connected.length - 1) * spacing + 34} ${y} L${startX + (connected.length - 1) * spacing + 58} ${y}`}
+            markerEnd="url(#arrow-list)"
+          />
+          <text className="list-null-label" x={startX + (connected.length - 1) * spacing + 66} y={y + 5}>
+            null
+          </text>
+        </>
+      ) : null}
+
+      {connected.map((layer, index) => (
+        <PointerCell
+          key={layer.id}
+          id={layer.id}
+          x={startX + index * spacing}
+          y={y}
+          label={getListCellLabel(layer)}
+          caption={getListCellCaption(layer, index)}
+          highlighted={highlighted}
+          selected={selected}
+          onNodeClick={onNodeClick}
+          tone={layer.id === 'cabeca' ? 'head' : layer.id === 'c5' ? 'new' : 'normal'}
+        />
+      ))}
+
+      {loose.map((layer, index) => (
+        <PointerCell
+          key={layer.id}
+          id={layer.id}
+          x={320 + index * 58}
+          y={148}
+          label={getListCellLabel(layer)}
+          caption="solta"
+          highlighted={highlighted}
+          selected={selected}
+          onNodeClick={onNodeClick}
+          tone="loose"
+        />
+      ))}
+    </svg>
+  );
+}
+
+function StackDiagram({
+  visualState,
+  highlighted,
+  selected,
+  onNodeClick,
+}: {
+  visualState: HybridVisualState;
+  highlighted: HighlightSet;
+  selected: HighlightSet;
+  onNodeClick?: (nodeId: string) => void;
+}) {
+  const startY = 48;
+  const gap = 38;
+  const x = 194;
+
+  return (
+    <svg className="structure-sketch stack-sketch" viewBox="0 0 360 190" role="img" aria-label="Diagrama de pilha">
+      <defs>
+        <marker id="arrow-stack" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" />
+        </marker>
+      </defs>
+      <text className="diagram-caption" x="24" y="24">
+        pilha flexivel
+      </text>
+      <text className="stack-top-label" x="72" y={startY + 6}>
+        topo
+      </text>
+      <path className="stack-top-arrow" d={`M108 ${startY + 2} L${x - 36} ${startY + 2}`} markerEnd="url(#arrow-stack)" />
+
+      {visualState.layers.map((layer, index) => {
+        const y = startY + index * gap;
+        const nextY = startY + (index + 1) * gap;
+
+        return index < visualState.layers.length - 1 ? (
+          <path
+            key={`${layer.id}-arrow`}
+            className="stack-link"
+            d={`M${x} ${y + 18} L${x} ${nextY - 18}`}
+            markerEnd="url(#arrow-stack)"
+          />
+        ) : null;
+      })}
+
+      {visualState.layers.map((layer, index) => {
+        const y = startY + index * gap;
+
+        return (
+          <PointerCell
+            key={layer.id}
+            id={layer.id}
+            x={x}
+            y={y}
+            label={getStackCellLabel(layer)}
+            caption={index === 0 ? 'topo' : index === visualState.layers.length - 1 ? 'base' : ''}
+            highlighted={highlighted}
+            selected={selected}
+            onNodeClick={onNodeClick}
+            tone={index === 0 ? 'new' : 'normal'}
+          />
+        );
+      })}
+    </svg>
+  );
+}
+
+function ArrayDiagram({
+  visualState,
+  highlighted,
+  selected,
+  onNodeClick,
+}: {
+  visualState: HybridVisualState;
+  highlighted: HighlightSet;
+  selected: HighlightSet;
+  onNodeClick?: (nodeId: string) => void;
+}) {
+  const cellWidth = 64;
+  const startX = 22;
+  const y = 72;
+
+  return (
+    <svg className="structure-sketch array-sketch" viewBox="0 0 360 190" role="img" aria-label="Diagrama de vetor">
+      <text className="diagram-caption" x="22" y="24">
+        vetor em memoria principal
+      </text>
+      {visualState.layers.map((layer, index) => {
+        const x = startX + index * cellWidth;
+        const value = layer.items[0] ?? '';
+        const tags = layer.items.slice(1);
+        const isHighlighted = highlighted.has(layer.id);
+        const isSelected = selected.has(layer.id);
+
+        return (
+          <g
+            key={layer.id}
+            className={[
+              'array-cell',
+              isHighlighted ? 'is-active' : '',
+              isSelected ? 'is-selected' : '',
+              onNodeClick ? 'is-clickable' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            data-node-id={layer.id}
+            onClick={onNodeClick ? () => onNodeClick(layer.id) : undefined}
+            onKeyDown={getNodeKeyDown(onNodeClick, layer.id)}
+            role={onNodeClick ? 'button' : undefined}
+            tabIndex={onNodeClick ? 0 : undefined}
+          >
+            <text className="array-index" x={x + 26} y={y - 16} textAnchor="middle">
+              {layer.label}
+            </text>
+            <rect x={x} y={y} width={52} height={48} rx={8} />
+            <text className="array-value" x={x + 26} y={y + 31} textAnchor="middle">
+              {value}
+            </text>
+            {tags.map((tag, tagIndex) => (
+              <text key={`${layer.id}-${tag}`} className="array-tag" x={x + 26} y={y + 66 + tagIndex * 14} textAnchor="middle">
+                {tag}
+              </text>
+            ))}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+function PointerCell({
+  id,
+  x,
+  y,
+  label,
+  caption,
+  highlighted,
+  selected,
+  onNodeClick,
+  tone,
+}: {
+  id: string;
+  x: number;
+  y: number;
+  label: string;
+  caption: string;
+  highlighted: HighlightSet;
+  selected: HighlightSet;
+  onNodeClick?: (nodeId: string) => void;
+  tone: 'normal' | 'head' | 'new' | 'loose';
+}) {
+  const isHighlighted = highlighted.has(id);
+  const isSelected = selected.has(id);
+  const radius = tone === 'head' ? 24 : 28;
+
+  return (
+    <g
+      className={[
+        'pointer-cell',
+        `cell-${tone}`,
+        isHighlighted ? 'is-active' : '',
+        isSelected ? 'is-selected' : '',
+        onNodeClick ? 'is-clickable' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      data-node-id={id}
+      onClick={onNodeClick ? () => onNodeClick(id) : undefined}
+      onKeyDown={getNodeKeyDown(onNodeClick, id)}
+      role={onNodeClick ? 'button' : undefined}
+      tabIndex={onNodeClick ? 0 : undefined}
+    >
+      <circle cx={x} cy={y} r={radius} />
+      <text className="cell-label" x={x} y={y + 5} textAnchor="middle">
+        {label}
+      </text>
+      {caption ? (
+        <text className="cell-caption" x={x} y={y + radius + 17} textAnchor="middle">
+          {caption}
+        </text>
+      ) : null}
+    </g>
+  );
+}
+
+function getListCellLabel(layer: HybridLayerView): string {
+  if (layer.id === 'cabeca') {
+    return 'cabeca';
+  }
+
+  return layer.items[0] ?? layer.label;
+}
+
+function getListCellCaption(layer: HybridLayerView, index: number): string {
+  if (layer.id === 'cabeca') {
+    return 'celula cabeca';
+  }
+
+  if (layer.label === 'ultimo') {
+    return 'ultimo';
+  }
+
+  if (layer.id === 'c5') {
+    return 'nova';
+  }
+
+  return index === 1 ? 'primeira' : '';
+}
+
+function getStackCellLabel(layer: HybridLayerView): string {
+  return layer.items[0] ?? layer.label;
 }
 
 function layoutTree(root: TreeNodeView | undefined): { nodes: PositionedTreeNode[]; edges: Edge[] } {
@@ -368,6 +702,9 @@ function renderFallbackStructure(
   onNodeClick?: (nodeId: string) => void,
 ) {
   const labelByStructure: Record<StructureKind, string[]> = {
+    lista: ['primeiro', '10', '20', '30'],
+    pilha: ['topo', '30', '20', '10'],
+    ordenacao: ['i', '7', '3', '9'],
     binaria: ['8', '3', '10', '1', '6', '14'],
     abb: ['40', '20', '60', '10', '30', '50', '70'],
     avl: ['30', '20', '40', '10', '25', '50'],

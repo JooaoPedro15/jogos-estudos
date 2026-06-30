@@ -5,6 +5,9 @@ import { sampleVisualStates } from '../structures/sampleStructures';
 import type { ChallengeStep, StructureKind } from '../types/challenge';
 
 const mvpStructures: StructureKind[] = [
+  'lista',
+  'pilha',
+  'ordenacao',
   'binaria',
   'abb',
   'avl',
@@ -17,6 +20,15 @@ const mvpStructures: StructureKind[] = [
 ];
 
 const requiredChallengeIds = [
+  'lista-flexivel-remover-posicao-01',
+  'lista-desenho-inserir-inicio-01',
+  'lista-sequencial-pesquisar-01',
+  'pilha-flexivel-pop-01',
+  'pilha-desenho-push-01',
+  'pilha-analisar-soma-01',
+  'ordenacao-selecao-menor-01',
+  'ordenacao-insercao-desenho-01',
+  'ordenacao-quicksort-particao-01',
   'abb-pesquisar-01',
   'abb-contar-folhas-01',
   'abb-lista3-eh-abb-03',
@@ -104,7 +116,7 @@ describe('challengeBank', () => {
     expect(actualIds.size).toBeGreaterThanOrEqual(requiredChallengeIds.length);
   });
 
-  test('fits the prova 3 list into phases with the requested 60/30/10 focus split', () => {
+  test('fits the prova 3 list into phases with the requested 60/40 focus split', () => {
     const listChallenges = challengeBank.filter(
       (challenge) => challenge.source?.label === 'lista-aeds2-prova3.pdf',
     );
@@ -116,8 +128,28 @@ describe('challengeBank', () => {
     const structures = new Set(listChallenges.map((challenge) => challenge.structure));
 
     expect(listChallenges).toHaveLength(10);
-    expect(countsByFocus).toMatchObject({ codigo: 6, desenho: 3, conceito: 1 });
+    expect(countsByFocus).toMatchObject({ codigo: 6, desenho: 4 });
+    expect(countsByFocus.conceito ?? 0).toBe(0);
     expect(structures.size).toBeGreaterThanOrEqual(8);
+  });
+
+  test('includes lista, pilha and ordenacao from the course slides', () => {
+    const slideChallenges = challengeBank.filter(
+      (challenge) => challenge.source?.label === 'Semestre AEDS.zip',
+    );
+    const requiredStructures: StructureKind[] = ['lista', 'pilha', 'ordenacao'];
+
+    for (const structure of requiredStructures) {
+      const challenges = slideChallenges.filter((challenge) => challenge.structure === structure);
+      const countsByFocus = challenges.reduce<Record<string, number>>((counts, challenge) => {
+        const focus = challenge.focus ?? 'sem-foco';
+        counts[focus] = (counts[focus] ?? 0) + 1;
+        return counts;
+      }, {});
+
+      expect(challenges, `${structure} should have three slide-based phases`).toHaveLength(3);
+      expect(countsByFocus).toMatchObject({ codigo: 2, desenho: 1 });
+    }
   });
 
   test('contains drawing-selection phases backed by real visual states', () => {

@@ -5,6 +5,11 @@ const prova3Source = (question: string) => ({
   question,
 });
 
+const courseSource = (question: string) => ({
+  label: 'Semestre AEDS.zip',
+  question,
+});
+
 export const challengeBank = [
   {
     id: 'abb-pesquisar-01',
@@ -2171,8 +2176,8 @@ class EstruturaDoidona {
   },
   {
     id: 'patricia-lista3-eh-patricia-24',
-    title: 'Reconhecer PATRICIA valida',
-    pattern: 'analisar-complexidade',
+    title: 'Escolher desenho PATRICIA valido',
+    pattern: 'verificar-propriedade-global',
     structure: 'patricia',
     difficulty: 'medio',
     statement:
@@ -2191,17 +2196,16 @@ class ArvorePatricia {
   }
 }`,
     visualStateId: 'patricia-bit-01',
-    focus: 'conceito',
+    focus: 'desenho',
     source: prova3Source('Questao 24'),
     steps: [
       {
         id: 'patricia-lista3-eh-patricia-24-s1',
         kind: 'interpretar',
-        prompt: 'Qual situacao indica que ainda existe compressao possivel?',
+        prompt: 'Qual desenho completa uma PATRICIA valida?',
         options: [
-          { id: 'a', label: 'No interno com apenas um filho.' },
-          { id: 'b', label: 'Folha marcada como fim.' },
-          { id: 'c', label: 'No interno com dois filhos divergentes.' },
+          { id: 'a', label: 'Desenho A', visualStateId: 'patricia-bit-01' },
+          { id: 'b', label: 'Desenho B', visualStateId: 'patricia-invalida-um-filho-01' },
         ],
         correctOptionId: 'a',
       },
@@ -2245,6 +2249,685 @@ class ArvorePatricia {
         id: 'patricia-conceito-um-filho',
         title: 'Aceitar no interno com um filho',
         description: 'Esse caso mostra que o caminho ainda poderia ser compactado.',
+      },
+    ],
+  },
+  {
+    id: 'lista-flexivel-remover-posicao-01',
+    title: 'Remover por posicao na lista simples',
+    pattern: 'seguir-um-caminho',
+    structure: 'lista',
+    difficulty: 'medio',
+    statement:
+      'Nos slides de lista flexivel, a classe Lista usa uma celula cabeca chamada primeiro e um ponteiro ultimo. Complete remover(int pos) para retirar a celula da posicao indicada, religando os ponteiros corretamente.',
+    providedCode: `class Celula {
+  int elemento;
+  Celula prox;
+}
+
+class Lista {
+  private Celula primeiro, ultimo;
+
+  int remover(int pos) throws Exception {
+    // considere pos valida e primeira posicao igual a 0
+  }
+}`,
+    visualStateId: 'lista-simples-01',
+    focus: 'codigo',
+    source: courseSource('u04d_tadFlexivel_listasimples.pdf'),
+    steps: [
+      {
+        id: 'lista-flexivel-remover-posicao-01-s1',
+        kind: 'interpretar',
+        prompt: 'Para remover a posicao 1, em qual celula o ponteiro auxiliar deve parar antes de religar?',
+        options: [
+          { id: 'a', label: 'Na celula anterior a removida, com elemento 10.' },
+          { id: 'b', label: 'Na propria celula removida, com elemento 20.' },
+          { id: 'c', label: 'Sempre na celula cabeca, independente da posicao.' },
+        ],
+        correctOptionId: 'a',
+        activeNodeId: 'c10',
+      },
+      {
+        id: 'lista-flexivel-remover-posicao-01-s2',
+        kind: 'simular',
+        prompt: 'Depois de remover 20 da lista 10 -> 20 -> 30, qual ligacao deve existir?',
+        options: [
+          { id: 'a', label: '10.prox aponta para 30.' },
+          { id: 'b', label: '30.prox aponta para 10.' },
+          { id: 'c', label: 'primeiro.prox aponta para null.' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['c10', 'c20', 'c30'],
+      },
+      {
+        id: 'lista-flexivel-remover-posicao-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene o nucleo de remover(pos).',
+        blocks: [
+          { id: 'andar', label: 'andar com i ate a celula anterior a pos', order: 1 },
+          { id: 'guardar', label: 'guardar tmp = i.prox', order: 2 },
+          { id: 'religar', label: 'fazer i.prox = tmp.prox', order: 3 },
+          { id: 'ultimo', label: 'se tmp == ultimo, atualizar ultimo = i', order: 4 },
+          { id: 'retornar', label: 'retornar tmp.elemento', order: 5 },
+        ],
+        correctOrder: ['andar', 'guardar', 'religar', 'ultimo', 'retornar'],
+      },
+      {
+        id: 'lista-flexivel-remover-posicao-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e o custo de remover em uma posicao arbitraria de lista simples?',
+        options: [
+          { id: 'a', label: 'O(n), pois pode ser necessario caminhar ate a posicao.' },
+          { id: 'b', label: 'O(1), pois toda remocao conhece o anterior.' },
+          { id: 'c', label: 'O(log n), pois a lista fica ordenada.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'A remocao em posicao exige percorrer a lista ate a celula anterior, no pior caso proximo ao fim.',
+    },
+    commonMistakes: [
+      {
+        id: 'lista-remover-perder-resto',
+        title: 'Perder o resto da lista',
+        description: 'Se tmp.prox nao for preservado antes da religacao, as celulas seguintes podem ficar inacessiveis.',
+      },
+    ],
+  },
+  {
+    id: 'lista-desenho-inserir-inicio-01',
+    title: 'Escolher desenho do inserirInicio',
+    pattern: 'verificar-propriedade-global',
+    structure: 'lista',
+    difficulty: 'facil',
+    statement:
+      'A partir de uma lista simples com celula cabeca, escolha o desenho correto depois de executar inserirInicio(5). A nova celula deve entrar logo depois de primeiro.',
+    providedCode: `void inserirInicio(int x) {
+  Celula tmp = new Celula(x);
+  tmp.prox = primeiro.prox;
+  primeiro.prox = tmp;
+  if (primeiro == ultimo) ultimo = tmp;
+}`,
+    visualStateId: 'lista-simples-01',
+    focus: 'desenho',
+    source: courseSource('u04d_tadFlexivel_listasimples.pdf'),
+    steps: [
+      {
+        id: 'lista-desenho-inserir-inicio-01-s1',
+        kind: 'interpretar',
+        prompt: 'Qual desenho representa a lista apos inserir 5 no inicio?',
+        options: [
+          { id: 'a', label: 'Desenho A', visualStateId: 'lista-inserir-inicio-correto-01' },
+          { id: 'b', label: 'Desenho B', visualStateId: 'lista-inserir-inicio-errado-01' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'lista-desenho-inserir-inicio-01-s2',
+        kind: 'simular',
+        prompt: 'Qual ponteiro precisa ser ajustado primeiro para nao perder a lista antiga?',
+        options: [
+          { id: 'a', label: 'tmp.prox = primeiro.prox' },
+          { id: 'b', label: 'primeiro.prox = null' },
+          { id: 'c', label: 'ultimo.prox = tmp' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['cabeca', 'c5', 'c10'],
+      },
+      {
+        id: 'lista-desenho-inserir-inicio-01-s3',
+        kind: 'lacuna',
+        prompt: 'Complete a segunda religacao: primeiro.___ = tmp.',
+        gapId: 'primeiro-prox',
+        answers: [{ id: 'prox', answer: 'prox' }],
+      },
+      {
+        id: 'lista-desenho-inserir-inicio-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e o custo de inserir no inicio com celula cabeca?',
+        options: [
+          { id: 'a', label: 'O(1), pois nao percorre a lista.' },
+          { id: 'b', label: 'O(n), pois precisa achar o ultimo.' },
+          { id: 'c', label: 'O(log n), pois divide a lista.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(1)',
+      explanation: 'A operacao mexe apenas em primeiro.prox, tmp.prox e possivelmente ultimo.',
+    },
+    commonMistakes: [
+      {
+        id: 'lista-inicio-celula-solta',
+        title: 'Deixar a nova celula solta',
+        description: 'Criar tmp sem apontar primeiro.prox para ela nao insere a celula na lista.',
+      },
+    ],
+  },
+  {
+    id: 'lista-sequencial-pesquisar-01',
+    title: 'Pesquisar em lista sequencial',
+    pattern: 'percorrer-todos-os-nos',
+    structure: 'lista',
+    difficulty: 'facil',
+    statement:
+      'Nos slides de TAD Lista, a implementacao sequencial guarda os elementos em um array e controla o tamanho com n. Defina pesquisar(int x) retornando verdadeiro quando x estiver na lista.',
+    providedCode: `class Lista {
+  private int[] array;
+  private int n;
+
+  boolean pesquisar(int x) {
+    // complete
+  }
+}`,
+    visualStateId: 'lista-simples-01',
+    focus: 'codigo',
+    source: courseSource('u02a_tadLinear_lista.pdf'),
+    steps: [
+      {
+        id: 'lista-sequencial-pesquisar-01-s1',
+        kind: 'interpretar',
+        prompt: 'Qual limite do laco evita ler posicoes fora da lista usada?',
+        options: [
+          { id: 'a', label: 'i < n' },
+          { id: 'b', label: 'i <= array.length' },
+          { id: 'c', label: 'i < x' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'lista-sequencial-pesquisar-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete a comparacao principal: if (array[i] ___ x) return true;',
+        gapId: 'igualdade-array',
+        answers: [{ id: 'eq', answer: '==', aliases: ['igual'] }],
+      },
+      {
+        id: 'lista-sequencial-pesquisar-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a funcao pesquisar.',
+        blocks: [
+          { id: 'for', label: 'percorrer i de 0 ate n-1', order: 1 },
+          { id: 'if', label: 'se array[i] == x, retornar true', order: 2 },
+          { id: 'false', label: 'ao fim do laco, retornar false', order: 3 },
+        ],
+        correctOrder: ['for', 'if', 'false'],
+      },
+      {
+        id: 'lista-sequencial-pesquisar-01-s4',
+        kind: 'complexidade',
+        prompt: 'No pior caso, quantos elementos podem ser comparados?',
+        options: [
+          { id: 'a', label: 'n elementos.' },
+          { id: 'b', label: 'Apenas o primeiro.' },
+          { id: 'c', label: 'log2(n) elementos.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'Se x nao estiver na lista ou estiver no fim, todos os n elementos usados sao testados.',
+    },
+    commonMistakes: [
+      {
+        id: 'lista-sequencial-array-length',
+        title: 'Usar array.length como tamanho logico',
+        description: 'array.length e a capacidade; n e a quantidade real de elementos inseridos.',
+      },
+    ],
+  },
+  {
+    id: 'pilha-flexivel-pop-01',
+    title: 'Remover do topo da pilha',
+    pattern: 'seguir-um-caminho',
+    structure: 'pilha',
+    difficulty: 'facil',
+    statement:
+      'Nos slides de Pilha flexivel, a classe guarda apenas o ponteiro topo. Complete remover() para desempilhar o elemento do topo e avancar o ponteiro.',
+    providedCode: `class Celula {
+  int elemento;
+  Celula prox;
+}
+
+class Pilha {
+  private Celula topo;
+
+  int remover() throws Exception {
+    // complete
+  }
+}`,
+    visualStateId: 'pilha-flexivel-01',
+    focus: 'codigo',
+    source: courseSource('u04b_tadFlexivel_pilha.pdf'),
+    steps: [
+      {
+        id: 'pilha-flexivel-pop-01-s1',
+        kind: 'interpretar',
+        prompt: 'Qual elemento sai primeiro na pilha exibida?',
+        options: [
+          { id: 'a', label: '30, pois esta no topo.' },
+          { id: 'b', label: '10, pois entrou primeiro.' },
+          { id: 'c', label: '20, pois esta no meio.' },
+        ],
+        correctOptionId: 'a',
+        activeNodeId: 'topo',
+      },
+      {
+        id: 'pilha-flexivel-pop-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete a atualizacao: topo = topo.___;',
+        gapId: 'topo-prox',
+        answers: [{ id: 'prox', answer: 'prox' }],
+      },
+      {
+        id: 'pilha-flexivel-pop-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene o remover da pilha.',
+        blocks: [
+          { id: 'vazia', label: 'se topo == null, lancar excecao', order: 1 },
+          { id: 'guardar', label: 'guardar resp = topo.elemento', order: 2 },
+          { id: 'avancar', label: 'atualizar topo = topo.prox', order: 3 },
+          { id: 'return', label: 'retornar resp', order: 4 },
+        ],
+        correctOrder: ['vazia', 'guardar', 'avancar', 'return'],
+      },
+      {
+        id: 'pilha-flexivel-pop-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e a complexidade de push/pop em pilha flexivel com ponteiro topo?',
+        options: [
+          { id: 'a', label: 'O(1), pois mexe so no topo.' },
+          { id: 'b', label: 'O(n), pois precisa percorrer ate a base.' },
+          { id: 'c', label: 'O(log n), pois usa divisao.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(1)',
+      explanation: 'A remocao da pilha acessa e altera apenas a primeira celula apontada por topo.',
+    },
+    commonMistakes: [
+      {
+        id: 'pilha-pop-remover-base',
+        title: 'Remover pela base',
+        description: 'Isso transforma a operacao em fila e quebra o comportamento LIFO da pilha.',
+      },
+    ],
+  },
+  {
+    id: 'pilha-desenho-push-01',
+    title: 'Escolher desenho do push',
+    pattern: 'verificar-propriedade-global',
+    structure: 'pilha',
+    difficulty: 'facil',
+    statement:
+      'Depois de executar inserir(40) em uma pilha flexivel, a nova celula precisa virar topo e apontar para o antigo topo.',
+    providedCode: `void inserir(int x) {
+  Celula tmp = new Celula(x);
+  tmp.prox = topo;
+  topo = tmp;
+}`,
+    visualStateId: 'pilha-flexivel-01',
+    focus: 'desenho',
+    source: courseSource('u04b_tadFlexivel_pilha.pdf'),
+    steps: [
+      {
+        id: 'pilha-desenho-push-01-s1',
+        kind: 'interpretar',
+        prompt: 'Qual desenho representa corretamente o push de 40?',
+        options: [
+          { id: 'a', label: 'Desenho A', visualStateId: 'pilha-push-correto-01' },
+          { id: 'b', label: 'Desenho B', visualStateId: 'pilha-push-errado-01' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'pilha-desenho-push-01-s2',
+        kind: 'simular',
+        prompt: 'Depois do push, qual elemento deve ser removido por pop?',
+        options: [
+          { id: 'a', label: '40' },
+          { id: 'b', label: '30' },
+          { id: 'c', label: '10' },
+        ],
+        correctOptionId: 'a',
+        activeNodeId: 'topo',
+      },
+      {
+        id: 'pilha-desenho-push-01-s3',
+        kind: 'lacuna',
+        prompt: 'Complete a primeira ligacao: tmp.prox = ___;',
+        gapId: 'topo-antigo',
+        answers: [{ id: 'topo', answer: 'topo' }],
+      },
+      {
+        id: 'pilha-desenho-push-01-s4',
+        kind: 'complexidade',
+        prompt: 'Por que o push nao depende do tamanho da pilha?',
+        options: [
+          { id: 'a', label: 'Porque so cria a celula e troca o ponteiro topo.' },
+          { id: 'b', label: 'Porque percorre ate achar o ultimo.' },
+          { id: 'c', label: 'Porque ordena os elementos antes de inserir.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(1)',
+      explanation: 'A pilha flexivel insere sempre no topo, sem caminhar pela cadeia.',
+    },
+    commonMistakes: [
+      {
+        id: 'pilha-push-na-base',
+        title: 'Inserir na base',
+        description: 'Inserir no final da cadeia muda a operacao esperada e exige percurso desnecessario.',
+      },
+    ],
+  },
+  {
+    id: 'pilha-analisar-soma-01',
+    title: 'Analisar funcao que percorre a pilha',
+    pattern: 'analisar-complexidade',
+    structure: 'pilha',
+    difficulty: 'medio',
+    statement:
+      'Analise a funcao pronta abaixo. Ela nao remove elementos; apenas caminha pelos ponteiros da pilha a partir do topo.',
+    providedCode: `int soma() {
+  int resp = 0;
+  for (Celula i = topo; i != null; i = i.prox) {
+    resp += i.elemento;
+  }
+  return resp;
+}`,
+    visualStateId: 'pilha-flexivel-01',
+    focus: 'codigo',
+    source: courseSource('u04b_tadFlexivel_pilha.pdf'),
+    steps: [
+      {
+        id: 'pilha-analisar-soma-01-s1',
+        kind: 'interpretar',
+        prompt: 'O que a funcao soma() retorna para a pilha exibida?',
+        options: [
+          { id: 'a', label: '60' },
+          { id: 'b', label: '30' },
+          { id: 'c', label: '10' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'pilha-analisar-soma-01-s2',
+        kind: 'simular',
+        prompt: 'Qual e a ordem de visita do laco?',
+        options: [
+          { id: 'a', label: '30 -> 20 -> 10' },
+          { id: 'b', label: '10 -> 20 -> 30' },
+          { id: 'c', label: '20 -> 30 -> 10' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['topo', 'c20', 'c10'],
+      },
+      {
+        id: 'pilha-analisar-soma-01-s3',
+        kind: 'lacuna',
+        prompt: 'Complete a atualizacao do laco: i = i.___;',
+        gapId: 'i-prox',
+        answers: [{ id: 'prox', answer: 'prox' }],
+      },
+      {
+        id: 'pilha-analisar-soma-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e a complexidade dessa funcao?',
+        options: [
+          { id: 'a', label: 'O(n), pois visita todas as celulas.' },
+          { id: 'b', label: 'O(1), pois a pilha tem topo.' },
+          { id: 'c', label: 'O(log n), pois pula metade dos elementos.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'A funcao percorre uma celula por iteracao ate chegar em null.',
+    },
+    commonMistakes: [
+      {
+        id: 'pilha-analisar-achar-que-remove',
+        title: 'Confundir percorrer com remover',
+        description: 'O ponteiro topo nao e alterado; a funcao apenas usa um auxiliar i.',
+      },
+    ],
+  },
+  {
+    id: 'ordenacao-selecao-menor-01',
+    title: 'Completar passo da selecao',
+    pattern: 'percorrer-todos-os-nos',
+    structure: 'ordenacao',
+    difficulty: 'medio',
+    statement:
+      'Nos slides de ordenacao por selecao, cada passada escolhe o menor elemento do trecho nao ordenado e troca com a posicao i. Complete o raciocinio do primeiro passo.',
+    providedCode: `void selecao(int[] array, int n) {
+  for (int i = 0; i < n - 1; i++) {
+    int menor = i;
+    for (int j = i + 1; j < n; j++) {
+      // atualize menor quando necessario
+    }
+    swap(array, menor, i);
+  }
+}`,
+    visualStateId: 'ordenacao-selecao-01',
+    focus: 'codigo',
+    source: courseSource('u03_ordenacaoInterna_selecao.pdf'),
+    steps: [
+      {
+        id: 'ordenacao-selecao-menor-01-s1',
+        kind: 'interpretar',
+        prompt: 'No vetor exibido, qual indice deve ser guardado em menor na primeira passada?',
+        options: [
+          { id: 'a', label: '1, onde esta o valor 4.' },
+          { id: 'b', label: '0, onde esta o valor 7.' },
+          { id: 'c', label: '3, onde esta o valor 12.' },
+        ],
+        correctOptionId: 'a',
+        activeNodeId: 'v1',
+      },
+      {
+        id: 'ordenacao-selecao-menor-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete a comparacao: if (array[j] ___ array[menor]) menor = j;',
+        gapId: 'menor-comparacao',
+        answers: [{ id: 'lt', answer: '<', aliases: ['menor que'] }],
+      },
+      {
+        id: 'ordenacao-selecao-menor-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene uma passada da selecao.',
+        blocks: [
+          { id: 'menor-i', label: 'iniciar menor = i', order: 1 },
+          { id: 'varrer', label: 'varrer j de i+1 ate n-1', order: 2 },
+          { id: 'atualizar', label: 'atualizar menor se achar valor menor', order: 3 },
+          { id: 'trocar', label: 'trocar array[i] com array[menor]', order: 4 },
+        ],
+        correctOrder: ['menor-i', 'varrer', 'atualizar', 'trocar'],
+      },
+      {
+        id: 'ordenacao-selecao-menor-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e a complexidade da selecao no numero de comparacoes?',
+        options: [
+          { id: 'a', label: 'O(n^2), mesmo se o vetor ja estiver ordenado.' },
+          { id: 'b', label: 'O(n), pois cada elemento troca uma vez.' },
+          { id: 'c', label: 'O(log n), pois sempre divide o vetor.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n^2)',
+      explanation: 'A selecao compara pares em lacos aninhados; a quantidade de comparacoes independe da ordem inicial.',
+    },
+    commonMistakes: [
+      {
+        id: 'ordenacao-selecao-contar-so-trocas',
+        title: 'Analisar apenas trocas',
+        description: 'Mesmo com poucas trocas, as comparacoes continuam quadraticas.',
+      },
+    ],
+  },
+  {
+    id: 'ordenacao-insercao-desenho-01',
+    title: 'Escolher estado da insercao',
+    pattern: 'verificar-propriedade-global',
+    structure: 'ordenacao',
+    difficulty: 'medio',
+    statement:
+      'No algoritmo de insercao, o prefixo antes de i fica ordenado. Escolha o desenho correto depois de inserir o pivo 5 no prefixo [2, 4, 7, 9].',
+    providedCode: `for (int i = 1; i < n; i++) {
+  int tmp = array[i];
+  int j = i - 1;
+  while (j >= 0 && array[j] > tmp) {
+    array[j + 1] = array[j];
+    j--;
+  }
+  array[j + 1] = tmp;
+}`,
+    visualStateId: 'ordenacao-insercao-correto-01',
+    focus: 'desenho',
+    source: courseSource('u03b_ordenacaoInterna_insercao.pdf'),
+    steps: [
+      {
+        id: 'ordenacao-insercao-desenho-01-s1',
+        kind: 'interpretar',
+        prompt: 'Qual desenho mostra o prefixo ordenado depois de inserir 5?',
+        options: [
+          { id: 'a', label: 'Desenho A', visualStateId: 'ordenacao-insercao-correto-01' },
+          { id: 'b', label: 'Desenho B', visualStateId: 'ordenacao-insercao-errado-01' },
+        ],
+        correctOptionId: 'a',
+      },
+      {
+        id: 'ordenacao-insercao-desenho-01-s2',
+        kind: 'simular',
+        prompt: 'Qual valor precisa ser deslocado para a direita antes de colocar 5?',
+        options: [
+          { id: 'a', label: '7' },
+          { id: 'b', label: '2' },
+          { id: 'c', label: '4' },
+        ],
+        correctOptionId: 'a',
+        activeNodeId: 'v3',
+      },
+      {
+        id: 'ordenacao-insercao-desenho-01-s3',
+        kind: 'lacuna',
+        prompt: 'Complete a condicao do while: array[j] ___ tmp.',
+        gapId: 'insercao-maior',
+        answers: [{ id: 'gt', answer: '>', aliases: ['maior que'] }],
+      },
+      {
+        id: 'ordenacao-insercao-desenho-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual e o pior caso da ordenacao por insercao?',
+        options: [
+          { id: 'a', label: 'O(n^2), quando desloca muitos elementos.' },
+          { id: 'b', label: 'O(n log n), sempre.' },
+          { id: 'c', label: 'O(1), pois guarda tmp.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n^2) no pior caso',
+      explanation: 'Em ordem inversa, cada novo pivo pode deslocar todo o prefixo anterior.',
+    },
+    commonMistakes: [
+      {
+        id: 'ordenacao-insercao-trocar-com-selecao',
+        title: 'Confundir insercao com selecao',
+        description: 'Insercao desloca elementos do prefixo; selecao procura o menor do restante.',
+      },
+    ],
+  },
+  {
+    id: 'ordenacao-quicksort-particao-01',
+    title: 'Analisar particao do quicksort',
+    pattern: 'analisar-complexidade',
+    structure: 'ordenacao',
+    difficulty: 'dificil',
+    statement:
+      'Nos slides de quicksort, a particao reorganiza o vetor em torno de um pivo. Analise o estado exibido e a complexidade esperada do algoritmo.',
+    providedCode: `void quicksort(int[] array, int esq, int dir) {
+  int i = esq, j = dir;
+  int pivo = array[(esq + dir) / 2];
+  while (i <= j) {
+    while (array[i] < pivo) i++;
+    while (array[j] > pivo) j--;
+    if (i <= j) swap(array, i++, j--);
+  }
+  if (esq < j) quicksort(array, esq, j);
+  if (i < dir) quicksort(array, i, dir);
+}`,
+    visualStateId: 'ordenacao-particao-01',
+    focus: 'codigo',
+    source: courseSource('u03d_ordenacaoInterna_quicksort.pdf'),
+    steps: [
+      {
+        id: 'ordenacao-quicksort-particao-01-s1',
+        kind: 'interpretar',
+        prompt: 'No desenho, que propriedade a particao ja garante em relacao ao pivo 5?',
+        options: [
+          { id: 'a', label: 'Valores menores ficaram a esquerda e maiores a direita.' },
+          { id: 'b', label: 'O vetor inteiro ja esta necessariamente ordenado.' },
+          { id: 'c', label: 'Todos os valores iguais ao pivo foram removidos.' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['v0', 'v1', 'v2', 'v3', 'v4'],
+      },
+      {
+        id: 'ordenacao-quicksort-particao-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete a escolha do pivo central: int pivo = array[(esq + dir) ___ 2];',
+        gapId: 'pivo-divisao',
+        answers: [{ id: 'div', answer: '/', aliases: ['dividido por'] }],
+      },
+      {
+        id: 'ordenacao-quicksort-particao-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene o raciocinio da particao.',
+        blocks: [
+          { id: 'pivo', label: 'escolher o pivo', order: 1 },
+          { id: 'avancar-i', label: 'avancar i enquanto array[i] < pivo', order: 2 },
+          { id: 'recuar-j', label: 'recuar j enquanto array[j] > pivo', order: 3 },
+          { id: 'trocar', label: 'trocar quando i <= j e continuar', order: 4 },
+        ],
+        correctOrder: ['pivo', 'avancar-i', 'recuar-j', 'trocar'],
+      },
+      {
+        id: 'ordenacao-quicksort-particao-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual analise combina caso medio e pior caso do quicksort?',
+        options: [
+          { id: 'a', label: 'Medio O(n log n), pior O(n^2).' },
+          { id: 'b', label: 'Sempre O(n), pois so faz uma particao.' },
+          { id: 'c', label: 'Sempre O(n^2), mesmo com particoes equilibradas.' },
+        ],
+        correctOptionId: 'a',
+      },
+    ],
+    complexity: {
+      answer: 'O(n log n) medio; O(n^2) pior caso',
+      explanation: 'Particoes equilibradas geram altura log n; particoes muito ruins podem gerar altura n.',
+    },
+    commonMistakes: [
+      {
+        id: 'ordenacao-quicksort-particao-ordenado',
+        title: 'Achar que uma particao ordena tudo',
+        description: 'A particao separa em torno do pivo; as subpartes ainda precisam de chamadas recursivas.',
       },
     ],
   },

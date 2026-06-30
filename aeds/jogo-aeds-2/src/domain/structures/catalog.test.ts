@@ -5,6 +5,9 @@ import type { StructureKind } from '../../types/challenge';
 import { structureCatalog, unlockedStructureIds } from './catalog';
 
 const allStructures: StructureKind[] = [
+  'lista',
+  'pilha',
+  'ordenacao',
   'binaria',
   'abb',
   'avl',
@@ -17,7 +20,7 @@ const allStructures: StructureKind[] = [
 ];
 
 describe('structureCatalog', () => {
-  it('lista exatamente as 9 estruturas do recorte atual', () => {
+  it('lista exatamente as 12 estruturas do material atual', () => {
     expect(structureCatalog.map((structure) => structure.id)).toEqual(allStructures);
   });
 
