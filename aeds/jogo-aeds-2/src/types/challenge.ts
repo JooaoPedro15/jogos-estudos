@@ -29,6 +29,8 @@ export type ChallengeStepKind =
   | 'blocos'
   | 'complexidade'
   | 'clique'
+  | 'corrigir'
+  | 'digitar'
   | 'revisao';
 
 export type ChallengeType =
@@ -126,7 +128,36 @@ export type ClickStep = ChallengeStepBase & {
   selectionMode?: 'ordered' | 'unordered';
 };
 
-export type ChallengeStep = ChoiceStep | GapStep | BlockStep | ReviewStep | ClickStep;
+export type FixLineOption = {
+  id: string;
+  label: string;
+};
+
+// Etapa "corrigir": o jogador aponta a linha errada do codigo e escolhe o conserto.
+export type FixStep = ChallengeStepBase & {
+  kind: 'corrigir';
+  lines: string[];
+  wrongLineIndex: number;
+  fixOptions: FixLineOption[];
+  correctFixId: string;
+};
+
+// Etapa "digitar": o jogador escreve a linha/expressao de codigo pedida.
+// A validacao normaliza caixa, acentos, espacos e ponto-e-virgula final.
+export type TypeCodeStep = ChallengeStepBase & {
+  kind: 'digitar';
+  expected: string;
+  aliases?: string[];
+};
+
+export type ChallengeStep =
+  | ChoiceStep
+  | GapStep
+  | BlockStep
+  | ReviewStep
+  | ClickStep
+  | FixStep
+  | TypeCodeStep;
 
 export type Challenge = {
   id: string;

@@ -91,6 +91,10 @@ function StepBody({
           onToggleClickNode={onToggleClickNode}
         />
       );
+    case 'corrigir':
+      return <FixStepBody key={step.id} step={step} onAnswer={onAnswer} />;
+    case 'digitar':
+      return <TypeCodeStepBody key={step.id} step={step} onAnswer={onAnswer} />;
     case 'revisao':
       return <ReviewStepBody step={step} onAnswer={onAnswer} />;
     default: {
@@ -336,6 +340,109 @@ function BlockStepBody({ step, onAnswer }: BlockStepBodyProps) {
         </button>
       </div>
     </div>
+  );
+}
+
+type FixStepBodyProps = {
+  step: Extract<ChallengeStep, { kind: 'corrigir' }>;
+  onAnswer: (answer: StepAnswer) => void;
+};
+
+/**
+ * Etapa "corrigir": primeiro o jogador clica na linha que considera errada,
+ * depois escolhe o conserto. So confirma quando os dois estao selecionados.
+ */
+function FixStepBody({ step, onAnswer }: FixStepBodyProps) {
+  const [lineIndex, setLineIndex] = useState<number | undefined>(undefined);
+  const [fixId, setFixId] = useState<string | undefined>(undefined);
+
+  const handleSubmit = () => {
+    if (lineIndex === undefined || fixId === undefined) {
+      return;
+    }
+    onAnswer({ kind: 'fix', lineIndex, fixId });
+  };
+
+  return (
+    <div className="fix-step">
+      <div className="fix-lines" role="group" aria-label="Linhas do codigo">
+        <p className="fix-instruction">1. Clique na linha errada:</p>
+        {step.lines.map((line, index) => (
+          <button
+            key={`${index}-${line.slice(0, 16)}`}
+            type="button"
+            className={`fix-line${lineIndex === index ? ' is-selected' : ''}`}
+            aria-pressed={lineIndex === index}
+            onClick={() => setLineIndex(index)}
+          >
+            <span className="fix-line-number">{index + 1}</span>
+            <code>{line}</code>
+          </button>
+        ))}
+      </div>
+
+      <div className="fix-options" role="group" aria-label="Opcoes de conserto">
+        <p className="fix-instruction">2. Escolha o conserto:</p>
+        {step.fixOptions.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={`choice-option${fixId === option.id ? ' is-selected' : ''}`}
+            aria-pressed={fixId === option.id}
+            onClick={() => setFixId(option.id)}
+          >
+            <code>{option.label}</code>
+          </button>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        className="icon-command primary"
+        onClick={handleSubmit}
+        disabled={lineIndex === undefined || fixId === undefined}
+      >
+        Confirmar correcao
+      </button>
+    </div>
+  );
+}
+
+type TypeCodeStepBodyProps = {
+  step: Extract<ChallengeStep, { kind: 'digitar' }>;
+  onAnswer: (answer: StepAnswer) => void;
+};
+
+/** Etapa "digitar": o jogador escreve a linha/expressao pedida. */
+function TypeCodeStepBody({ step, onAnswer }: TypeCodeStepBodyProps) {
+  const [text, setText] = useState('');
+  const textareaId = useId();
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (text.trim().length === 0) {
+      return;
+    }
+    onAnswer({ kind: 'code', text });
+  };
+
+  return (
+    <form className="type-code-form" onSubmit={handleSubmit}>
+      <label htmlFor={textareaId}>Digite o codigo</label>
+      <textarea
+        id={textareaId}
+        className="type-code-input"
+        rows={3}
+        spellCheck={false}
+        autoComplete="off"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder="ex.: return contar(i.esq) + contar(i.dir) + 1;"
+      />
+      <button type="submit" className="icon-command primary" disabled={text.trim().length === 0}>
+        Responder
+      </button>
+    </form>
   );
 }
 

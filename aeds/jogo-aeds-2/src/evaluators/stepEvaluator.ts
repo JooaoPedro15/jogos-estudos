@@ -1,4 +1,4 @@
-import type { ChallengeStep, ClickStep } from '../types/challenge';
+import type { ChallengeStep, ClickStep, TypeCodeStep } from '../types/challenge';
 
 /**
  * Estado puro da resolução de uma sequência de etapas (quiz). Cada `resolveStep`
@@ -23,6 +23,8 @@ export type StepAnswer =
   | { kind: 'gap'; text: string }
   | { kind: 'blocks'; order: string[] }
   | { kind: 'click'; nodeIds: string[] }
+  | { kind: 'fix'; lineIndex: number; fixId: string }
+  | { kind: 'code'; text: string }
   | { kind: 'review' };
 
 export type StepResult = {
@@ -147,6 +149,14 @@ function isAnswerCorrect(step: ChallengeStep, answer: StepAnswer): boolean {
       return answer.kind === 'blocks' && isOrderEqual(answer.order, step.correctOrder);
     case 'clique':
       return answer.kind === 'click' && isClickCorrect(step, answer.nodeIds);
+    case 'corrigir':
+      return (
+        answer.kind === 'fix' &&
+        answer.lineIndex === step.wrongLineIndex &&
+        answer.fixId === step.correctFixId
+      );
+    case 'digitar':
+      return answer.kind === 'code' && isCodeCorrect(step, answer.text);
     case 'revisao':
       return true;
     default: {
@@ -196,6 +206,13 @@ function isClickCorrect(step: ClickStep, nodeIds: string[]): boolean {
   return [...target].every((id) => submitted.has(id));
 }
 
+function isCodeCorrect(step: TypeCodeStep, text: string): boolean {
+  const normalizedInput = normalizeCode(text);
+  const accepted = [step.expected, ...(step.aliases ?? [])];
+
+  return accepted.some((candidate) => normalizeCode(candidate) === normalizedInput);
+}
+
 /**
  * Normalização fixa da lacuna: trim + lowercase + remoção de acentos.
  */
@@ -205,4 +222,13 @@ export function normalizeText(value: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '');
+}
+
+/**
+ * Normalização de código digitado: além da normalização de texto, remove
+ * todos os espaços em branco e ponto-e-vírgula finais. Compara apenas os
+ * tokens — indentação e estilo não reprovam a resposta.
+ */
+export function normalizeCode(value: string): string {
+  return normalizeText(value).replace(/\s+/g, '').replace(/;+$/, '');
 }

@@ -4,8 +4,10 @@ import type {
   BlockStep,
   ChoiceStep,
   ClickStep,
+  FixStep,
   GapStep,
   ReviewStep,
+  TypeCodeStep,
 } from '../types/challenge';
 import { createStepProgress, resolveStep } from './stepEvaluator';
 
@@ -190,6 +192,103 @@ describe('resolveStep — clique (click)', () => {
 
     expect(certo.correct).toBe(true);
     expect(invertido.correct).toBe(false);
+  });
+});
+
+const fixStep: FixStep = {
+  id: 'st-fix',
+  kind: 'corrigir',
+  prompt: 'A funcao contarFolhas tem uma linha errada. Aponte e corrija.',
+  lines: [
+    'if (i == null) return 0;',
+    'if (i.esq == null || i.dir == null) return 1;',
+    'return contarFolhas(i.esq) + contarFolhas(i.dir);',
+  ],
+  wrongLineIndex: 1,
+  fixOptions: [
+    { id: 'and', label: 'if (i.esq == null && i.dir == null) return 1;' },
+    { id: 'nada', label: 'A linha esta correta.' },
+    { id: 'base', label: 'if (i == null) return 1;' },
+  ],
+  correctFixId: 'and',
+};
+
+const typeStep: TypeCodeStep = {
+  id: 'st-type',
+  kind: 'digitar',
+  prompt: 'Escreva o retorno que combina as duas subarvores na contagem de nos.',
+  expected: 'return contar(i.esq) + contar(i.dir) + 1;',
+  aliases: ['return 1 + contar(i.esq) + contar(i.dir);'],
+};
+
+describe('resolveStep — corrigir (fix)', () => {
+  it('aceita linha certa + conserto certo', () => {
+    const progress = createStepProgress('c');
+    const { result } = resolveStep(progress, fixStep, {
+      kind: 'fix',
+      lineIndex: 1,
+      fixId: 'and',
+    });
+
+    expect(result.correct).toBe(true);
+    expect(result.scoreDelta).toBe(10);
+  });
+
+  it('rejeita linha errada mesmo com conserto certo', () => {
+    const progress = createStepProgress('c');
+    const { progress: next, result } = resolveStep(progress, fixStep, {
+      kind: 'fix',
+      lineIndex: 0,
+      fixId: 'and',
+    });
+
+    expect(result.correct).toBe(false);
+    expect(next.stepErrors['st-fix']).toBe(1);
+  });
+
+  it('rejeita conserto errado na linha certa', () => {
+    const progress = createStepProgress('c');
+    const { result } = resolveStep(progress, fixStep, {
+      kind: 'fix',
+      lineIndex: 1,
+      fixId: 'base',
+    });
+
+    expect(result.correct).toBe(false);
+  });
+});
+
+describe('resolveStep — digitar (code)', () => {
+  it('aceita o codigo esperado com espacos e caixa diferentes', () => {
+    const progress = createStepProgress('c');
+    const { result } = resolveStep(progress, typeStep, {
+      kind: 'code',
+      text: '  RETURN contar( i.esq )+contar( i.dir )+1  ',
+    });
+
+    expect(result.correct).toBe(true);
+    expect(result.scoreDelta).toBe(10);
+  });
+
+  it('aceita alias equivalente', () => {
+    const progress = createStepProgress('c');
+    const { result } = resolveStep(progress, typeStep, {
+      kind: 'code',
+      text: 'return 1 + contar(i.esq) + contar(i.dir)',
+    });
+
+    expect(result.correct).toBe(true);
+  });
+
+  it('rejeita codigo diferente e registra erro', () => {
+    const progress = createStepProgress('c');
+    const { progress: next, result } = resolveStep(progress, typeStep, {
+      kind: 'code',
+      text: 'return contar(i.esq) - contar(i.dir) + 1;',
+    });
+
+    expect(result.correct).toBe(false);
+    expect(next.stepErrors['st-type']).toBe(1);
   });
 });
 

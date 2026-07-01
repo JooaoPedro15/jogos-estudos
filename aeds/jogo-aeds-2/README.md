@@ -16,6 +16,9 @@ e trilhas jogaveis para todas elas em um primeiro recorte de conteudo.
   reconhecer, construir, pesquisar, inserir, remover (tres casos), percorrer/percursos, contar,
   alterar funcao pronta, escrever altura e um desafio final de dominio. A fase da lista de prova
   continua aparecendo primeiro; as demais seguem a ordem da trilha.
+- Arvore Binaria tambem tem trilha completa 1..10 no mesmo molde, adaptada a ausencia da regra
+  de busca: fila para construir/inserir/remover em largura, pesquisa O(n) combinando os lados,
+  fase de desenho com cliques em folhas/caminhos e desafio final de dominio.
 - A lista `lista-aeds2-prova3.pdf` foi encaixada em 10 fases distribuidas nas
   estruturas, com proporcao rastreada por teste: 60% codigo e 40% desenho.
 - O zip `Semestre AEDS.zip` tambem foi usado para criar 9 fases novas de Lista,
@@ -27,8 +30,14 @@ e trilhas jogaveis para todas elas em um primeiro recorte de conteudo.
   diagrama para selecionar nos/slots.
 - Lista, Pilha e Ordenacao usam desenhos proprios: lista encadeada com celula cabeca
   e setas, pilha vertical com topo, e vetor com indices/marcadores.
-- `stepEvaluator` avalia escolha, lacuna, blocos, clique e revisao sem depender da
-  antiga camada de cartas.
+- `stepEvaluator` avalia escolha, lacuna, blocos, clique, corrigir, digitar e revisao sem
+  depender da antiga camada de cartas.
+- Duas etapas de producao de codigo: `corrigir` (apontar a linha errada e escolher o conserto)
+  e `digitar` (escrever a linha/expressao; a validacao normaliza caixa, acentos, espacos e
+  ponto-e-virgula final via `normalizeCode`).
+- O banco inteiro respeita a proporcao 85/15 do spec (85% codigo / 15% desenho), travada por
+  teste automatizado: `codigo >= 80%`, `desenho` entre 10% e 20%, `conceito <= 5%`, e todo
+  desafio precisa declarar `focus`.
 - `StructureDiagram` renderiza o `visualStateId` do desafio atual, evitando mostrar uma
   arvore generica quando a fase e de Hash, TRIE, PATRICIA, 2-3-4 ou outra estrutura.
 - `StructureDiagram` destaca caminho/no ativo quando a etapa informa `activePath` ou

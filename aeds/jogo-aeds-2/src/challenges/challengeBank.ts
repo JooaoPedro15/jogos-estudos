@@ -713,6 +713,14 @@ No inserir(int x, No i) {
       },
       {
         id: 'abb-codigo-altura-01-s4',
+        kind: 'digitar',
+        prompt: 'Agora escreva a linha final da funcao: o retorno que combina as duas alturas.',
+        expected: 'return 1 + Math.max(he, hd);',
+        aliases: ['return Math.max(he, hd) + 1;', 'return 1 + Math.max(hd, he);'],
+        explanation: 'O no atual soma 1 aresta ao maior dos dois lados: return 1 + Math.max(he, hd);',
+      },
+      {
+        id: 'abb-codigo-altura-01-s5',
         kind: 'complexidade',
         prompt: 'Qual a complexidade de calcular a altura?',
         options: [
@@ -833,6 +841,7 @@ No inserir(int x, No i) {
     title: 'Calcular fator de balanceamento',
     pattern: 'retornar-de-baixo-para-cima',
     structure: 'avl',
+    focus: 'codigo',
     difficulty: 'medio',
     statement:
       'Em uma AVL, implemente o calculo do fator de balanceamento de um No usando a altura das subarvores. Explique por que a resposta depende de valores retornados de baixo para cima.',
@@ -911,6 +920,7 @@ class Arvore {
     title: 'Verificar balanceamento AVL',
     pattern: 'verificar-propriedade-global',
     structure: 'avl',
+    focus: 'codigo',
     difficulty: 'medio',
     statement:
       'Dada uma arvore binaria com campos esq e dir, escreva um metodo que diga se ela respeita a regra AVL em todos os nos. A resposta deve verificar o no atual e suas subarvores.',
@@ -992,6 +1002,7 @@ class Arvore {
     title: 'Contar nos brancos',
     pattern: 'percorrer-todos-os-nos',
     structure: 'alvinegra',
+    focus: 'codigo',
     difficulty: 'facil',
     statement:
       'Considere uma arvore alvinegra em que NoAN possui cor true para branco e false para preto. Implemente um metodo que conte quantos nos brancos existem e informe a complexidade.',
@@ -1073,6 +1084,7 @@ class Arvore {
     title: 'Reconhecer tipo quatro',
     pattern: 'verificar-propriedade-global',
     structure: 'alvinegra',
+    focus: 'codigo',
     difficulty: 'medio',
     statement:
       'Durante a insercao em arvore alvinegra, identifique quando ocorre o caso de tio branco com pai e tio brancos. Explique a correcao esperada e seu impacto assintotico.',
@@ -1153,6 +1165,7 @@ class Arvore {
     title: 'Pesquisar em hash com reserva',
     pattern: 'navegar-por-camadas',
     structure: 'hash',
+    focus: 'codigo',
     difficulty: 'facil',
     statement:
       'Considere uma tabela hash com area principal e area de reserva para colisoes. Implemente pesquisar(int x), verificando primeiro a posicao hash e depois a reserva ocupada.',
@@ -1228,6 +1241,7 @@ class Arvore {
     title: 'Tratar colisao com rehash',
     pattern: 'seguir-um-caminho',
     structure: 'hash',
+    focus: 'codigo',
     difficulty: 'medio',
     statement:
       'Em uma hash aberta com uma funcao de rehash simples, implemente a insercao de elemento quando a primeira posicao esta ocupada. Informe quando a insercao falha.',
@@ -1309,6 +1323,7 @@ class Arvore {
     title: 'Pesquisar palavra na trie',
     pattern: 'navegar-por-camadas',
     structure: 'trie',
+    focus: 'codigo',
     difficulty: 'medio',
     statement:
       'Dada uma ArvoreTrie em que cada Celula possui caractere, prox e indicador folha, implemente pesquisar(String s). O metodo deve diferenciar prefixo existente de palavra cadastrada.',
@@ -1386,6 +1401,7 @@ class ArvoreTrie {
     title: 'Verificar prefixo na trie',
     pattern: 'navegar-por-camadas',
     structure: 'trie',
+    focus: 'codigo',
     difficulty: 'facil',
     statement:
       'Na mesma ArvoreTrie, escreva um metodo que informe se uma string e prefixo de alguma palavra armazenada. Diferencie essa tarefa da pesquisa de palavra completa e apresente a complexidade.',
@@ -1628,10 +1644,671 @@ class Arvore {
     ],
   },
   {
+    id: 'binaria-reconhecer-01',
+    title: 'Reconhecer a arvore binaria comum',
+    pattern: 'verificar-propriedade-global',
+    structure: 'binaria',
+    phase: 1,
+    focus: 'codigo',
+    difficulty: 'facil',
+    statement:
+      'A arvore binaria comum usa a mesma classe No da ABB (elemento, esq, dir), mas NAO possui regra de ordem entre os elementos. Reconhecer essa diferenca evita usar descidas por comparacao onde elas nao valem.',
+    providedCode: `class No {
+  int elemento;
+  No esq, dir;
+}
+
+class Arvore {
+  private No raiz;
+  // nenhuma regra de ordem entre esq e dir
+}`,
+    visualStateId: 'binaria-ismax-01',
+    steps: [
+      {
+        id: 'binaria-reconhecer-01-s1',
+        kind: 'interpretar',
+        prompt: 'Qual a diferenca essencial entre arvore binaria comum e ABB?',
+        options: [
+          { id: 'a', label: 'A binaria comum nao tem regra de ordem; a ABB exige esq < no < dir' },
+          { id: 'b', label: 'A binaria comum permite tres filhos por no' },
+          { id: 'c', label: 'A ABB nao usa ponteiros esq/dir' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A forma e igual (ate dois filhos); o que muda e a ausencia da propriedade de busca.',
+      },
+      {
+        id: 'binaria-reconhecer-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete: em uma arvore binaria, cada no tem no maximo ___ filhos.',
+        gapId: 'grau-maximo',
+        answers: [{ id: 'dois', answer: '2', aliases: ['dois'] }],
+        explanation: 'Grau maximo 2: por isso os campos sao exatamente esq e dir.',
+      },
+      {
+        id: 'binaria-reconhecer-01-s3',
+        kind: 'simular',
+        prompt: 'Quantos nos tem a arvore exibida?',
+        options: [
+          { id: 'a', label: '8' },
+          { id: 'b', label: '7' },
+          { id: 'c', label: '6' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Nos: 8, 3, 10, 1, 6, 4, 14 e 13 = 8 nos.',
+      },
+      {
+        id: 'binaria-reconhecer-01-s4',
+        kind: 'interpretar',
+        prompt: 'Na arvore exibida, 13 esta a esquerda de 14 mesmo sendo menor que 8 da raiz. Isso e um erro?',
+        options: [
+          { id: 'a', label: 'Nao: sem regra de ordem, qualquer valor pode ficar em qualquer posicao' },
+          { id: 'b', label: 'Sim: 13 deveria estar na subarvore esquerda da raiz' },
+          { id: 'c', label: 'Sim: folhas precisam ser maiores que a raiz' },
+        ],
+        correctOptionId: 'a',
+        activeNodeId: 'n13',
+        explanation: 'So a ABB restringe posicoes por valor; a binaria comum aceita qualquer arranjo.',
+      },
+    ],
+    complexity: {
+      answer: 'O(1) por no; O(n) para inspecionar a arvore toda',
+      explanation: 'Reconhecer os campos e constante; validar qualquer propriedade global exige visitar todos os nos.',
+    },
+    commonMistakes: [
+      {
+        id: 'binaria-reconhecer-assumir-ordem',
+        title: 'Assumir regra de ABB em arvore comum',
+        description: 'Descartar subarvores por comparacao so vale quando existe a propriedade de busca.',
+      },
+    ],
+  },
+  {
+    id: 'binaria-desenhar-folhas-01',
+    title: 'Desenhar e identificar niveis, folhas e caminhos',
+    pattern: 'percorrer-todos-os-nos',
+    structure: 'binaria',
+    phase: 2,
+    focus: 'desenho',
+    difficulty: 'facil',
+    statement:
+      'Antes de codificar, e preciso ler o desenho: identificar folhas, niveis e caminhos, e diferenciar arvore estritamente binaria (todo no com 0 ou 2 filhos) de uma arvore qualquer.',
+    providedCode: `// folha: no com esq == null && dir == null
+// nivel: distancia em arestas ate a raiz
+// estritamente binaria: nenhum no com apenas 1 filho`,
+    visualStateId: 'binaria-ismax-01',
+    steps: [
+      {
+        id: 'binaria-desenhar-folhas-01-s1',
+        kind: 'interpretar',
+        prompt: 'Qual desenho mostra uma arvore ESTRITAMENTE binaria (todo no com 0 ou 2 filhos)?',
+        options: [
+          { id: 'a', label: 'Desenho A', visualStateId: 'binaria-estrita-01' },
+          { id: 'b', label: 'Desenho B', visualStateId: 'binaria-ismax-01' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'No desenho B, os nos 6, 10 e 14 tem apenas um filho; no A, todo no tem 0 ou 2.',
+      },
+      {
+        id: 'binaria-desenhar-folhas-01-s2',
+        kind: 'clique',
+        prompt: 'Clique nas 3 folhas da arvore exibida.',
+        targetNodeIds: ['n1', 'n4', 'n13'],
+        selectionMode: 'unordered',
+        explanation: 'Folhas sao nos reais sem filhos: 1, 4 e 13.',
+      },
+      {
+        id: 'binaria-desenhar-folhas-01-s3',
+        kind: 'interpretar',
+        prompt: 'Contando a raiz como nivel 0, quantos niveis a arvore exibida ocupa?',
+        options: [
+          { id: 'a', label: '4 niveis (0 a 3)' },
+          { id: 'b', label: '3 niveis (0 a 2)' },
+          { id: 'c', label: '8 niveis, um por no' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'O caminho 8 -> 3 -> 6 -> 4 alcanca o nivel 3; logo ha 4 niveis.',
+      },
+      {
+        id: 'binaria-desenhar-folhas-01-s4',
+        kind: 'clique',
+        prompt: 'Clique, NA ORDEM, no caminho da raiz ate o no 4.',
+        targetNodeIds: ['n8', 'n3', 'n6', 'n4'],
+        selectionMode: 'ordered',
+        explanation: 'O caminho desce 8 -> 3 -> 6 -> 4; cada aresta soma 1 ao nivel.',
+      },
+    ],
+    complexity: {
+      answer: 'O(n) para classificar folhas e niveis',
+      explanation: 'Identificar folhas e niveis exige olhar cada no do desenho uma vez.',
+    },
+    commonMistakes: [
+      {
+        id: 'binaria-desenho-folha-interna',
+        title: 'Marcar no interno como folha',
+        description: 'No com um unico filho nao e folha; folha exige esq e dir nulos.',
+      },
+    ],
+  },
+  {
+    id: 'binaria-construir-niveis-01',
+    title: 'Construir arvore inserindo por niveis',
+    pattern: 'navegar-por-camadas',
+    structure: 'binaria',
+    phase: 3,
+    focus: 'codigo',
+    difficulty: 'medio',
+    statement:
+      'Sem regra de ordem, uma forma canonica de construir arvore binaria e inserir por niveis (largura), preenchendo cada nivel da esquerda para a direita com ajuda de uma fila.',
+    providedCode: `void inserir(int x) {
+  No novo = new No(x);
+  if (raiz == null) { raiz = novo; return; }
+  Fila fila = new Fila();
+  fila.enfileirar(raiz);
+  while (!fila.vazia()) {
+    No i = fila.desenfileirar();
+    if (i.esq == null) { i.esq = novo; return; }
+    if (i.dir == null) { i.dir = novo; return; }
+    fila.enfileirar(i.esq);
+    fila.enfileirar(i.dir);
+  }
+}`,
+    visualStateId: 'binaria-estrita-01',
+    steps: [
+      {
+        id: 'binaria-construir-niveis-01-s1',
+        kind: 'interpretar',
+        prompt: 'Qual estrutura auxiliar garante o preenchimento nivel a nivel?',
+        options: [
+          { id: 'a', label: 'Fila (FIFO): visita os nos na ordem em que aparecem por nivel' },
+          { id: 'b', label: 'Pilha (LIFO): aprofunda antes de completar o nivel' },
+          { id: 'c', label: 'Vetor ordenado por valor' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A fila processa os nos na ordem de chegada, exatamente a ordem dos niveis.',
+      },
+      {
+        id: 'binaria-construir-niveis-01-s2',
+        kind: 'simular',
+        prompt: 'A arvore exibida tem 7 nos completando os niveis 0 a 2. Inserindo 5 por niveis, onde ele entra?',
+        options: [
+          { id: 'a', label: 'Filho esquerdo de 1 (primeiro no com vaga na largura)' },
+          { id: 'b', label: 'Filho direito de 14' },
+          { id: 'c', label: 'Nova raiz' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n8', 'n3', 'n1'],
+        explanation: 'A fila visita 8, 3, 10, 1...; o primeiro com vaga e o 1, e a vaga esquerda vem primeiro.',
+      },
+      {
+        id: 'binaria-construir-niveis-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a insercao por niveis.',
+        blocks: [
+          { id: 'raiz', label: 'se raiz == null, novo vira raiz', order: 1 },
+          { id: 'enf', label: 'enfileire a raiz', order: 2 },
+          { id: 'des', label: 'desenfileire i e teste vagas esq/dir', order: 3 },
+          { id: 'filhos', label: 'sem vaga: enfileire i.esq e i.dir e repita', order: 4 },
+        ],
+        correctOrder: ['raiz', 'enf', 'des', 'filhos'],
+      },
+      {
+        id: 'binaria-construir-niveis-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual o custo de uma insercao por niveis no pior caso?',
+        options: [
+          { id: 'a', label: 'O(n): pode percorrer todos os nos ate achar vaga' },
+          { id: 'b', label: 'O(log n) garantido' },
+          { id: 'c', label: 'O(1) sempre' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A largura visita os nos ja existentes ate encontrar a primeira vaga.',
+      },
+    ],
+    complexity: {
+      answer: 'O(n) por insercao no pior caso',
+      explanation: 'A busca por vaga percorre a fila de nos existentes; nao ha atalho por comparacao.',
+    },
+    commonMistakes: [
+      {
+        id: 'binaria-construir-usar-pilha',
+        title: 'Usar pilha no lugar da fila',
+        description: 'Com pilha o preenchimento aprofunda um ramo e deixa de completar os niveis.',
+      },
+    ],
+  },
+  {
+    id: 'binaria-pesquisar-01',
+    title: 'Pesquisar sem poder descartar subarvores',
+    pattern: 'percorrer-todos-os-nos',
+    structure: 'binaria',
+    phase: 4,
+    focus: 'codigo',
+    difficulty: 'medio',
+    statement:
+      'Sem a propriedade de busca, pesquisar exige olhar os dois lados: o valor pode estar em qualquer subarvore. Combine os retornos com OU logico.',
+    providedCode: `boolean pesquisar(int x, No i) {
+  if (i == null) return false;
+  if (i.elemento == x) return true;
+  return pesquisar(x, i.esq) || pesquisar(x, i.dir);
+}`,
+    visualStateId: 'binaria-ismax-01',
+    steps: [
+      {
+        id: 'binaria-pesquisar-01-s1',
+        kind: 'interpretar',
+        prompt: 'Por que a pesquisa na binaria comum nao pode descer por comparacao como na ABB?',
+        options: [
+          { id: 'a', label: 'Sem regra de ordem, o valor pode estar em qualquer lado' },
+          { id: 'b', label: 'Porque a recursao nao funciona em arvores comuns' },
+          { id: 'c', label: 'Porque a raiz nunca contem o valor procurado' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Comparar com o no atual nao diz nada sobre onde o valor esta; nada pode ser descartado.',
+      },
+      {
+        id: 'binaria-pesquisar-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete a combinacao dos dois lados: return pesquisar(x, i.esq) ___ pesquisar(x, i.dir);',
+        gapId: 'combina-ou',
+        answers: [{ id: 'ou', answer: '||', aliases: ['ou', 'or'] }],
+        explanation: 'Basta um dos lados achar: OU logico combina os retornos.',
+      },
+      {
+        id: 'binaria-pesquisar-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a pesquisa recursiva.',
+        blocks: [
+          { id: 'nulo', label: 'se i == null, retorne false', order: 1 },
+          { id: 'achou', label: 'se i.elemento == x, retorne true', order: 2 },
+          { id: 'lados', label: 'retorne pesquisa(esq) || pesquisa(dir)', order: 3 },
+        ],
+        correctOrder: ['nulo', 'achou', 'lados'],
+      },
+      {
+        id: 'binaria-pesquisar-01-s4',
+        kind: 'corrigir',
+        prompt: 'Um colega escreveu a pesquisa abaixo, mas ela so acha valores que estao nos DOIS lados. Aponte a linha errada e corrija.',
+        lines: [
+          'if (i == null) return false;',
+          'if (i.elemento == x) return true;',
+          'return pesquisar(x, i.esq) && pesquisar(x, i.dir);',
+        ],
+        wrongLineIndex: 2,
+        fixOptions: [
+          { id: 'ou', label: 'return pesquisar(x, i.esq) || pesquisar(x, i.dir);' },
+          { id: 'so-esq', label: 'return pesquisar(x, i.esq);' },
+          { id: 'nada', label: 'A linha esta correta.' },
+        ],
+        correctFixId: 'ou',
+        explanation: 'Com && os dois lados precisariam conter x; o certo e || (basta um lado achar).',
+      },
+      {
+        id: 'binaria-pesquisar-01-s5',
+        kind: 'complexidade',
+        prompt: 'Compare: pesquisa na binaria comum vs na ABB.',
+        options: [
+          { id: 'a', label: 'Comum: O(n); ABB: O(h), pois descarta um lado por comparacao' },
+          { id: 'b', label: 'As duas sao O(log n) sempre' },
+          { id: 'c', label: 'As duas sao O(1)' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A propriedade de busca e o que permite a ABB ignorar metade local da arvore.',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'No pior caso a pesquisa visita todos os nos, pois nenhuma subarvore pode ser descartada.',
+    },
+    commonMistakes: [
+      {
+        id: 'binaria-pesquisar-descartar-lado',
+        title: 'Descartar um lado por comparacao',
+        description: 'if (x < i.elemento) so vale na ABB; na binaria comum perde valores do outro lado.',
+      },
+    ],
+  },
+  {
+    id: 'binaria-inserir-largura-01',
+    title: 'Implementar a insercao em largura',
+    pattern: 'navegar-por-camadas',
+    structure: 'binaria',
+    phase: 5,
+    focus: 'codigo',
+    difficulty: 'medio',
+    statement:
+      'Implemente a insercao que mantem a arvore o mais completa possivel: percorra por niveis com uma fila e ligue o novo no na primeira vaga (esq antes de dir).',
+    providedCode: `void inserir(int x) {
+  No novo = new No(x);
+  if (raiz == null) { raiz = novo; return; }
+  Fila fila = new Fila();
+  fila.enfileirar(raiz);
+  while (!fila.vazia()) {
+    No i = fila.desenfileirar();
+    if (i.esq == null) { i.esq = novo; return; }
+    if (i.dir == null) { i.dir = novo; return; }
+    fila.enfileirar(i.esq);
+    fila.enfileirar(i.dir);
+  }
+}`,
+    visualStateId: 'binaria-estrita-01',
+    steps: [
+      {
+        id: 'binaria-inserir-largura-01-s1',
+        kind: 'interpretar',
+        prompt: 'Onde o novo no deve ser ligado?',
+        options: [
+          { id: 'a', label: 'Na primeira vaga encontrada em percurso por niveis, esq antes de dir' },
+          { id: 'b', label: 'Sempre como nova raiz' },
+          { id: 'c', label: 'Na posicao definida pela comparacao de valores' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Sem regra de valor, o criterio e estrutural: primeira vaga na ordem dos niveis.',
+      },
+      {
+        id: 'binaria-inserir-largura-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete o teste de vaga: if (i.esq == ___) { i.esq = novo; return; }',
+        gapId: 'vaga-null',
+        answers: [{ id: 'null', answer: 'null', aliases: ['nulo'] }],
+        explanation: 'Vaga e um ponteiro nulo: o primeiro esq/dir nulo recebe o novo no.',
+      },
+      {
+        id: 'binaria-inserir-largura-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene o corpo do laco da insercao.',
+        blocks: [
+          { id: 'des', label: 'No i = fila.desenfileirar()', order: 1 },
+          { id: 'esq', label: 'se i.esq == null: liga novo em i.esq e retorna', order: 2 },
+          { id: 'dir', label: 'se i.dir == null: liga novo em i.dir e retorna', order: 3 },
+          { id: 'enf', label: 'enfileira i.esq e i.dir', order: 4 },
+        ],
+        correctOrder: ['des', 'esq', 'dir', 'enf'],
+      },
+      {
+        id: 'binaria-inserir-largura-01-s4',
+        kind: 'complexidade',
+        prompt: 'Por que essa insercao e O(n) no pior caso?',
+        options: [
+          { id: 'a', label: 'A fila pode visitar todos os nos antes de achar vaga' },
+          { id: 'b', label: 'Porque criar o no custa O(n)' },
+          { id: 'c', label: 'Nao e: a fila garante O(1)' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Numa arvore quase completa a vaga aparece so depois de percorrer os niveis cheios.',
+      },
+    ],
+    complexity: {
+      answer: 'O(n) no pior caso',
+      explanation: 'O percurso em largura pode passar por todos os nos existentes ate achar a primeira vaga.',
+    },
+    commonMistakes: [
+      {
+        id: 'binaria-inserir-sem-return',
+        title: 'Esquecer o return apos ligar o novo no',
+        description: 'Sem retornar, o laco continua e o mesmo no e ligado em outras vagas.',
+      },
+    ],
+  },
+  {
+    id: 'binaria-remover-01',
+    title: 'Remover substituindo pelo ultimo no em largura',
+    pattern: 'navegar-por-camadas',
+    structure: 'binaria',
+    phase: 6,
+    focus: 'codigo',
+    difficulty: 'dificil',
+    statement:
+      'Na binaria comum, uma remocao que preserva a forma compacta copia o valor do ULTIMO no em largura para o no removido e entao desliga esse ultimo no do pai.',
+    providedCode: `void remover(int x) {
+  // 1. ache o no alvo (percurso qualquer)
+  // 2. ache o ultimo no em largura e seu pai
+  // 3. alvo.elemento = ultimo.elemento
+  // 4. desligue o ultimo do pai (esq/dir = null)
+}`,
+    visualStateId: 'binaria-ismax-01',
+    steps: [
+      {
+        id: 'binaria-remover-01-s1',
+        kind: 'interpretar',
+        prompt: 'Remover uma folha exige o que?',
+        options: [
+          { id: 'a', label: 'Fazer o pai apontar null para ela' },
+          { id: 'b', label: 'Rotacionar a subarvore do pai' },
+          { id: 'c', label: 'Substituir pela raiz' },
+        ],
+        correctOptionId: 'a',
+        activeNodeId: 'n13',
+        explanation: 'Folha nao tem filhos: basta o pai soltar a referencia.',
+      },
+      {
+        id: 'binaria-remover-01-s2',
+        kind: 'simular',
+        prompt: 'Na arvore exibida, o percurso por niveis e 8, 3, 10, 1, 6, 14, 4, 13. Removendo o no 3, qual valor sobe para o lugar dele?',
+        options: [
+          { id: 'a', label: '13, o ultimo no em largura' },
+          { id: 'b', label: '4, o filho mais profundo da esquerda' },
+          { id: 'c', label: '10, o irmao' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n3', 'n13'],
+        activeNodeId: 'n3',
+        explanation: 'A tecnica copia o valor do ultimo em largura (13) e remove o no 13 original.',
+      },
+      {
+        id: 'binaria-remover-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a remocao pela tecnica do ultimo em largura.',
+        blocks: [
+          { id: 'alvo', label: 'localize o no alvo', order: 1 },
+          { id: 'ultimo', label: 'localize o ultimo no em largura e seu pai', order: 2 },
+          { id: 'copia', label: 'copie ultimo.elemento para o alvo', order: 3 },
+          { id: 'solta', label: 'faca o pai do ultimo apontar null', order: 4 },
+        ],
+        correctOrder: ['alvo', 'ultimo', 'copia', 'solta'],
+      },
+      {
+        id: 'binaria-remover-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual o custo da remocao com essa tecnica?',
+        options: [
+          { id: 'a', label: 'O(n): achar o alvo e o ultimo em largura percorre a arvore' },
+          { id: 'b', label: 'O(h) como na ABB' },
+          { id: 'c', label: 'O(1)' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Os dois passos de localizacao sao percursos completos no pior caso.',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'Achar o alvo e o ultimo no em largura exige percorrer a arvore sem atalhos.',
+    },
+    commonMistakes: [
+      {
+        id: 'binaria-remover-esquecer-pai',
+        title: 'Copiar o valor e esquecer de desligar o ultimo',
+        description: 'Sem soltar o ultimo no, o valor fica duplicado na arvore.',
+      },
+    ],
+  },
+  {
+    id: 'binaria-alterar-grau2-01',
+    title: 'Modificar contagem para nos de grau 2',
+    pattern: 'percorrer-todos-os-nos',
+    structure: 'binaria',
+    phase: 8,
+    focus: 'codigo',
+    difficulty: 'medio',
+    transferGroupId: 'contagem-transferencia-01',
+    statement:
+      'Adapte a contagem de nos para contar apenas os de grau 2 (com os dois filhos). A travessia permanece; muda a condicao da contribuicao do no atual.',
+    providedCode: `int contarGrau2(No i) {
+  if (i == null) return 0;
+  int cont = (i.esq != null && i.dir != null) ? 1 : 0;
+  cont += contarGrau2(i.esq) + contarGrau2(i.dir);
+  return cont;
+}`,
+    visualStateId: 'binaria-ismax-01',
+    steps: [
+      {
+        id: 'binaria-alterar-grau2-01-s1',
+        kind: 'interpretar',
+        prompt: 'O que muda em relacao a contar todos os nos?',
+        options: [
+          { id: 'a', label: 'Somar 1 apenas quando i.esq != null && i.dir != null' },
+          { id: 'b', label: 'Trocar o caso base para retornar 1' },
+          { id: 'c', label: 'Percorrer somente a subarvore esquerda' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A estrutura recursiva nao muda; so a condicao da contribuicao local.',
+      },
+      {
+        id: 'binaria-alterar-grau2-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete: if (i.esq != null ___ i.dir != null) cont++;',
+        gapId: 'operador-e',
+        answers: [{ id: 'e', answer: '&&', aliases: ['e', 'and'] }],
+        explanation: 'Grau 2 exige os DOIS filhos: E logico.',
+      },
+      {
+        id: 'binaria-alterar-grau2-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene contarGrau2(i).',
+        blocks: [
+          { id: 'base', label: 'se i == null, retorne 0', order: 1 },
+          { id: 'atual', label: 'cont = (esq e dir nao nulos) ? 1 : 0', order: 2 },
+          { id: 'soma', label: 'cont += recursao esq + recursao dir', order: 3 },
+          { id: 'ret', label: 'retorne cont', order: 4 },
+        ],
+        correctOrder: ['base', 'atual', 'soma', 'ret'],
+      },
+      {
+        id: 'binaria-alterar-grau2-01-s4',
+        kind: 'simular',
+        prompt: 'Na arvore exibida, quantos nos tem grau 2?',
+        options: [
+          { id: 'a', label: '2 (o 8 e o 3)' },
+          { id: 'b', label: '5 (todos os nos internos)' },
+          { id: 'c', label: '3 (8, 3 e 10)' },
+        ],
+        correctOptionId: 'a',
+        explanation: '8 tem filhos 3 e 10; 3 tem filhos 1 e 6. Ja 6, 10 e 14 tem apenas um filho.',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'Contar por propriedade visita cada no uma vez; nada pode ser descartado.',
+    },
+    commonMistakes: [
+      {
+        id: 'binaria-grau2-usar-ou',
+        title: 'Usar OU no lugar de E',
+        description: 'esq != null || dir != null conta nos de grau 1 tambem; grau 2 exige os dois filhos.',
+      },
+    ],
+  },
+  {
+    id: 'binaria-dominio-01',
+    title: 'Desafio de dominio: forma, folhas e altura',
+    pattern: 'verificar-propriedade-global',
+    structure: 'binaria',
+    phase: 10,
+    focus: 'codigo',
+    difficulty: 'dificil',
+    statement:
+      'Fase final da trilha de Arvore Binaria: combine leitura do desenho (altura, folhas, forma) com o raciocinio das funcoes ja construidas na trilha.',
+    providedCode: `int altura(No i) {
+  return (i == null) ? -1
+    : 1 + Math.max(altura(i.esq), altura(i.dir));
+}
+
+int folhas(No i) {
+  if (i == null) return 0;
+  if (i.esq == null && i.dir == null) return 1;
+  return folhas(i.esq) + folhas(i.dir);
+}`,
+    visualStateId: 'binaria-ismax-01',
+    steps: [
+      {
+        id: 'binaria-dominio-01-s1',
+        kind: 'simular',
+        prompt: 'Qual a altura (em arestas) da arvore exibida?',
+        options: [
+          { id: 'a', label: '3' },
+          { id: 'b', label: '4' },
+          { id: 'c', label: '2' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n8', 'n3', 'n6', 'n4'],
+        explanation: 'O caminho mais longo (8 -> 3 -> 6 -> 4 ou 8 -> 10 -> 14 -> 13) tem 3 arestas.',
+      },
+      {
+        id: 'binaria-dominio-01-s2',
+        kind: 'simular',
+        prompt: 'Quantas folhas a arvore exibida possui?',
+        options: [
+          { id: 'a', label: '3 (1, 4 e 13)' },
+          { id: 'b', label: '5' },
+          { id: 'c', label: '2' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Somente 1, 4 e 13 nao tem filhos.',
+      },
+      {
+        id: 'binaria-dominio-01-s3',
+        kind: 'interpretar',
+        prompt: 'A arvore exibida e estritamente binaria?',
+        options: [
+          { id: 'a', label: 'Nao: 6, 10 e 14 tem apenas um filho' },
+          { id: 'b', label: 'Sim: toda arvore com 8 nos e estrita' },
+          { id: 'c', label: 'Sim: basta ter raiz com dois filhos' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Estritamente binaria proibe grau 1; aqui tres nos violam a regra.',
+      },
+      {
+        id: 'binaria-dominio-01-s4',
+        kind: 'complexidade',
+        prompt: 'isMax combina altura e contagem de nos. Qual o custo total?',
+        options: [
+          { id: 'a', label: 'O(n): dois percursos lineares e uma comparacao' },
+          { id: 'b', label: 'O(log n) por causa do log2 na formula' },
+          { id: 'c', label: 'O(n^2)' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Percursos separados de altura e contagem continuam lineares; constantes somem.',
+      },
+      {
+        id: 'binaria-dominio-01-s5',
+        kind: 'revisao',
+        prompt: 'Revise a trilha de dominio da Arvore Binaria.',
+        summary:
+          'Sem regra de ordem, tudo vira percurso: pesquisar, contar e medir sao O(n). Fila da a ordem por niveis para construir, inserir e remover preservando a forma.',
+        solutionNotes: [
+          'Pesquisa combina os dois lados com ||; nada pode ser descartado.',
+          'Insercao/remocao canonicas usam percurso em largura (fila).',
+          'Altura usa 1 + max; folhas exigem esq e dir nulos; grau 2 exige os dois filhos.',
+        ],
+      },
+    ],
+    complexity: {
+      answer: 'O(n) para pesquisar, medir e contar; O(n) para inserir/remover em largura',
+      explanation: 'Sem propriedade de busca nao ha descarte de subarvore; todos os algoritmos sao lineares.',
+    },
+    commonMistakes: [
+      {
+        id: 'binaria-dominio-importar-abb',
+        title: 'Importar habitos de ABB',
+        description: 'Descer por comparacao, custo O(h) e remocao por antecessor valem para ABB, nao aqui.',
+      },
+    ],
+  },
+  {
     id: 'doidona-pesquisar-palavra-01',
     title: 'Pesquisar palavra na estrutura doidona',
     pattern: 'navegar-por-camadas',
     structure: 'doidona',
+    focus: 'codigo',
     difficulty: 'dificil',
     statement:
       'Considere uma estrutura doidona que armazena palavras em camadas T1, T2 e listas encadeadas. Implemente pesquisar(String palavra) verificando a primeira tabela, a segunda camada de colisao e a lista ligada quando necessario.',
@@ -1724,6 +2401,7 @@ class Doidona {
     title: 'Inserir navegando por arvore e tabelas',
     pattern: 'navegar-por-camadas',
     structure: 'doidona',
+    focus: 'codigo',
     difficulty: 'dificil',
     statement:
       'Considere a estrutura doidona em que o primeiro nivel pode escolher uma arvore por caractere, depois T1, T2 e lista encadeada. Implemente a insercao respeitando a ordem das camadas e tratando colisoes.',
@@ -1820,6 +2498,7 @@ class Doidona {
     title: 'Dividir no cheio em arvore 2-3-4',
     pattern: 'verificar-propriedade-global',
     structure: 'arv234',
+    focus: 'codigo',
     difficulty: 'medio',
     statement:
       'Considere uma arvore 2-3-4 em que cada no pode guardar ate tres chaves ordenadas. Explique quando um no cheio deve ser dividido e qual chave sobe para o pai.',
@@ -1897,6 +2576,7 @@ class Doidona {
     title: 'Pesquisar chave em no 2-3-4',
     pattern: 'seguir-um-caminho',
     structure: 'arv234',
+    focus: 'codigo',
     difficulty: 'facil',
     statement:
       'Dado um no 2-3-4 com chaves ordenadas, escolha o intervalo correto antes de descer para o filho. A pesquisa compara dentro do no e segue apenas um caminho.',
@@ -1966,6 +2646,7 @@ class Doidona {
     title: 'Decidir pelo bit em PATRICIA',
     pattern: 'navegar-por-camadas',
     structure: 'patricia',
+    focus: 'codigo',
     difficulty: 'medio',
     statement:
       'Em uma arvore PATRICIA, nos internos guardam o indice do bit usado para decidir o proximo ramo. Simule a pesquisa seguindo os bits indicados.',
@@ -2043,6 +2724,7 @@ class Doidona {
     title: 'Entender compressao de caminhos em PATRICIA',
     pattern: 'analisar-complexidade',
     structure: 'patricia',
+    focus: 'codigo',
     difficulty: 'medio',
     statement:
       'PATRICIA comprime caminhos de TRIE que nao criam ramificacao. Explique por que os nos internos testam apenas bits discriminantes.',

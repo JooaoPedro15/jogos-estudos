@@ -184,6 +184,75 @@ describe('challengeBank', () => {
     }
   });
 
+  test('Arvore Binaria e uma trilha completa com as fases 1..10 numeradas', () => {
+    const binaria = challengeBank.filter((challenge) => challenge.structure === 'binaria');
+    const phases = binaria
+      .filter((challenge) => typeof challenge.phase === 'number')
+      .map((challenge) => challenge.phase)
+      .sort((a, b) => (a ?? 0) - (b ?? 0));
+
+    expect(phases).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  test('a trilha de Arvore Binaria cobre as operacoes essenciais de dominio', () => {
+    const binariaIds = new Set(
+      challengeBank
+        .filter((challenge) => challenge.structure === 'binaria')
+        .map((challenge) => challenge.id),
+    );
+
+    const requiredOperationPhases = [
+      'binaria-reconhecer-01',
+      'binaria-desenhar-folhas-01',
+      'binaria-construir-niveis-01',
+      'binaria-pesquisar-01',
+      'binaria-inserir-largura-01',
+      'binaria-remover-01',
+      'binaria-maior-caminho-01',
+      'binaria-alterar-grau2-01',
+      'binaria-ismax-01',
+      'binaria-dominio-01',
+    ];
+
+    for (const id of requiredOperationPhases) {
+      expect(binariaIds.has(id), `Arvore Binaria deveria ter a fase ${id}`).toBe(true);
+    }
+  });
+
+  test('todo desafio declara um focus (codigo/desenho/conceito)', () => {
+    for (const challenge of challengeBank) {
+      expect(challenge.focus, `${challenge.id} deveria ter focus`).toBeDefined();
+    }
+  });
+
+  test('o banco inteiro respeita a proporcao 85/15 de codigo/desenho', () => {
+    const total = challengeBank.length;
+    const byFocus = challengeBank.reduce<Record<string, number>>((counts, challenge) => {
+      const focus = challenge.focus ?? 'sem-foco';
+      counts[focus] = (counts[focus] ?? 0) + 1;
+      return counts;
+    }, {});
+
+    const codigo = (byFocus.codigo ?? 0) / total;
+    const desenho = (byFocus.desenho ?? 0) / total;
+    const conceito = (byFocus.conceito ?? 0) / total;
+
+    // Faixa-alvo do spec: ~85% codigo, ~15% desenho, conceito marginal.
+    expect(codigo, `codigo=${(codigo * 100).toFixed(1)}%`).toBeGreaterThanOrEqual(0.8);
+    expect(desenho, `desenho=${(desenho * 100).toFixed(1)}%`).toBeGreaterThanOrEqual(0.1);
+    expect(desenho, `desenho=${(desenho * 100).toFixed(1)}%`).toBeLessThanOrEqual(0.2);
+    expect(conceito, `conceito=${(conceito * 100).toFixed(1)}%`).toBeLessThanOrEqual(0.05);
+  });
+
+  test('o banco usa as etapas de producao de codigo corrigir e digitar', () => {
+    const kinds = new Set(
+      challengeBank.flatMap((challenge) => challenge.steps.map((step) => step.kind)),
+    );
+
+    expect(kinds.has('corrigir'), 'deveria existir ao menos uma etapa corrigir').toBe(true);
+    expect(kinds.has('digitar'), 'deveria existir ao menos uma etapa digitar').toBe(true);
+  });
+
   test('contains drawing-selection phases backed by real visual states', () => {
     const drawingChallenges = challengeBank.filter((challenge) => challenge.focus === 'desenho');
 

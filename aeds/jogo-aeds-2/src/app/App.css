@@ -953,9 +953,101 @@ pre {
 
 .gap-form,
 .block-step,
-.click-step {
+.click-step,
+.fix-step,
+.type-code-form {
   display: grid;
   gap: 12px;
+}
+
+.fix-instruction {
+  margin-bottom: 0;
+  color: var(--ink-500);
+  font-size: 0.82rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fix-lines,
+.fix-options {
+  display: grid;
+  gap: 8px;
+}
+
+.fix-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 9px 12px;
+  text-align: left;
+  background: var(--surface-tint);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms var(--ease);
+}
+
+.fix-line:hover {
+  border-color: var(--brand-500);
+  transform: translateY(-1px);
+}
+
+.fix-line code,
+.fix-options .choice-option code {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.84rem;
+}
+
+.fix-line-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  color: var(--ink-400);
+  background: var(--surface-2);
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.fix-line.is-selected,
+.choice-option.is-selected {
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
+  border-color: transparent;
+}
+
+.fix-line.is-selected .fix-line-number {
+  color: var(--brand-900);
+  background: #ffffff;
+}
+
+.type-code-form label {
+  color: var(--ink-700);
+  font-weight: 750;
+}
+
+.type-code-input {
+  width: 100%;
+  padding: 10px 12px;
+  color: var(--ink-900);
+  background: var(--surface);
+  border: 1px solid #b9c8c2;
+  border-radius: var(--r-xs);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.type-code-input:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px var(--brand-glow);
 }
 
 .gap-form label {
