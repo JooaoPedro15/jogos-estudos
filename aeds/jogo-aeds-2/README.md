@@ -12,6 +12,10 @@ e trilhas jogaveis para todas elas em um primeiro recorte de conteudo.
 - Biblioteca de 12 estruturas: Lista, Pilha, Ordenacao, Arvore Binaria, ABB, AVL,
   2-3-4, Alvinegra, Hash, TRIE, PATRICIA e Doidona.
 - Todas as 12 estruturas estao liberadas com pelo menos 3 desafios estruturados cada.
+- A ABB e a trilha-modelo de dominio: 11 fases ordenadas por um campo `phase` (1..10) cobrindo
+  reconhecer, construir, pesquisar, inserir, remover (tres casos), percorrer/percursos, contar,
+  alterar funcao pronta, escrever altura e um desafio final de dominio. A fase da lista de prova
+  continua aparecendo primeiro; as demais seguem a ordem da trilha.
 - A lista `lista-aeds2-prova3.pdf` foi encaixada em 10 fases distribuidas nas
   estruturas, com proporcao rastreada por teste: 60% codigo e 40% desenho.
 - O zip `Semestre AEDS.zip` tambem foi usado para criar 9 fases novas de Lista,
@@ -33,6 +37,15 @@ e trilhas jogaveis para todas elas em um primeiro recorte de conteudo.
   destaque no diagrama e historico de operacoes. ABB usa simulacao real por valor digitado;
   Lista, Pilha e Ordenacao usam roteiros visuais especificos da estrutura selecionada.
   Caderno e Simulado continuam como modos de interface sem persistencia/localStorage.
+- O visual foi reformulado para um sistema de design baseado em tokens CSS (`:root`):
+  paleta teal/ambar coesa, sidebar com gradiente e marca, cards com acento por familia
+  e elevacao em hover, badges arredondados, foco acessivel (`:focus-visible`),
+  diagramas com moldura suave e `prefers-reduced-motion` respeitado.
+- Os diagramas de arvore e de TRIE usam layout proprio: arvore por caminhamento central
+  (in-order) e TRIE por slots de folha, ambos com `viewBox` dinamico calculado a partir do
+  numero de nos e da profundidade. Isso evita sobreposicao e centraliza cada pai entre suas
+  subarvores, deixando ABB/AVL/2-3-4/alvinegra muito mais legiveis. O diagrama de hash separa
+  visualmente area principal e reserva.
 
 ## Tecnologias
 

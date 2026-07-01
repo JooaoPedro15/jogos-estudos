@@ -152,6 +152,38 @@ describe('challengeBank', () => {
     }
   });
 
+  test('ABB e uma trilha-modelo completa com as fases 1..10 numeradas', () => {
+    const abb = challengeBank.filter((challenge) => challenge.structure === 'abb');
+    const numbered = abb.filter((challenge) => typeof challenge.phase === 'number');
+    const phases = numbered.map((challenge) => challenge.phase).sort((a, b) => (a ?? 0) - (b ?? 0));
+
+    // As fases numeradas de ABB devem cobrir exatamente 1..10, sem buracos nem repeticao.
+    expect(phases).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  });
+
+  test('a trilha de ABB cobre as operacoes essenciais de dominio', () => {
+    const abbIds = new Set(
+      challengeBank.filter((challenge) => challenge.structure === 'abb').map((challenge) => challenge.id),
+    );
+
+    const requiredOperationPhases = [
+      'abb-reconhecer-01',
+      'abb-construir-01',
+      'abb-pesquisar-01',
+      'abb-inserir-01',
+      'abb-remover-01',
+      'abb-percorrer-emordem-01',
+      'abb-contar-folhas-01',
+      'abb-alterar-contar-pares-01',
+      'abb-codigo-altura-01',
+      'abb-dominio-01',
+    ];
+
+    for (const id of requiredOperationPhases) {
+      expect(abbIds.has(id), `ABB deveria ter a fase ${id}`).toBe(true);
+    }
+  });
+
   test('contains drawing-selection phases backed by real visual states', () => {
     const drawingChallenges = challengeBank.filter((challenge) => challenge.focus === 'desenho');
 

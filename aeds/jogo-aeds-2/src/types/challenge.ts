@@ -143,6 +143,10 @@ export type Challenge = {
   commonMistakes: CommonMistake[];
   type?: ChallengeType;
   focus?: ChallengeFocus;
+  // Posicao da fase na trilha de dominio da estrutura (1..10). Quando ausente,
+  // a fase e ordenada apos as que tem numero, respeitando a regra de mostrar
+  // primeiro as questoes vindas da lista de prova.
+  phase?: number;
   source?: ChallengeSource;
   transferGroupId?: string;
   // Editable starting point for coding interactions in later tasks.

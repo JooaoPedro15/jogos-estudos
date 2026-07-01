@@ -59,7 +59,7 @@ export const sampleVisualStates: Record<string, VisualState> = {
         left: {
           id: 'n50',
           label: '50',
-          right: { id: 'n42', label: '42' },
+          left: { id: 'n42', label: '42' },
         },
         right: { id: 'n70', label: '70' },
       },

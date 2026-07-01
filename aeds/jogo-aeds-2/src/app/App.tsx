@@ -664,7 +664,11 @@ function getChallengeCount(structureId: StructureKind): number {
 function getOrderedChallenges(structureId: StructureKind): Challenge[] {
   return challengeBank
     .filter((challenge) => challenge.structure === structureId)
-    .sort((first, second) => getChallengePriority(first) - getChallengePriority(second));
+    .sort(
+      (first, second) =>
+        getChallengePriority(first) - getChallengePriority(second) ||
+        getPhaseOrder(first) - getPhaseOrder(second),
+    );
 }
 
 function getChallengePriority(challenge: Challenge): number {
@@ -673,6 +677,11 @@ function getChallengePriority(challenge: Challenge): number {
   }
 
   return 1;
+}
+
+// Fases numeradas (trilha de dominio) aparecem em ordem; as sem numero vao para o fim.
+function getPhaseOrder(challenge: Challenge): number {
+  return challenge.phase ?? Number.MAX_SAFE_INTEGER;
 }
 
 function getFocusLabel(focus: NonNullable<Challenge['focus']>): string {

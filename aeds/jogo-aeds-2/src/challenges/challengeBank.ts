@@ -16,6 +16,8 @@ export const challengeBank = [
     title: 'Pesquisar elemento em ABB',
     pattern: 'seguir-um-caminho',
     structure: 'abb',
+    phase: 3,
+    focus: 'codigo',
     difficulty: 'facil',
     statement:
       'Considere a classe No com os campos elemento, esq e dir, e a classe Arvore com o atributo raiz. Implemente o metodo pesquisar(int x) para decidir se x pertence a ABB. Justifique a complexidade no pior caso.',
@@ -97,6 +99,8 @@ class Arvore {
     title: 'Contar folhas em ABB',
     pattern: 'percorrer-todos-os-nos',
     structure: 'abb',
+    phase: 7,
+    focus: 'codigo',
     difficulty: 'facil',
     statement:
       'Dada uma ABB implementada com No, escreva um metodo que retorne a quantidade de folhas. O professor espera uma solucao recursiva, cobrindo caso base, soma das subarvores e complexidade.',
@@ -173,6 +177,654 @@ class Arvore {
         id: 'abb-folhas-contar-nulos',
         title: 'Contar ponteiros nulos como folhas',
         description: 'Folha e um no real sem filhos, nao uma referencia null.',
+      },
+    ],
+  },
+  {
+    id: 'abb-reconhecer-01',
+    title: 'Reconhecer a estrutura de uma ABB',
+    pattern: 'verificar-propriedade-global',
+    structure: 'abb',
+    phase: 1,
+    focus: 'codigo',
+    difficulty: 'facil',
+    statement:
+      'A classe No guarda um elemento e duas referencias, esq e dir. A classe Arvore guarda apenas a raiz. Antes de codificar qualquer operacao, e preciso reconhecer os campos e a propriedade que define uma ABB.',
+    providedCode: `class No {
+  int elemento;
+  No esq, dir;
+}
+
+class Arvore {
+  private No raiz;
+  // pesquisar, inserir, remover usam sempre esq/dir
+}`,
+    visualStateId: 'abb-basica-01',
+    steps: [
+      {
+        id: 'abb-reconhecer-01-s1',
+        kind: 'interpretar',
+        prompt: 'Quais campos um No de ABB precisa ter?',
+        options: [
+          { id: 'a', label: 'elemento, esq e dir' },
+          { id: 'b', label: 'elemento e prox' },
+          { id: 'c', label: 'elemento, anterior e proximo' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A ABB e binaria: cada no aponta para no maximo dois filhos, esq e dir.',
+      },
+      {
+        id: 'abb-reconhecer-01-s2',
+        kind: 'interpretar',
+        prompt: 'Qual invariante vale para TODO no i de uma ABB?',
+        options: [
+          { id: 'a', label: 'Toda a subarvore esquerda < i.elemento < toda a subarvore direita' },
+          { id: 'b', label: 'Apenas i.esq.elemento < i.elemento < i.dir.elemento (so os filhos diretos)' },
+          { id: 'c', label: 'Todas as folhas ficam no mesmo nivel' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A propriedade e global: vale para a subarvore inteira, nao so para os filhos imediatos.',
+      },
+      {
+        id: 'abb-reconhecer-01-s3',
+        kind: 'simular',
+        prompt: 'Na arvore exibida, em que posicao o valor 35 deveria entrar?',
+        options: [
+          { id: 'a', label: 'Filho direito de 30' },
+          { id: 'b', label: 'Filho esquerdo de 30' },
+          { id: 'c', label: 'Filho direito de 40' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n40', 'n20', 'n30'],
+        explanation: '35 < 40 (vai para esq), 35 > 20 (dir), 35 > 30 (dir): entra como filho direito de 30.',
+      },
+      {
+        id: 'abb-reconhecer-01-s4',
+        kind: 'lacuna',
+        prompt: 'Complete a condicao de descida para a subarvore direita: if (x ___ i.elemento).',
+        gapId: 'comparacao-dir',
+        answers: [{ id: 'gt', answer: '>', aliases: ['maior que', 'maior'] }],
+        explanation: 'Valores maiores que o no atual ficam sempre na subarvore direita.',
+      },
+    ],
+    complexity: {
+      answer: 'O(1) por no para ver os campos; O(n) para validar a arvore toda',
+      explanation: 'Olhar um no e constante; garantir a propriedade global exige visitar todos os nos.',
+    },
+    commonMistakes: [
+      {
+        id: 'abb-reconhecer-local-vs-global',
+        title: 'Confundir propriedade local com global',
+        description: 'Checar apenas os filhos diretos aceita arvores invalidas; a regra vale para toda a subarvore.',
+      },
+    ],
+  },
+  {
+    id: 'abb-construir-01',
+    title: 'Construir uma ABB inserindo em sequencia',
+    pattern: 'seguir-um-caminho',
+    structure: 'abb',
+    phase: 2,
+    focus: 'codigo',
+    difficulty: 'facil',
+    statement:
+      'Insira a sequencia 40, 20, 60, 10, 30, 50, 70 em uma ABB inicialmente vazia. Acompanhe onde cada valor para e por que.',
+    providedCode: `void inserir(int x) {
+  raiz = inserir(x, raiz);
+}
+
+No inserir(int x, No i) {
+  if (i == null) return new No(x);
+  if (x < i.elemento) i.esq = inserir(x, i.esq);
+  else                i.dir = inserir(x, i.dir);
+  return i;
+}`,
+    visualStateId: 'abb-basica-01',
+    steps: [
+      {
+        id: 'abb-construir-01-s1',
+        kind: 'interpretar',
+        prompt: 'Inserindo na ordem 40, 20, 60, 10, 30, 50, 70 numa ABB vazia, quem vira raiz?',
+        options: [
+          { id: 'a', label: '40, o primeiro a ser inserido' },
+          { id: 'b', label: '10, o menor valor' },
+          { id: 'c', label: '70, o maior valor' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Em uma ABB sem balanceamento, a raiz e simplesmente o primeiro elemento inserido.',
+      },
+      {
+        id: 'abb-construir-01-s2',
+        kind: 'simular',
+        prompt: 'Ao inserir 30, qual caminho e percorrido ate a posicao livre?',
+        options: [
+          { id: 'a', label: '40 -> 20 -> direita (30)' },
+          { id: 'b', label: '40 -> 60' },
+          { id: 'c', label: '40 -> 20 -> 10' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n40', 'n20', 'n30'],
+        explanation: '30 < 40 desce a esquerda; 30 > 20 desce a direita e ocupa a vaga.',
+      },
+      {
+        id: 'abb-construir-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a logica recursiva de inserir(x, i).',
+        blocks: [
+          { id: 'base', label: 'se i == null, retorne new No(x)', order: 1 },
+          { id: 'esq', label: 'se x < i.elemento, i.esq = inserir(x, i.esq)', order: 2 },
+          { id: 'dir', label: 'senao i.dir = inserir(x, i.dir)', order: 3 },
+          { id: 'ret', label: 'retorne i', order: 4 },
+        ],
+        correctOrder: ['base', 'esq', 'dir', 'ret'],
+      },
+      {
+        id: 'abb-construir-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual o custo de construir a ABB com n insercoes no caso medio?',
+        options: [
+          { id: 'a', label: 'O(n log n)' },
+          { id: 'b', label: 'O(n)' },
+          { id: 'c', label: 'O(n^2) sempre' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Cada insercao custa O(log n) no caso medio; com n insercoes, O(n log n).',
+      },
+    ],
+    complexity: {
+      answer: 'O(n log n) no caso medio; O(n^2) no pior (entrada ja ordenada)',
+      explanation: 'Uma sequencia crescente gera uma arvore degenerada (lista), com insercoes O(n).',
+    },
+    commonMistakes: [
+      {
+        id: 'abb-construir-degenerada',
+        title: 'Ignorar a entrada ordenada',
+        description: 'Inserir valores ja ordenados sem balanceamento produz uma arvore-lista de altura n.',
+      },
+    ],
+  },
+  {
+    id: 'abb-inserir-01',
+    title: 'Inserir mantendo a propriedade da ABB',
+    pattern: 'seguir-um-caminho',
+    structure: 'abb',
+    phase: 4,
+    focus: 'codigo',
+    difficulty: 'medio',
+    statement:
+      'Implemente inserir(int x) de forma recursiva, religando os ponteiros no retorno. Use a insercao do valor 42 como exemplo guiado.',
+    providedCode: `No inserir(int x, No i) {
+  if (i == null) return new No(x);
+  if (x < i.elemento)      i.esq = inserir(x, i.esq);
+  else if (x > i.elemento) i.dir = inserir(x, i.dir);
+  return i; // religa o pai ao filho criado
+}`,
+    visualStateId: 'abb-inserir-42-01',
+    steps: [
+      {
+        id: 'abb-inserir-01-s1',
+        kind: 'simular',
+        prompt: 'Inserindo 42 na arvore basica (40,20,60,10,30,50,70), em qual no ele para?',
+        options: [
+          { id: 'a', label: 'Como filho esquerdo de 50' },
+          { id: 'b', label: 'Como filho direito de 50' },
+          { id: 'c', label: 'Como filho esquerdo de 60' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n40', 'n60', 'n50', 'n42'],
+        activeNodeId: 'n42',
+        explanation: '42 > 40 desce a direita (60); 42 < 60 desce a esquerda (50); 42 < 50 desce a esquerda, que esta livre: entra como filho esquerdo de 50.',
+      },
+      {
+        id: 'abb-inserir-01-s2',
+        kind: 'lacuna',
+        prompt: 'Para descer a esquerda quando x e menor, complete: if (x < i.elemento) i.esq = inserir(x, ___);',
+        gapId: 'religa-esq',
+        answers: [{ id: 'iesq', answer: 'i.esq', aliases: ['i .esq', 'iesq'] }],
+        explanation: 'O retorno da chamada precisa ser reatribuido a i.esq para religar o no criado.',
+      },
+      {
+        id: 'abb-inserir-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a insercao recursiva que evita duplicatas.',
+        blocks: [
+          { id: 'base', label: 'se i == null, retorne new No(x)', order: 1 },
+          { id: 'esq', label: 'se x < i.elemento, i.esq = inserir(x, i.esq)', order: 2 },
+          { id: 'dir', label: 'senao se x > i.elemento, i.dir = inserir(x, i.dir)', order: 3 },
+          { id: 'ret', label: 'retorne i', order: 4 },
+        ],
+        correctOrder: ['base', 'esq', 'dir', 'ret'],
+      },
+      {
+        id: 'abb-inserir-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual a complexidade de uma insercao isolada?',
+        options: [
+          { id: 'a', label: 'O(h), que vai de O(log n) a O(n)' },
+          { id: 'b', label: 'O(1) sempre' },
+          { id: 'c', label: 'O(n log n)' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A insercao percorre um unico caminho da raiz ate a folha: custo proporcional a altura h.',
+      },
+    ],
+    complexity: {
+      answer: 'O(h): O(log n) balanceada, O(n) degenerada',
+      explanation: 'Inserir desce um caminho unico ate uma posicao livre; o custo segue a altura da arvore.',
+    },
+    commonMistakes: [
+      {
+        id: 'abb-inserir-sem-religar',
+        title: 'Nao reatribuir i.esq / i.dir',
+        description: 'Chamar inserir(x, i.esq) sem guardar o retorno perde o no recem-criado.',
+      },
+    ],
+  },
+  {
+    id: 'abb-remover-01',
+    title: 'Remover nos tres casos da ABB',
+    pattern: 'seguir-um-caminho',
+    structure: 'abb',
+    phase: 5,
+    focus: 'codigo',
+    difficulty: 'dificil',
+    statement:
+      'A remocao em ABB tem tres casos: folha, no com um filho e no com dois filhos. No caso de dois filhos, use o maior elemento da subarvore esquerda (antecessor) para substituir.',
+    providedCode: `No remover(int x, No i) {
+  if (i == null) return null;
+  if (x < i.elemento)      i.esq = remover(x, i.esq);
+  else if (x > i.elemento) i.dir = remover(x, i.dir);
+  else {
+    if (i.dir == null)      return i.esq; // 0 ou 1 filho
+    else if (i.esq == null) return i.dir;
+    else i = maiorEsquerda(i, i.esq);     // 2 filhos
+  }
+  return i;
+}`,
+    visualStateId: 'abb-basica-01',
+    steps: [
+      {
+        id: 'abb-remover-01-s1',
+        kind: 'interpretar',
+        prompt: 'Remover uma folha (ex.: 10) consiste em:',
+        options: [
+          { id: 'a', label: 'Fazer o pai apontar para null no lugar dela' },
+          { id: 'b', label: 'Copiar a raiz para a folha' },
+          { id: 'c', label: 'Rotacionar a subarvore' },
+        ],
+        correctOptionId: 'a',
+        activeNodeId: 'n10',
+        explanation: 'Folha sem filhos: a chamada retorna null e o pai religa esse lado para null.',
+      },
+      {
+        id: 'abb-remover-01-s2',
+        kind: 'simular',
+        prompt: 'Para remover 60 (dois filhos) pela tecnica do maior da subarvore esquerda, qual valor substitui 60?',
+        options: [
+          { id: 'a', label: '50' },
+          { id: 'b', label: '70' },
+          { id: 'c', label: '40' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n60', 'n50'],
+        explanation: 'A subarvore esquerda de 60 e {50}; o maior dela e 50, que sobe para o lugar de 60.',
+      },
+      {
+        id: 'abb-remover-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene o tratamento do caso com dois filhos.',
+        blocks: [
+          { id: 'achar', label: 'encontre o maior elemento da subarvore esquerda (maiorEsq)', order: 1 },
+          { id: 'copiar', label: 'copie esse valor para o no que esta sendo removido', order: 2 },
+          { id: 'remover', label: 'remova recursivamente o maiorEsq da subarvore esquerda', order: 3 },
+          { id: 'retornar', label: 'retorne o no ajustado', order: 4 },
+        ],
+        correctOrder: ['achar', 'copiar', 'remover', 'retornar'],
+      },
+      {
+        id: 'abb-remover-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual a complexidade da remocao no pior caso?',
+        options: [
+          { id: 'a', label: 'O(h), ate O(n) se degenerada' },
+          { id: 'b', label: 'O(1)' },
+          { id: 'c', label: 'O(n log n)' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Encontrar o no e o antecessor segue caminhos limitados pela altura h.',
+      },
+    ],
+    complexity: {
+      answer: 'O(h), ate O(n) no pior caso',
+      explanation: 'Buscar o no a remover e o antecessor percorre caminhos proporcionais a altura.',
+    },
+    commonMistakes: [
+      {
+        id: 'abb-remover-dois-filhos',
+        title: 'Esquecer o caso de dois filhos',
+        description: 'Remover sem substituir pelo antecessor/sucessor quebra a propriedade da ABB.',
+      },
+    ],
+  },
+  {
+    id: 'abb-percorrer-emordem-01',
+    title: 'Percorrer em ordem e variar o caminhamento',
+    pattern: 'percorrer-todos-os-nos',
+    structure: 'abb',
+    phase: 6,
+    focus: 'codigo',
+    difficulty: 'facil',
+    statement:
+      'Os caminhamentos central, pre-ordem e pos-ordem so mudam a posicao da visita ao no em relacao as chamadas recursivas. Em uma ABB, o caminhamento central produz a sequencia ordenada.',
+    providedCode: `void central(No i) {
+  if (i == null) return;
+  central(i.esq);
+  visitar(i.elemento);
+  central(i.dir);
+}`,
+    visualStateId: 'abb-basica-01',
+    steps: [
+      {
+        id: 'abb-percorrer-emordem-01-s1',
+        kind: 'simular',
+        prompt: 'O caminhamento central da arvore basica produz qual sequencia?',
+        options: [
+          { id: 'a', label: '10 20 30 40 50 60 70' },
+          { id: 'b', label: '40 20 10 30 60 50 70' },
+          { id: 'c', label: '10 30 20 50 70 60 40' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'esq, raiz, dir respeitando a propriedade da ABB sempre devolve os elementos em ordem crescente.',
+      },
+      {
+        id: 'abb-percorrer-emordem-01-s2',
+        kind: 'interpretar',
+        prompt: 'Por que o central de uma ABB sai ordenado?',
+        options: [
+          { id: 'a', label: 'Porque visita esq (menores), depois a raiz, depois dir (maiores)' },
+          { id: 'b', label: 'Por coincidencia dos valores escolhidos' },
+          { id: 'c', label: 'Porque a arvore esta sempre balanceada' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A propriedade global garante que a subarvore esquerda toda vem antes do no, e este antes da direita.',
+      },
+      {
+        id: 'abb-percorrer-emordem-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene o caminhamento central(i).',
+        blocks: [
+          { id: 'base', label: 'se i == null, retorne', order: 1 },
+          { id: 'esq', label: 'central(i.esq)', order: 2 },
+          { id: 'visita', label: 'visitar(i.elemento)', order: 3 },
+          { id: 'dir', label: 'central(i.dir)', order: 4 },
+        ],
+        correctOrder: ['base', 'esq', 'visita', 'dir'],
+      },
+      {
+        id: 'abb-percorrer-emordem-01-s4',
+        kind: 'simular',
+        prompt: 'A pre-ordem (raiz, esq, dir) da arvore basica comeca com:',
+        options: [
+          { id: 'a', label: '40 20 10 30 60 50 70' },
+          { id: 'b', label: '10 20 30 40 50 60 70' },
+          { id: 'c', label: '70 60 50 40 30 20 10' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Pre-ordem visita a raiz antes das subarvores: 40, depois toda a esquerda, depois a direita.',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'Qualquer caminhamento visita cada no exatamente uma vez.',
+    },
+    commonMistakes: [
+      {
+        id: 'abb-percorrer-troca-visita',
+        title: 'Trocar a posicao da visita',
+        description: 'Mover visitar() antes ou depois das recursoes muda central para pre ou pos-ordem.',
+      },
+    ],
+  },
+  {
+    id: 'abb-alterar-contar-pares-01',
+    title: 'Modificar uma contagem para contar pares',
+    pattern: 'percorrer-todos-os-nos',
+    structure: 'abb',
+    phase: 8,
+    focus: 'codigo',
+    difficulty: 'medio',
+    transferGroupId: 'contagem-transferencia-01',
+    statement:
+      'Voce ja tem uma funcao que percorre todos os nos. Adapte-a para contar apenas os nos cujo elemento e par. A estrutura recursiva permanece; muda so a condicao de contagem.',
+    providedCode: `int contarPares(No i) {
+  if (i == null) return 0;
+  int cont = (i.elemento % 2 == 0) ? 1 : 0;
+  cont += contarPares(i.esq) + contarPares(i.dir);
+  return cont;
+}`,
+    visualStateId: 'binaria-ismax-01',
+    steps: [
+      {
+        id: 'abb-alterar-contar-pares-01-s1',
+        kind: 'interpretar',
+        prompt: 'O que muda em relacao a contar todos os nos?',
+        options: [
+          { id: 'a', label: 'Somar 1 apenas quando i.elemento % 2 == 0' },
+          { id: 'b', label: 'Mudar o caso base para retornar 1' },
+          { id: 'c', label: 'Parar na primeira folha encontrada' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A travessia continua igual; apenas a contribuicao do no atual passa a depender da paridade.',
+      },
+      {
+        id: 'abb-alterar-contar-pares-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete a condicao que testa o no atual: if (i.elemento ___ 2 == 0) cont++;',
+        gapId: 'operador-mod',
+        answers: [{ id: 'mod', answer: '%', aliases: ['mod', 'resto'] }],
+        explanation: 'O operador modulo (%) devolve o resto; resto 0 na divisao por 2 indica numero par.',
+      },
+      {
+        id: 'abb-alterar-contar-pares-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a funcao contarPares(i).',
+        blocks: [
+          { id: 'base', label: 'se i == null, retorne 0', order: 1 },
+          { id: 'atual', label: 'int cont = (i.elemento % 2 == 0) ? 1 : 0', order: 2 },
+          { id: 'soma', label: 'cont += contarPares(i.esq) + contarPares(i.dir)', order: 3 },
+          { id: 'ret', label: 'retorne cont', order: 4 },
+        ],
+        correctOrder: ['base', 'atual', 'soma', 'ret'],
+      },
+      {
+        id: 'abb-alterar-contar-pares-01-s4',
+        kind: 'simular',
+        prompt: 'Na ABB exibida (8, 3, 10, 1, 6, 4, 14, 13), quantos elementos sao pares?',
+        options: [
+          { id: 'a', label: '5 (8, 10, 6, 4, 14)' },
+          { id: 'b', label: '3 (3, 1, 13)' },
+          { id: 'c', label: '8 (todos)' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Pares: 8, 10, 6, 4, 14 = 5. Impares: 3, 1, 13 = 3.',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'Contar por propriedade obriga visitar todos os nos; nenhuma subarvore pode ser descartada.',
+    },
+    commonMistakes: [
+      {
+        id: 'abb-alterar-mexer-base',
+        title: 'Mexer no caso base em vez da condicao',
+        description: 'O caso base continua retornando 0; quem muda e a contribuicao do no atual.',
+      },
+    ],
+  },
+  {
+    id: 'abb-codigo-altura-01',
+    title: 'Escrever a funcao altura da ABB',
+    pattern: 'retornar-de-baixo-para-cima',
+    structure: 'abb',
+    phase: 9,
+    focus: 'codigo',
+    difficulty: 'medio',
+    statement:
+      'Escreva a funcao altura usando a convencao em arestas: a arvore vazia tem altura -1 e uma folha tem altura 0. A resposta depende de valores que sobem de baixo para cima.',
+    providedCode: `int altura(No i) {
+  if (i == null) return -1;
+  int he = altura(i.esq);
+  int hd = altura(i.dir);
+  return 1 + Math.max(he, hd);
+}`,
+    visualStateId: 'abb-basica-01',
+    steps: [
+      {
+        id: 'abb-codigo-altura-01-s1',
+        kind: 'interpretar',
+        prompt: 'Na convencao em arestas, qual a altura de uma arvore com apenas a raiz?',
+        options: [
+          { id: 'a', label: '0' },
+          { id: 'b', label: '1' },
+          { id: 'c', label: '-1' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'Sem arestas no caminho, a folha/raiz unica tem altura 0; a arvore vazia e que vale -1.',
+      },
+      {
+        id: 'abb-codigo-altura-01-s2',
+        kind: 'lacuna',
+        prompt: 'Complete o caso base da arvore vazia: if (i == null) return ___;',
+        gapId: 'altura-base',
+        answers: [{ id: 'menos1', answer: '-1', aliases: ['menos um'] }],
+        explanation: 'Retornar -1 faz com que uma folha (filhos null) resulte em 1 + max(-1, -1) = 0.',
+      },
+      {
+        id: 'abb-codigo-altura-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a funcao altura(i).',
+        blocks: [
+          { id: 'base', label: 'se i == null, retorne -1', order: 1 },
+          { id: 'he', label: 'int he = altura(i.esq)', order: 2 },
+          { id: 'hd', label: 'int hd = altura(i.dir)', order: 3 },
+          { id: 'ret', label: 'retorne 1 + max(he, hd)', order: 4 },
+        ],
+        correctOrder: ['base', 'he', 'hd', 'ret'],
+      },
+      {
+        id: 'abb-codigo-altura-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual a complexidade de calcular a altura?',
+        options: [
+          { id: 'a', label: 'O(n), visita todos os nos' },
+          { id: 'b', label: 'O(h), so um caminho' },
+          { id: 'c', label: 'O(log n) sempre' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A altura precisa comparar as duas subarvores de cada no, entao visita todos os nos.',
+      },
+    ],
+    complexity: {
+      answer: 'O(n)',
+      explanation: 'Cada no contribui com o max das subarvores; nenhum ramo pode ser descartado.',
+    },
+    commonMistakes: [
+      {
+        id: 'abb-altura-soma',
+        title: 'Somar alturas em vez de usar max',
+        description: 'A altura usa 1 + max(he, hd); somar he + hd mede outra coisa.',
+      },
+    ],
+  },
+  {
+    id: 'abb-dominio-01',
+    title: 'Desafio de dominio: juntar tudo na ABB',
+    pattern: 'verificar-propriedade-global',
+    structure: 'abb',
+    phase: 10,
+    focus: 'codigo',
+    difficulty: 'dificil',
+    statement:
+      'Fase final da trilha de ABB: combine pesquisa, remocao com dois filhos, validacao por limites e analise de custo em um unico desafio.',
+    providedCode: `boolean ehABB(No i, int min, int max) {
+  if (i == null) return true;
+  if (i.elemento <= min || i.elemento >= max) return false;
+  return ehABB(i.esq, min, i.elemento)
+      && ehABB(i.dir, i.elemento, max);
+}`,
+    visualStateId: 'abb-basica-01',
+    steps: [
+      {
+        id: 'abb-dominio-01-s1',
+        kind: 'simular',
+        prompt: 'Pesquisar 50: qual caminho a busca visita?',
+        options: [
+          { id: 'a', label: '40 -> 60 -> 50' },
+          { id: 'b', label: '40 -> 20 -> 30' },
+          { id: 'c', label: '40 -> 60 -> 70' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n40', 'n60', 'n50'],
+        explanation: '50 > 40 (dir, 60), 50 < 60 (esq, 50): encontrado.',
+      },
+      {
+        id: 'abb-dominio-01-s2',
+        kind: 'simular',
+        prompt: 'Remover a raiz 40 (dois filhos) pelo maior da subarvore esquerda: quem sobe?',
+        options: [
+          { id: 'a', label: '30 (maior da subarvore esquerda {20,10,30})' },
+          { id: 'b', label: '20' },
+          { id: 'c', label: '50' },
+        ],
+        correctOptionId: 'a',
+        activePath: ['n40', 'n20', 'n30'],
+        explanation: 'A subarvore esquerda de 40 e {10,20,30}; o maior e 30, que substitui a raiz.',
+      },
+      {
+        id: 'abb-dominio-01-s3',
+        kind: 'blocos',
+        prompt: 'Ordene a validacao ehABB(i, min, max) por limites.',
+        blocks: [
+          { id: 'base', label: 'se i == null, retorne true', order: 1 },
+          { id: 'limite', label: 'se i.elemento <= min ou i.elemento >= max, retorne false', order: 2 },
+          { id: 'rec', label: 'retorne ehABB(i.esq, min, i.elemento) && ehABB(i.dir, i.elemento, max)', order: 3 },
+        ],
+        correctOrder: ['base', 'limite', 'rec'],
+      },
+      {
+        id: 'abb-dominio-01-s4',
+        kind: 'complexidade',
+        prompt: 'Qual o custo de validar ehABB por limites?',
+        options: [
+          { id: 'a', label: 'O(n), visita cada no uma vez' },
+          { id: 'b', label: 'O(h)' },
+          { id: 'c', label: 'O(n^2)' },
+        ],
+        correctOptionId: 'a',
+        explanation: 'A validacao por limites desce a arvore inteira passando min/max a cada chamada.',
+      },
+      {
+        id: 'abb-dominio-01-s5',
+        kind: 'revisao',
+        prompt: 'Revise a trilha de dominio da ABB.',
+        summary:
+          'Pesquisa e remocao seguem caminhos O(h); validacao e percursos sao O(n). A propriedade da ABB e global e a comparacao esq < no < dir guia toda operacao.',
+        solutionNotes: [
+          'Buscar/inserir/remover: um unico caminho, custo O(h).',
+          'Validar por limites (min, max) evita o erro de comparar so filhos diretos.',
+          'Remocao com dois filhos usa o antecessor (maior da esquerda) ou o sucessor.',
+        ],
+      },
+    ],
+    complexity: {
+      answer: 'O(n) para validar/percorrer; O(h) para buscar/inserir/remover',
+      explanation: 'Operacoes de caminho seguem a altura; operacoes que olham a arvore inteira sao lineares.',
+    },
+    commonMistakes: [
+      {
+        id: 'abb-dominio-validar-local',
+        title: 'Validar so comparando filhos diretos',
+        description: 'Sem propagar min/max, arvores invalidas passam no teste; a validacao precisa de limites globais.',
       },
     ],
   },
@@ -817,6 +1469,8 @@ class ArvoreTrie {
     title: 'Verificar limite entre altura e nos',
     pattern: 'verificar-propriedade-global',
     structure: 'binaria',
+    phase: 9,
+    focus: 'codigo',
     difficulty: 'medio',
     statement:
       'Considere uma Arvore Binaria com classe No contendo elemento, esq e dir. Implemente o metodo boolean isMax(double valor), que retorna verdadeiro quando a altura da arvore e no maximo valor vezes Log2(quantidadeNo). A solucao deve calcular altura, quantidade de nos e explicar a complexidade.',
@@ -897,6 +1551,8 @@ class Arvore {
     title: 'Comparar caminhos em arvore binaria',
     pattern: 'retornar-de-baixo-para-cima',
     structure: 'binaria',
+    phase: 7,
+    focus: 'codigo',
     difficulty: 'facil',
     statement:
       'Dada uma arvore binaria comum, implemente um metodo que retorne a maior quantidade de nos em um caminho da raiz ate uma folha. A arvore nao e necessariamente ABB, entao os dois lados precisam ser analisados.',

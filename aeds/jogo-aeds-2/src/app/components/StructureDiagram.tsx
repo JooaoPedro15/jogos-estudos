@@ -117,10 +117,15 @@ function TreeDiagram({
   selected: HighlightSet;
   onNodeClick?: (nodeId: string) => void;
 }) {
-  const { nodes, edges } = layoutTree(visualState.root);
+  const { nodes, edges, width, height } = layoutTree(visualState.root);
 
   return (
-    <svg className="structure-sketch" viewBox="0 0 360 180" role="img" aria-label="Diagrama de arvore">
+    <svg
+      className="structure-sketch"
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label="Diagrama de arvore"
+    >
       {edges.map((edge, index) => (
         <path
           key={`${edge.from.x}-${edge.from.y}-${edge.to.x}-${edge.to.y}-${index}`}
@@ -136,7 +141,7 @@ function TreeDiagram({
           onNodeClick={onNodeClick}
           cx={node.x}
           cy={node.y}
-          r={18}
+          r={20}
           label={node.label}
           className={node.color ? `node-${node.color}` : undefined}
         />
@@ -158,8 +163,15 @@ function HashDiagram({
 }) {
   return (
     <svg className="structure-sketch hash-sketch" viewBox="0 0 360 180" role="img" aria-label="Diagrama de hash">
-      <text className="diagram-caption" x="24" y="24">
-        area principal + reserva
+      <text className="diagram-caption" x="24" y="22">
+        tabela hash
+      </text>
+      <text className="diagram-caption" x="24" y="40">
+        area principal
+      </text>
+      <path className="list-link list-null-link" d="M24 96 L336 96" />
+      <text className="diagram-caption" x="24" y="100">
+        reserva
       </text>
       {visualState.slots.map((slot) => {
         const x = 24 + (slot.index % 4) * 78;
@@ -209,10 +221,15 @@ function TrieDiagram({
   selected: HighlightSet;
   onNodeClick?: (nodeId: string) => void;
 }) {
-  const { nodes, edges } = layoutTrie(visualState.root);
+  const { nodes, edges, width, height } = layoutTrie(visualState.root);
 
   return (
-    <svg className="structure-sketch trie-sketch" viewBox="0 0 360 180" role="img" aria-label="Diagrama de TRIE">
+    <svg
+      className="structure-sketch trie-sketch"
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label="Diagrama de TRIE"
+    >
       {edges.map((edge, index) => (
         <path
           key={`${edge.from.x}-${edge.from.y}-${edge.to.x}-${edge.to.y}-${index}`}
@@ -624,75 +641,153 @@ function getStackCellLabel(layer: HybridLayerView): string {
   return layer.items[0] ?? layer.label;
 }
 
-function layoutTree(root: TreeNodeView | undefined): { nodes: PositionedTreeNode[]; edges: Edge[] } {
+function layoutTree(root: TreeNodeView | undefined): {
+  nodes: PositionedTreeNode[];
+  edges: Edge[];
+  width: number;
+  height: number;
+} {
   if (!root) {
-    return { nodes: [], edges: [] };
+    return { nodes: [], edges: [], width: 360, height: 180 };
   }
+
+  const sideMargin = 34;
+  const slotWidth = 60;
+  const levelGap = 58;
+  const top = 36;
+
+  // Posicao x por caminhamento central (in-order): cada no ocupa um "slot"
+  // sequencial, garantindo que ninguem se sobreponha e que o pai fique
+  // centralizado entre suas subarvores. Funciona bem para ABB e arvores comuns.
+  const positions = new Map<string, PositionedTreeNode>();
+  let order = 0;
+  let maxDepth = 0;
+
+  const assign = (node: TreeNodeView, depth: number) => {
+    if (node.left) {
+      assign(node.left, depth + 1);
+    }
+
+    maxDepth = Math.max(maxDepth, depth);
+    positions.set(node.id, {
+      id: node.id,
+      label: node.label,
+      x: sideMargin + order * slotWidth,
+      y: top + depth * levelGap,
+      color: node.color,
+    });
+    order += 1;
+
+    if (node.right) {
+      assign(node.right, depth + 1);
+    }
+  };
+
+  assign(root, 0);
 
   const nodes: PositionedTreeNode[] = [];
   const edges: Edge[] = [];
 
-  const visit = (
-    node: TreeNodeView,
-    depth: number,
-    minX: number,
-    maxX: number,
-    parent?: { x: number; y: number },
-  ) => {
-    const x = (minX + maxX) / 2;
-    const y = 28 + depth * 48;
-    nodes.push({ id: node.id, label: node.label, x, y, color: node.color });
-
-    if (parent) {
-      edges.push({ from: parent, to: { x, y } });
+  const walk = (node: TreeNodeView) => {
+    const parent = positions.get(node.id);
+    if (!parent) {
+      return;
     }
 
-    const midpoint = (minX + maxX) / 2;
-    if (node.left) {
-      visit(node.left, depth + 1, minX, midpoint, { x, y });
-    }
-    if (node.right) {
-      visit(node.right, depth + 1, midpoint, maxX, { x, y });
+    nodes.push(parent);
+
+    for (const child of [node.left, node.right]) {
+      if (!child) {
+        continue;
+      }
+
+      const childPos = positions.get(child.id);
+      if (childPos) {
+        edges.push({
+          from: { x: parent.x, y: parent.y },
+          to: { x: childPos.x, y: childPos.y },
+        });
+      }
+      walk(child);
     }
   };
 
-  visit(root, 0, 24, 336);
-  return { nodes, edges };
+  walk(root);
+
+  const width = Math.max(360, sideMargin * 2 + Math.max(0, order - 1) * slotWidth);
+  const height = top + maxDepth * levelGap + 46;
+  return { nodes, edges, width, height };
 }
 
-function layoutTrie(root: TrieNodeView): { nodes: PositionedTrieNode[]; edges: Edge[] } {
+function layoutTrie(root: TrieNodeView): {
+  nodes: PositionedTrieNode[];
+  edges: Edge[];
+  width: number;
+  height: number;
+} {
+  const sideMargin = 30;
+  const slotWidth = 54;
+  const levelGap = 48;
+  const top = 34;
+
+  // Folhas recebem slots sequenciais; cada no interno fica centralizado entre
+  // a primeira e a ultima folha de sua subarvore, evitando sobreposicao.
+  const positions = new Map<string, PositionedTrieNode>();
+  let leafOrder = 0;
+  let maxDepth = 0;
+
+  const assign = (node: TrieNodeView, depth: number): number => {
+    maxDepth = Math.max(maxDepth, depth);
+    const children = node.children ?? [];
+
+    let x: number;
+    if (children.length === 0) {
+      x = sideMargin + leafOrder * slotWidth;
+      leafOrder += 1;
+    } else {
+      const childXs = children.map((child) => assign(child, depth + 1));
+      x = (childXs[0] + childXs[childXs.length - 1]) / 2;
+    }
+
+    positions.set(node.id, {
+      id: node.id,
+      label: node.char.length > 0 ? node.char : 'raiz',
+      x,
+      y: top + depth * levelGap,
+      folha: node.folha,
+    });
+    return x;
+  };
+
+  assign(root, 0);
+
   const nodes: PositionedTrieNode[] = [];
   const edges: Edge[] = [];
 
-  const visit = (
-    node: TrieNodeView,
-    depth: number,
-    minX: number,
-    maxX: number,
-    parent?: { x: number; y: number },
-  ) => {
-    const x = (minX + maxX) / 2;
-    const y = 28 + depth * 42;
-    const label = node.char.length > 0 ? node.char : 'raiz';
-    nodes.push({ id: node.id, label, x, y, folha: node.folha });
-
-    if (parent) {
-      edges.push({ from: parent, to: { x, y } });
+  const walk = (node: TrieNodeView) => {
+    const parent = positions.get(node.id);
+    if (!parent) {
+      return;
     }
 
-    const children = node.children ?? [];
-    const span = maxX - minX;
-    const childWidth = children.length > 0 ? span / children.length : span;
-    children.forEach((child, index) => {
-      visit(child, depth + 1, minX + index * childWidth, minX + (index + 1) * childWidth, {
-        x,
-        y,
-      });
-    });
+    nodes.push(parent);
+    for (const child of node.children ?? []) {
+      const childPos = positions.get(child.id);
+      if (childPos) {
+        edges.push({
+          from: { x: parent.x, y: parent.y },
+          to: { x: childPos.x, y: childPos.y },
+        });
+      }
+      walk(child);
+    }
   };
 
-  visit(root, 0, 18, 342);
-  return { nodes, edges };
+  walk(root);
+
+  const width = Math.max(360, sideMargin * 2 + Math.max(0, leafOrder - 1) * slotWidth);
+  const height = top + maxDepth * levelGap + 44;
+  return { nodes, edges, width, height };
 }
 
 function renderFallbackStructure(
