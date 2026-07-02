@@ -945,6 +945,43 @@ h1 {
   font-size: var(--text-sm);
 }
 
+.reset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.reset-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+
+.reset-button:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.reset-button.is-danger {
+  color: var(--danger-ink);
+  background: var(--danger-soft);
+  border-color: transparent;
+}
+
+.reset-button.is-danger:hover {
+  border-color: var(--danger);
+}
+
 /* Seleção de operação */
 
 .op-bar {

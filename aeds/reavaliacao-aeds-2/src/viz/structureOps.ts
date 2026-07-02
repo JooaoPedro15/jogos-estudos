@@ -1,20 +1,35 @@
 import { avlToViz, balance, insertPlain, rebalance, type AvlNode } from './avlModel';
-import { defaultDoidonaConfig, doidonaScene, type DoidonaConfig, type DoidonaOpId } from './doidona';
+import {
+  defaultDoidonaConfig,
+  doidonaOpScene,
+  doidonaPreviewScene,
+  emptyDoidonaState,
+  initialDoidonaState,
+  type DoidonaConfig,
+  type DoidonaOpId,
+  type DoidonaState,
+} from './doidona';
 import { buildLevelOrderTree, e, layoutTree, n, p, snap, type TreeNode } from './sceneUtils';
 import type { VizEdge, VizFrame, VizNode, VizNodeState, VizPointer, VizScene, VizVar } from './vizTypes';
 
 /* =====================================================================
-   Operações interativas da aba "Estruturas": o usuário escolhe a
-   estrutura, a operação e o valor; a cena é gerada sob medida.
+   Operações interativas com ESTADO PERSISTENTE.
+   O código exibido segue os fontes oficiais da matéria (Max do Val):
+   pilha/fila/lista sequenciais e flexíveis, hashDiretoReserva,
+   ArvoreBinaria, AVL (balancear) e ArvoreTrie.
    ===================================================================== */
 
+export type Cell = { id: string; value: number };
+
 export type OpInput = { kind: 'number' | 'text'; label: string; sample: string };
+
+export type OpResult = { scene: VizScene; next: unknown };
 
 export type StructureOp = {
   id: string;
   label: string;
   input?: OpInput;
-  run: (value: string, config: DoidonaConfig) => VizScene;
+  run: (state: unknown, raw: string) => OpResult;
 };
 
 export type StructureEntry = {
@@ -22,6 +37,9 @@ export type StructureEntry = {
   name: string;
   blurb: string;
   configurable?: boolean;
+  initial: () => unknown;
+  empty: () => unknown;
+  preview: (state: unknown, opId: string) => VizScene;
   ops: StructureOp[];
 };
 
@@ -38,549 +56,976 @@ function parseWord(raw: string, fallback: string): string {
   return word || fallback;
 }
 
+function previewFrame(
+  nodes: VizNode[],
+  edges: VizEdge[],
+  pointers: VizPointer[],
+  caption: string,
+): VizFrame {
+  return snap(nodes, edges, pointers, caption, undefined);
+}
+
+const stateCaption = (empty: boolean, nome: string) =>
+  empty
+    ? `${nome} vazia. Use as operações para construí-la do zero.`
+    : `Estado atual da ${nome}. Escolha uma operação e execute.`;
+
 /* =====================================================================
-   PILHA
+   PILHA SEQUENCIAL — array + n (unidade02b)
    ===================================================================== */
 
+type StackState = { cells: Cell[]; seq: number };
+
+const STACK_CAP = 5;
 const STACK_X = 230;
 const stackSlotY = (index: number) => 258 - index * 48;
 
-function stackBase(): { slots: VizNode[]; items: VizNode[] } {
-  const slots = [0, 1, 2, 3, 4].map((index) =>
-    n(`slot${index}`, STACK_X, stackSlotY(index), '', { shape: 'slot', w: 96, h: 42, sub: `${index}` }),
-  );
-  const items = [
-    n('s5', STACK_X, stackSlotY(0), '5', { shape: 'box', w: 88, h: 36 }),
-    n('s8', STACK_X, stackSlotY(1), '8', { shape: 'box', w: 88, h: 36 }),
-  ];
-  return { slots, items };
+const stackInsertCode = [
+  'public void inserir(int x) {',
+  '   if (n >= array.length) {',
+  '      // erro: pilha cheia!',
+  '   }',
+  '   array[n] = x;',
+  '   n++;',
+  '}',
+];
+
+const stackRemoveCode = [
+  'public int remover() {',
+  '   if (n == 0) {',
+  '      // erro: pilha vazia!',
+  '   }',
+  '   n--;',
+  '   return array[n];',
+  '}',
+];
+
+const stackPeekCode = [
+  'public int topo() {',
+  '   if (n == 0) {',
+  '      // erro: pilha vazia!',
+  '   }',
+  '   return array[n - 1];   // nao remove',
+  '}',
+];
+
+function stackCodeFor(opId: string): string[] {
+  return opId === 'inserir' ? stackInsertCode : opId === 'remover' ? stackRemoveCode : stackPeekCode;
 }
 
-const stackPtr = (index: number) => [p(`slot${index}`, 'TOPO', 'right', 'primary')];
+function stackRender(state: StackState, marks: Record<string, VizNodeState> = {}): { nodes: VizNode[]; pointers: VizPointer[] } {
+  const nodes: VizNode[] = [];
 
-function stackInsertScene(raw: string): VizScene {
+  for (let index = 0; index < STACK_CAP; index += 1) {
+    nodes.push(n(`slot${index}`, STACK_X, stackSlotY(index), '', { shape: 'slot', w: 96, h: 42, sub: `${index}` }));
+  }
+
+  state.cells.forEach((cell, index) => {
+    nodes.push(n(cell.id, STACK_X, stackSlotY(index), `${cell.value}`, { shape: 'box', w: 88, h: 36, state: marks[cell.id] ?? 'default' }));
+  });
+
+  const pointers = state.cells.length
+    ? [p(`slot${state.cells.length - 1}`, 'TOPO', 'right', 'primary')]
+    : [];
+
+  return { nodes, pointers };
+}
+
+function stackScene(frames: VizFrame[], code: string[], operation: string): VizScene {
+  return { operation, complexity: 'O(1)', code, frames, width: 460, height: 310 };
+}
+
+function stackInsert(previous: StackState, raw: string): OpResult {
+  const state: StackState = structuredClone(previous);
   const value = parseNumber(raw, 7);
-  const code = ['push(x):', '  topo = topo + 1', '  dados[topo] = x'];
-  const { slots, items } = stackBase();
   const frames: VizFrame[] = [];
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], extra: VizNode[] = [], marks: Record<string, VizNodeState> = {}) => {
+    const { nodes, pointers } = stackRender(state, marks);
+    frames.push(snap([...nodes, ...extra], [], pointers, caption, codeLine, vars));
+  };
 
-  frames.push(snap([...slots, ...items], [], stackPtr(1), 'Pilha LIFO: o último a entrar é o primeiro a sair.', undefined, [{ name: 'topo', value: '1' }]));
+  const nVar = (): VizVar => ({ name: 'n', value: `${state.cells.length}` });
 
-  const novo = n('novo', 390, 88, `${value}`, { shape: 'box', w: 88, h: 36, state: 'inserted' });
-  frames.push(snap([...slots, ...items, novo], [], stackPtr(1), `push(${value}): o novo elemento chega pelo topo.`, 0, [{ name: 'x', value: `${value}` }]));
-  frames.push(snap([...slots, ...items, novo], [], stackPtr(2), 'topo avança para a próxima posição livre.', 1, [{ name: 'topo', value: '2' }]));
+  if (state.cells.length >= STACK_CAP) {
+    push(`inserir(${value}): n = ${state.cells.length} = array.length → pilha cheia.`, 1, [{ name: 'x', value: `${value}` }, nVar()]);
+    push('Erro ao inserir! A pilha sequencial não cresce além do array.', 2, [{ name: 'resultado', value: 'erro' }]);
+    return { scene: stackScene(frames, stackInsertCode, `inserir(${value})`), next: state };
+  }
 
-  novo.x = STACK_X;
-  novo.y = stackSlotY(2);
-  frames.push(snap([...slots, ...items, novo], [], stackPtr(2), `${value} desliza para a posição do topo.`, 2, [{ name: 'topo', value: '2' }]));
+  const novo = n('staging', 390, 88, `${value}`, { shape: 'box', w: 88, h: 36, state: 'inserted' });
+  push(`inserir(${value}): duplicatas são permitidas na pilha.`, 0, [{ name: 'x', value: `${value}` }, nVar()], [novo]);
+  push(`n = ${state.cells.length} < array.length: há espaço.`, 1, [nVar()], [novo]);
 
-  novo.state = 'found';
-  frames.push(snap([...slots, ...items, novo], [], stackPtr(2), 'push concluído: custo O(1), sem tocar nos demais.', 2, [{ name: 'topo', value: '2' }]));
+  const cell: Cell = { id: `s${(state.seq += 1)}`, value };
+  state.cells.push(cell);
+  push(`array[${state.cells.length - 1}] = ${value}: o elemento ocupa o topo.`, 4, [nVar()], [], { [cell.id]: 'inserted' });
+  push(`n++ → TOPO agora é a posição ${state.cells.length - 1}. Custo O(1).`, 5, [nVar()], [], { [cell.id]: 'found' });
 
-  return { operation: `push(${value})`, complexity: 'O(1)', code, frames, width: 460, height: 310 };
+  return { scene: stackScene(frames, stackInsertCode, `inserir(${value})`), next: state };
 }
 
-function stackRemoveScene(): VizScene {
-  const code = ['pop():', '  x = dados[topo]', '  topo = topo - 1', '  return x'];
-  const { slots, items } = stackBase();
+function stackRemove(previous: StackState): OpResult {
+  const state: StackState = structuredClone(previous);
   const frames: VizFrame[] = [];
-  const topo = items[items.length - 1];
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []) => {
+    const { nodes, pointers } = stackRender(state, marks);
+    frames.push(snap([...nodes, ...extra], [], pointers, caption, codeLine, vars));
+  };
 
-  frames.push(snap([...slots, ...items], [], stackPtr(1), 'pop() sempre atua no elemento apontado por topo.', 0, [{ name: 'topo', value: '1' }]));
+  if (!state.cells.length) {
+    push('remover(): n = 0 → pilha vazia.', 1, [{ name: 'n', value: '0' }]);
+    push('Erro ao remover! Não há elemento para retirar.', 2, [{ name: 'resultado', value: 'erro' }]);
+    return { scene: stackScene(frames, stackRemoveCode, 'remover()'), next: state };
+  }
 
-  topo.state = 'active';
-  frames.push(snap([...slots, ...items], [], stackPtr(1), `Lê o valor do topo: x = ${topo.label}.`, 1, [{ name: 'x', value: topo.label }]));
+  const topo = state.cells[state.cells.length - 1];
+  push('remover(): o pop atua sempre no elemento do topo.', 1, [{ name: 'n', value: `${state.cells.length}` }]);
+  push(`n-- e lê array[${state.cells.length - 1}] = ${topo.value}.`, 4, [{ name: 'resp', value: `${topo.value}` }], { [topo.id]: 'active' });
 
-  topo.state = 'removed';
-  topo.x = 390;
-  topo.y = 88;
-  frames.push(snap([...slots, ...items], [], stackPtr(1), `${topo.label} sai pelo topo da pilha.`, 1, [{ name: 'x', value: topo.label }]));
+  state.cells.pop();
+  const saindo = n(topo.id, 390, 88, `${topo.value}`, { shape: 'box', w: 88, h: 36, state: 'removed' });
+  push(`${topo.value} sai pelo topo. Custo O(1).`, 5, [{ name: 'resp', value: `${topo.value}` }, { name: 'n', value: `${state.cells.length}` }], {}, [saindo]);
+  push(state.cells.length ? `TOPO recua para a posição ${state.cells.length - 1}.` : 'A pilha ficou vazia (n = 0).', 5, [{ name: 'n', value: `${state.cells.length}` }]);
 
-  items.pop();
-  frames.push(snap([...slots, ...items], [], stackPtr(0), 'topo recua uma posição. pop custa O(1).', 2, [{ name: 'topo', value: '0' }]));
-
-  return { operation: 'pop()', complexity: 'O(1)', code, frames, width: 460, height: 310 };
+  return { scene: stackScene(frames, stackRemoveCode, 'remover()'), next: state };
 }
 
-function stackPeekScene(): VizScene {
-  const code = ['topo():', '  return dados[topo]  // não remove'];
-  const { slots, items } = stackBase();
+function stackPeek(previous: StackState): OpResult {
+  const state: StackState = structuredClone(previous);
   const frames: VizFrame[] = [];
-  const topo = items[items.length - 1];
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}) => {
+    const { nodes, pointers } = stackRender(state, marks);
+    frames.push(snap(nodes, [], pointers, caption, codeLine, vars));
+  };
 
-  frames.push(snap([...slots, ...items], [], stackPtr(1), 'Consultar topo: apenas lê, sem alterar a pilha.', 0, [{ name: 'topo', value: '1' }]));
+  if (!state.cells.length) {
+    push('topo(): n = 0 → pilha vazia.', 1, [{ name: 'n', value: '0' }]);
+    push('Erro! Não há topo para consultar.', 2, [{ name: 'resultado', value: 'erro' }]);
+    return { scene: stackScene(frames, stackPeekCode, 'consultar topo'), next: state };
+  }
 
-  topo.state = 'compare';
-  frames.push(snap([...slots, ...items], [], stackPtr(1), 'O ponteiro topo já indica onde olhar: nenhuma busca é necessária.', 1, [{ name: 'topo', value: '1' }]));
+  const topo = state.cells[state.cells.length - 1];
+  push('Consultar topo: apenas lê, sem alterar a pilha.', 1, [{ name: 'n', value: `${state.cells.length}` }]);
+  push(`array[n - 1] = ${topo.value}: acesso direto, nenhuma busca.`, 4, [{ name: 'retorno', value: `${topo.value}` }], { [topo.id]: 'compare' });
+  push(`Resultado: ${topo.value}. A pilha continua igual.`, 4, [{ name: 'retorno', value: `${topo.value}` }], { [topo.id]: 'found' });
 
-  topo.state = 'found';
-  frames.push(snap([...slots, ...items], [], stackPtr(1), `Resultado: ${topo.label}. A pilha continua exatamente igual.`, 1, [{ name: 'retorno', value: topo.label }]));
-
-  return { operation: 'consultar topo', complexity: 'O(1)', code, frames, width: 460, height: 310 };
+  return { scene: stackScene(frames, stackPeekCode, 'consultar topo'), next: state };
 }
 
 /* =====================================================================
-   FILA
+   FILA EM FILEIRA — frente/tras sem módulo (unidade02c, antes da circular)
    ===================================================================== */
 
+type QueueState = { cells: Array<Cell & { slot: number }>; primeiro: number; ultimo: number; seq: number };
+
+const QUEUE_CAP = 5;
 const QUEUE_Y = 168;
 const queueSlotX = (index: number) => 70 + index * 82;
 
-function queueBase(): { slots: VizNode[]; items: VizNode[] } {
-  const slots = [0, 1, 2, 3, 4].map((index) =>
-    n(`slot${index}`, queueSlotX(index), QUEUE_Y, '', { shape: 'slot', w: 72, h: 46, sub: `${index}` }),
-  );
-  const items = [
-    n('q4', queueSlotX(0), QUEUE_Y, '4', { shape: 'box', w: 64, h: 40 }),
-    n('q9', queueSlotX(1), QUEUE_Y, '9', { shape: 'box', w: 64, h: 40 }),
-  ];
-  return { slots, items };
-}
-
-const queuePtrs = (frente: number, tras: number): VizPointer[] => [
-  p(`slot${frente}`, 'FRENTE', 'top', 'accent'),
-  p(`slot${tras}`, 'TRÁS', 'bottom', 'primary'),
+const queueInsertCode = [
+  'public void inserir(int x) {',
+  '   if (ultimo >= array.length) {',
+  '      // erro: fila cheia!',
+  '   }',
+  '   array[ultimo] = x;',
+  '   ultimo++;',
+  '}',
 ];
 
-function queueInsertScene(raw: string): VizScene {
+const queueRemoveCode = [
+  'public int remover() {',
+  '   if (primeiro == ultimo) {',
+  '      // erro: fila vazia!',
+  '   }',
+  '   int resp = array[primeiro];',
+  '   primeiro++;',
+  '   return resp;',
+  '}',
+];
+
+const queuePeekCode = [
+  'public int frente() {',
+  '   if (primeiro == ultimo) {',
+  '      // erro: fila vazia!',
+  '   }',
+  '   return array[primeiro];   // nao remove',
+  '}',
+];
+
+function queueCodeFor(opId: string): string[] {
+  return opId === 'enfileirar' ? queueInsertCode : opId === 'desenfileirar' ? queueRemoveCode : queuePeekCode;
+}
+
+function queueRender(state: QueueState, marks: Record<string, VizNodeState> = {}): { nodes: VizNode[]; pointers: VizPointer[] } {
+  const nodes: VizNode[] = [];
+
+  for (let index = 0; index < QUEUE_CAP; index += 1) {
+    nodes.push(n(`slot${index}`, queueSlotX(index), QUEUE_Y, '', { shape: 'slot', w: 72, h: 46, sub: `${index}` }));
+  }
+
+  for (const cell of state.cells) {
+    nodes.push(n(cell.id, queueSlotX(cell.slot), QUEUE_Y, `${cell.value}`, { shape: 'box', w: 64, h: 40, state: marks[cell.id] ?? 'default' }));
+  }
+
+  const pointers = [
+    p(`slot${Math.min(state.primeiro, QUEUE_CAP - 1)}`, 'FRENTE', 'top', 'accent'),
+    p(`slot${Math.min(state.ultimo, QUEUE_CAP - 1)}`, 'TRÁS', 'bottom', 'primary'),
+  ];
+
+  return { nodes, pointers };
+}
+
+function queueScene(frames: VizFrame[], code: string[], operation: string): VizScene {
+  return { operation, complexity: 'O(1)', code, frames, width: 460, height: 260 };
+}
+
+function queueInsert(previous: QueueState, raw: string): OpResult {
+  const state: QueueState = structuredClone(previous);
   const value = parseNumber(raw, 2);
-  const code = ['enfileirar(x):', '  dados[tras] = x', '  tras = tras + 1'];
-  const { slots, items } = queueBase();
   const frames: VizFrame[] = [];
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], extra: VizNode[] = [], marks: Record<string, VizNodeState> = {}) => {
+    const { nodes, pointers } = queueRender(state, marks);
+    frames.push(snap([...nodes, ...extra], [], pointers, caption, codeLine, vars));
+  };
 
-  frames.push(snap([...slots, ...items], [], queuePtrs(0, 1), 'Fila FIFO: o primeiro a entrar é o primeiro a sair.', undefined, [{ name: 'frente', value: '0' }, { name: 'tras', value: '1' }]));
+  const ptrVars = (): VizVar[] => [
+    { name: 'primeiro', value: `${state.primeiro}` },
+    { name: 'ultimo', value: `${state.ultimo}` },
+  ];
 
-  const novo = n('novo', 400, 70, `${value}`, { shape: 'box', w: 64, h: 40, state: 'inserted' });
-  frames.push(snap([...slots, ...items, novo], [], queuePtrs(0, 1), `enfileirar(${value}): o elemento chega pelo final.`, 0, [{ name: 'x', value: `${value}` }]));
+  if (state.ultimo >= QUEUE_CAP) {
+    push(`inserir(${value}): ultimo = ${state.ultimo} = array.length → fila cheia.`, 1, [{ name: 'x', value: `${value}` }, ...ptrVars()]);
+    push(
+      state.primeiro > 0
+        ? 'Erro ao inserir! Há espaço livre no início, mas a fila em fileira NÃO reaproveita — é isso que a fila circular resolve.'
+        : 'Erro ao inserir! O array está completamente ocupado.',
+      2,
+      [{ name: 'resultado', value: 'erro' }],
+    );
+    return { scene: queueScene(frames, queueInsertCode, `inserir(${value})`), next: state };
+  }
 
-  novo.x = queueSlotX(2);
-  novo.y = QUEUE_Y;
-  frames.push(snap([...slots, ...items, novo], [], queuePtrs(0, 2), `${value} entra na posição de trás.`, 1, [{ name: 'tras', value: '2' }]));
+  const novo = n('staging', 400, 70, `${value}`, { shape: 'box', w: 64, h: 40, state: 'inserted' });
+  push(`inserir(${value}): duplicatas são permitidas na fila.`, 1, [{ name: 'x', value: `${value}` }, ...ptrVars()], [novo]);
 
-  novo.state = 'found';
-  frames.push(snap([...slots, ...items, novo], [], queuePtrs(0, 2), 'trás avança. Inserção no final: O(1).', 2, [{ name: 'frente', value: '0' }, { name: 'tras', value: '2' }]));
+  const cell = { id: `q${(state.seq += 1)}`, value, slot: state.ultimo };
+  state.cells.push(cell);
+  push(`array[${cell.slot}] = ${value}: o elemento entra por trás.`, 4, ptrVars(), [], { [cell.id]: 'inserted' });
 
-  return { operation: `enfileirar(${value})`, complexity: 'O(1)', code, frames, width: 460, height: 260 };
+  state.ultimo += 1;
+  push(`ultimo++ → ${state.ultimo}. Inserção O(1).`, 5, ptrVars(), [], { [cell.id]: 'found' });
+
+  return { scene: queueScene(frames, queueInsertCode, `inserir(${value})`), next: state };
 }
 
-function queueRemoveScene(): VizScene {
-  const code = ['desenfileirar():', '  x = dados[frente]', '  frente = frente + 1', '  return x'];
-  const { slots, items } = queueBase();
+function queueRemove(previous: QueueState): OpResult {
+  const state: QueueState = structuredClone(previous);
   const frames: VizFrame[] = [];
-  const primeiro = items[0];
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []) => {
+    const { nodes, pointers } = queueRender(state, marks);
+    frames.push(snap([...nodes, ...extra], [], pointers, caption, codeLine, vars));
+  };
 
-  frames.push(snap([...slots, ...items], [], queuePtrs(0, 1), 'A remoção acontece sempre pela frente da fila.', 0, [{ name: 'frente', value: '0' }]));
+  if (state.primeiro === state.ultimo) {
+    push('remover(): primeiro == ultimo → fila vazia.', 1, [{ name: 'primeiro', value: `${state.primeiro}` }, { name: 'ultimo', value: `${state.ultimo}` }]);
+    push('Erro ao remover! Não há elemento na frente.', 2, [{ name: 'resultado', value: 'erro' }]);
+    return { scene: queueScene(frames, queueRemoveCode, 'remover()'), next: state };
+  }
 
-  primeiro.state = 'active';
-  frames.push(snap([...slots, ...items], [], queuePtrs(0, 1), `Lê o elemento da frente: x = ${primeiro.label}.`, 1, [{ name: 'x', value: primeiro.label }]));
+  const alvo = state.cells.find((cell) => cell.slot === state.primeiro)!;
+  push('remover(): a saída é sempre pela FRENTE (FIFO).', 1, [{ name: 'primeiro', value: `${state.primeiro}` }]);
+  push(`resp = array[${state.primeiro}] = ${alvo.value}.`, 4, [{ name: 'resp', value: `${alvo.value}` }], { [alvo.id]: 'active' });
 
-  primeiro.state = 'removed';
-  primeiro.x = 40;
-  primeiro.y = 70;
-  frames.push(snap([...slots, ...items], [], queuePtrs(0, 1), `${primeiro.label} sai pela frente: a ordem de chegada foi respeitada.`, 1, [{ name: 'x', value: primeiro.label }]));
+  state.cells = state.cells.filter((cell) => cell.id !== alvo.id);
+  const saindo = n(alvo.id, 40, 70, `${alvo.value}`, { shape: 'box', w: 64, h: 40, state: 'removed' });
+  state.primeiro += 1;
+  push(`primeiro++ → ${state.primeiro}. ${alvo.value} saiu; ninguém foi copiado.`, 5, [{ name: 'primeiro', value: `${state.primeiro}` }], {}, [saindo]);
+  push('A posição antiga fica inutilizada na fila em fileira.', 6, [{ name: 'resp', value: `${alvo.value}` }]);
 
-  items.shift();
-  frames.push(snap([...slots, ...items], [], queuePtrs(1, 1), 'frente avança. Nenhum elemento é copiado: O(1).', 2, [{ name: 'frente', value: '1' }]));
-
-  return { operation: 'desenfileirar()', complexity: 'O(1)', code, frames, width: 460, height: 260 };
+  return { scene: queueScene(frames, queueRemoveCode, 'remover()'), next: state };
 }
 
-function queuePeekScene(): VizScene {
-  const code = ['frente():', '  return dados[frente]  // não remove'];
-  const { slots, items } = queueBase();
+function queuePeek(previous: QueueState): OpResult {
+  const state: QueueState = structuredClone(previous);
   const frames: VizFrame[] = [];
-  const primeiro = items[0];
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}) => {
+    const { nodes, pointers } = queueRender(state, marks);
+    frames.push(snap(nodes, [], pointers, caption, codeLine, vars));
+  };
 
-  frames.push(snap([...slots, ...items], [], queuePtrs(0, 1), 'Consultar frente: lê o próximo a sair, sem removê-lo.', 0));
+  if (state.primeiro === state.ultimo) {
+    push('frente(): primeiro == ultimo → fila vazia.', 1, []);
+    push('Erro! Não há frente para consultar.', 2, [{ name: 'resultado', value: 'erro' }]);
+    return { scene: queueScene(frames, queuePeekCode, 'consultar frente'), next: state };
+  }
 
-  primeiro.state = 'compare';
-  frames.push(snap([...slots, ...items], [], queuePtrs(0, 1), 'O ponteiro frente já aponta o elemento: acesso direto.', 1, [{ name: 'frente', value: '0' }]));
+  const alvo = state.cells.find((cell) => cell.slot === state.primeiro)!;
+  push('Consultar frente: lê o próximo a sair, sem removê-lo.', 1, [{ name: 'primeiro', value: `${state.primeiro}` }]);
+  push(`array[primeiro] = ${alvo.value}: acesso direto.`, 4, [{ name: 'retorno', value: `${alvo.value}` }], { [alvo.id]: 'compare' });
+  push(`Resultado: ${alvo.value}. A fila continua igual.`, 4, [{ name: 'retorno', value: `${alvo.value}` }], { [alvo.id]: 'found' });
 
-  primeiro.state = 'found';
-  frames.push(snap([...slots, ...items], [], queuePtrs(0, 1), `Resultado: ${primeiro.label}. A fila continua igual.`, 1, [{ name: 'retorno', value: primeiro.label }]));
-
-  return { operation: 'consultar frente', complexity: 'O(1)', code, frames, width: 460, height: 260 };
+  return { scene: queueScene(frames, queuePeekCode, 'consultar frente'), next: state };
 }
 
 /* =====================================================================
-   FILA CIRCULAR
+   FILA CIRCULAR — código do Fila.java (Max)
    ===================================================================== */
+
+type RingState = { slots: Array<Cell | null>; primeiro: number; ultimo: number; seq: number };
 
 const RING_TOTAL = 8;
 const RING_CX = 230;
 const RING_CY = 172;
+
+const ringInsertCode = [
+  'public void inserir(int x) {',
+  '   if ((ultimo + 1) % array.length == primeiro) {',
+  '      // erro: fila cheia!',
+  '   }',
+  '   array[ultimo] = x;',
+  '   ultimo = (ultimo + 1) % array.length;',
+  '}',
+];
+
+const ringRemoveCode = [
+  'public int remover() {',
+  '   if (primeiro == ultimo) {',
+  '      // erro: fila vazia!',
+  '   }',
+  '   int resp = array[primeiro];',
+  '   primeiro = (primeiro + 1) % array.length;',
+  '   return resp;',
+  '}',
+];
+
+function ringCodeFor(opId: string): string[] {
+  return opId === 'enfileirar' ? ringInsertCode : ringRemoveCode;
+}
 
 function ringPos(index: number): { x: number; y: number } {
   const angle = ((index * 360) / RING_TOTAL - 90) * (Math.PI / 180);
   return { x: RING_CX + 108 * Math.cos(angle), y: RING_CY + 108 * Math.sin(angle) };
 }
 
-function ringBase(): { slots: VizNode[]; items: Array<{ node: VizNode; slot: number }> } {
-  const slots = Array.from({ length: RING_TOTAL }, (_, index) => {
+function ringRender(state: RingState, marks: Record<string, VizNodeState> = {}): { nodes: VizNode[]; pointers: VizPointer[] } {
+  const nodes: VizNode[] = [];
+
+  state.slots.forEach((cell, index) => {
     const at = ringPos(index);
-    return n(`slot${index}`, at.x, at.y, '', { shape: 'slot', w: 52, h: 40, sub: `${index}` });
+    nodes.push(n(`slot${index}`, at.x, at.y, '', { shape: 'slot', w: 52, h: 40, sub: `${index}` }));
+    if (cell) {
+      nodes.push(n(cell.id, at.x, at.y, `${cell.value}`, { shape: 'box', w: 46, h: 34, state: marks[cell.id] ?? 'default' }));
+    }
   });
-  const mk = (value: number, slot: number) => {
-    const at = ringPos(slot);
-    return { node: n(`c${value}`, at.x, at.y, `${value}`, { shape: 'box', w: 46, h: 34 }), slot };
-  };
-  return { slots, items: [mk(7, 5), mk(1, 6), mk(6, 7)] };
+
+  const side = (index: number): 'top' | 'bottom' => (index >= 2 && index <= 6 ? 'bottom' : 'top');
+  const pointers = [
+    p(`slot${state.primeiro}`, 'FRENTE', side(state.primeiro), 'accent'),
+    p(`slot${state.ultimo}`, 'TRÁS', side(state.ultimo), 'primary'),
+  ];
+
+  return { nodes, pointers };
 }
 
-const ringPtrs = (frente: number, tras: number): VizPointer[] => [
-  p(`slot${frente}`, 'FRENTE', frente >= 2 && frente <= 6 ? 'bottom' : 'top', 'accent'),
-  p(`slot${tras}`, 'TRÁS', tras >= 2 && tras <= 6 ? 'bottom' : 'top', 'primary'),
-];
+function ringScene(frames: VizFrame[], code: string[], operation: string): VizScene {
+  return { operation, complexity: 'O(1)', code, frames, width: 460, height: 344 };
+}
 
-function ringInsertScene(raw: string): VizScene {
+function ringInsert(previous: RingState, raw: string): OpResult {
+  const state: RingState = structuredClone(previous);
   const value = parseNumber(raw, 9);
-  const code = ['enfileirar(x):', '  dados[tras] = x', '  tras = (tras + 1) % n'];
-  const { slots, items } = ringBase();
-  const nodes = () => [...slots, ...items.map((item) => item.node)];
   const frames: VizFrame[] = [];
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], extra: VizNode[] = [], marks: Record<string, VizNodeState> = {}) => {
+    const { nodes, pointers } = ringRender(state, marks);
+    frames.push(snap([...nodes, ...extra], [], pointers, caption, codeLine, vars));
+  };
 
-  frames.push(snap(nodes(), [], ringPtrs(5, 0), 'Fila circular: o vetor "dá a volta" com aritmética modular.', undefined, [{ name: 'frente', value: '5' }, { name: 'tras', value: '0' }, { name: 'n', value: '8' }]));
+  const ptrVars = (): VizVar[] => [
+    { name: 'primeiro', value: `${state.primeiro}` },
+    { name: 'ultimo', value: `${state.ultimo}` },
+  ];
 
-  const novo = n('novo', RING_CX, RING_CY, `${value}`, { shape: 'box', w: 46, h: 34, state: 'inserted' });
-  frames.push(snap([...nodes(), novo], [], ringPtrs(5, 0), `enfileirar(${value}): trás está no índice 0 — já deu a volta!`, 0, [{ name: 'x', value: `${value}` }, { name: 'tras', value: '0' }]));
+  if ((state.ultimo + 1) % RING_TOTAL === state.primeiro) {
+    push(`inserir(${value}): (ultimo + 1) % ${RING_TOTAL} == primeiro → fila cheia.`, 1, [{ name: 'x', value: `${value}` }, ...ptrVars()]);
+    push('Erro ao inserir! A circular sacrifica uma posição para diferenciar cheia de vazia.', 2, [{ name: 'resultado', value: 'erro' }]);
+    return { scene: ringScene(frames, ringInsertCode, `inserir(${value})`), next: state };
+  }
 
-  const alvo = ringPos(0);
-  novo.x = alvo.x;
-  novo.y = alvo.y;
-  frames.push(snap([...nodes(), novo], [], ringPtrs(5, 0), `${value} ocupa o índice 0 sem deslocar ninguém.`, 1, [{ name: 'tras', value: '0' }]));
+  const novo = n('staging', RING_CX, RING_CY, `${value}`, { shape: 'box', w: 46, h: 34, state: 'inserted' });
+  push(`inserir(${value}): trás está no índice ${state.ultimo}.`, 1, [{ name: 'x', value: `${value}` }, ...ptrVars()], [novo]);
 
-  novo.state = 'found';
-  frames.push(snap([...nodes(), novo], [], ringPtrs(5, 1), 'tras = (0 + 1) % 8 = 1. O módulo evita estourar o vetor.', 2, [{ name: 'tras', value: '1' }]));
+  const cell: Cell = { id: `c${(state.seq += 1)}`, value };
+  state.slots[state.ultimo] = cell;
+  push(`array[${state.ultimo}] = ${value}.`, 4, ptrVars(), [], { [cell.id]: 'inserted' });
 
-  return { operation: `enfileirar(${value}) com volta`, complexity: 'O(1)', code, frames, width: 460, height: 344 };
+  const anterior = state.ultimo;
+  state.ultimo = (state.ultimo + 1) % RING_TOTAL;
+  push(
+    state.ultimo < anterior
+      ? `ultimo = (${anterior} + 1) % ${RING_TOTAL} = ${state.ultimo}: o módulo dá a volta no vetor!`
+      : `ultimo = (${anterior} + 1) % ${RING_TOTAL} = ${state.ultimo}.`,
+    5,
+    ptrVars(),
+    [],
+    { [cell.id]: 'found' },
+  );
+
+  return { scene: ringScene(frames, ringInsertCode, `inserir(${value})`), next: state };
 }
 
-function ringRemoveScene(): VizScene {
-  const code = ['desenfileirar():', '  x = dados[frente]', '  frente = (frente + 1) % n', '  return x'];
-  const { slots, items } = ringBase();
-  const nodes = () => [...slots, ...items.map((item) => item.node)];
+function ringRemove(previous: RingState): OpResult {
+  const state: RingState = structuredClone(previous);
   const frames: VizFrame[] = [];
-  const primeiro = items[0].node;
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []) => {
+    const { nodes, pointers } = ringRender(state, marks);
+    frames.push(snap([...nodes, ...extra], [], pointers, caption, codeLine, vars));
+  };
 
-  frames.push(snap(nodes(), [], ringPtrs(5, 0), 'Na fila circular a remoção também respeita a frente.', 0, [{ name: 'frente', value: '5' }]));
+  if (state.primeiro === state.ultimo) {
+    push('remover(): primeiro == ultimo → fila vazia.', 1, [{ name: 'primeiro', value: `${state.primeiro}` }]);
+    push('Erro ao remover!', 2, [{ name: 'resultado', value: 'erro' }]);
+    return { scene: ringScene(frames, ringRemoveCode, 'remover()'), next: state };
+  }
 
-  primeiro.state = 'active';
-  frames.push(snap(nodes(), [], ringPtrs(5, 0), `Lê o elemento da frente: x = ${primeiro.label}.`, 1, [{ name: 'x', value: primeiro.label }]));
+  const alvo = state.slots[state.primeiro]!;
+  push('remover(): a frente continua saindo primeiro, mesmo na circular.', 1, [{ name: 'primeiro', value: `${state.primeiro}` }]);
+  push(`resp = array[${state.primeiro}] = ${alvo.value}.`, 4, [{ name: 'resp', value: `${alvo.value}` }], { [alvo.id]: 'active' });
 
-  primeiro.state = 'removed';
-  primeiro.x = RING_CX;
-  primeiro.y = RING_CY;
-  frames.push(snap(nodes(), [], ringPtrs(5, 0), `${primeiro.label} sai da fila.`, 1, [{ name: 'x', value: primeiro.label }]));
+  state.slots[state.primeiro] = null;
+  const saindo = n(alvo.id, RING_CX, RING_CY, `${alvo.value}`, { shape: 'box', w: 46, h: 34, state: 'removed' });
+  const anterior = state.primeiro;
+  state.primeiro = (state.primeiro + 1) % RING_TOTAL;
+  push(`primeiro = (${anterior} + 1) % ${RING_TOTAL} = ${state.primeiro}. Nada foi copiado: O(1).`, 5, [{ name: 'primeiro', value: `${state.primeiro}` }], {}, [saindo]);
 
-  items.shift();
-  frames.push(snap(nodes(), [], ringPtrs(6, 0), 'frente = (5 + 1) % 8 = 6. Nada foi copiado: O(1).', 2, [{ name: 'frente', value: '6' }]));
-
-  return { operation: 'desenfileirar()', complexity: 'O(1)', code, frames, width: 460, height: 344 };
+  return { scene: ringScene(frames, ringRemoveCode, 'remover()'), next: state };
 }
 
 /* =====================================================================
-   LISTA ENCADEADA (ordenada)
+   LISTA ENCADEADA ORDENADA — Celula/primeiro (unidade04d)
    ===================================================================== */
 
+type ListState = { cells: Cell[]; seq: number };
+
+const LIST_CAP = 7;
 const LIST_Y = 150;
-const LIST_BASE = [10, 20, 30];
 
-function listNodes(values: number[], marks: Record<number, VizNodeState> = {}): { nodes: VizNode[]; edges: VizEdge[] } {
-  const gap = Math.min(100, 340 / Math.max(values.length, 1));
-  const nodes: VizNode[] = values.map((value, index) =>
-    n(`l${value}`, 66 + index * gap, LIST_Y, `${value}`, { shape: 'box', w: 62, h: 44, state: marks[value] ?? 'default' }),
-  );
-  nodes.push(n('lnull', 66 + values.length * gap, LIST_Y, '∅', { shape: 'pill', w: 50, h: 36 }));
+const listInsertCode = [
+  'public void inserir(int x) {',
+  '   Celula p = primeiro;',
+  '   while (p.prox != null && p.prox.elemento < x) {',
+  '      p = p.prox;',
+  '   }',
+  '   Celula tmp = new Celula(x);',
+  '   tmp.prox = p.prox;',
+  '   p.prox = tmp;',
+  '}',
+];
 
-  const edges: VizEdge[] = values.map((value, index) =>
-    e(`l${value}`, index + 1 < values.length ? `l${values[index + 1]}` : 'lnull', { arrow: true }),
-  );
+const listSearchCode = [
+  'public boolean pesquisar(int x) {',
+  '   Celula i = primeiro.prox;',
+  '   while (i != null && i.elemento < x) {',
+  '      i = i.prox;',
+  '   }',
+  '   return (i != null && i.elemento == x);',
+  '}',
+];
 
-  return { nodes, edges };
+const listRemoveCode = [
+  'public void remover(int x) {',
+  '   Celula p = primeiro;',
+  '   while (p.prox != null && p.prox.elemento != x) {',
+  '      p = p.prox;',
+  '   }',
+  '   if (p.prox == null) {',
+  '      // erro: nao encontrado!',
+  '   }',
+  '   p.prox = p.prox.prox;   // religa a corrente',
+  '}',
+];
+
+function listCodeFor(opId: string): string[] {
+  return opId === 'inserir' ? listInsertCode : opId === 'buscar' ? listSearchCode : listRemoveCode;
 }
 
-const listPtr = (values: number[]) => (values.length ? [p(`l${values[0]}`, 'INÍCIO', 'top', 'accent')] : []);
+function listRender(state: ListState, marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []): { nodes: VizNode[]; edges: VizEdge[]; pointers: VizPointer[] } {
+  const count = state.cells.length;
+  const gap = Math.min(100, 356 / Math.max(count + 1, 1));
+  const nodes: VizNode[] = state.cells.map((cell, index) =>
+    n(cell.id, 60 + index * gap, LIST_Y, `${cell.value}`, { shape: 'box', w: Math.min(62, gap - 8), h: 44, state: marks[cell.id] ?? 'default' }),
+  );
+  nodes.push(n('lnull', 60 + count * gap, LIST_Y, '∅', { shape: 'pill', w: 48, h: 36 }));
+  nodes.push(...extra);
 
-function listInsertScene(raw: string): VizScene {
+  const edges: VizEdge[] = state.cells.map((cell, index) =>
+    e(cell.id, index + 1 < count ? state.cells[index + 1].id : 'lnull', { arrow: true }),
+  );
+
+  const pointers = state.cells.length ? [p(state.cells[0].id, 'INÍCIO', 'top', 'accent')] : [p('lnull', 'INÍCIO', 'top', 'accent')];
+  return { nodes, edges, pointers };
+}
+
+function listScene(frames: VizFrame[], code: string[], operation: string): VizScene {
+  return { operation, complexity: 'O(n)', code, frames, width: 460, height: 300 };
+}
+
+function listInsert(previous: ListState, raw: string): OpResult {
+  const state: ListState = structuredClone(previous);
   const value = parseNumber(raw, 25);
-  const code = [
-    'inserir(x):',
-    '  p = inicio',
-    '  enquanto p.prox.valor < x:',
-    '    p = p.prox',
-    '  novo.prox = p.prox',
-    '  p.prox = novo',
-  ];
-
-  const values = [...LIST_BASE];
   const frames: VizFrame[] = [];
-  const marks: Record<number, VizNodeState> = {};
-
-  const push = (caption: string, codeLine?: number, vars?: VizVar[], extra?: VizNode[]) => {
-    const { nodes, edges } = listNodes(values, marks);
-    frames.push(snap([...nodes, ...(extra ?? [])], edges, listPtr(values), caption, codeLine, vars));
+  const marks: Record<string, VizNodeState> = {};
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], extra: VizNode[] = []) => {
+    const { nodes, edges, pointers } = listRender(state, marks, extra);
+    frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
   };
 
-  if (values.includes(value)) {
-    push(`inserir(${value}): o valor já está na lista — nada a fazer.`, 0, [{ name: 'x', value: `${value}` }]);
-    marks[value] = 'found';
-    push('Lista ordenada sem repetidos: inserção ignorada.', 0);
-    return { operation: `inserir(${value})`, complexity: 'O(n)', code, frames, width: 460, height: 300 };
+  if (state.cells.length >= LIST_CAP) {
+    push(`inserir(${value}): limite didático de ${LIST_CAP} células atingido.`, 0, [{ name: 'x', value: `${value}` }]);
+    return { scene: listScene(frames, listInsertCode, `inserir(${value})`), next: state };
   }
 
-  push('Lista encadeada ordenada: cada nó aponta para o próximo.', 0, [{ name: 'x', value: `${value}` }]);
-
-  const novo = n(`l${value}`, 230, 250, `${value}`, { shape: 'box', w: 62, h: 44, state: 'inserted' });
-  push(`inserir(${value}): achar o ponto certo sem perder ponteiros.`, 1, [{ name: 'x', value: `${value}` }], [novo]);
+  const novo = n('staging', 230, 250, `${value}`, { shape: 'box', w: 62, h: 44, state: 'inserted' });
+  push(`inserir(${value}): a lista ordenada aceita repetidos; achar o ponto certo.`, 1, [{ name: 'x', value: `${value}` }], [novo]);
 
   let index = 0;
-  while (index < values.length && values[index] < value) {
-    marks[values[index]] = 'compare';
-    push(`p em ${values[index]}: ${values[index]} < ${value} → avança.`, 2, [{ name: 'p', value: `${values[index]}` }], [novo]);
-    marks[values[index]] = 'visited';
+  while (index < state.cells.length && state.cells[index].value < value) {
+    const cell = state.cells[index];
+    marks[cell.id] = 'compare';
+    push(`p.prox.elemento = ${cell.value} < ${value} → p avança.`, 3, [{ name: 'p', value: `${cell.value}` }], [novo]);
+    marks[cell.id] = 'visited';
     index += 1;
   }
 
-  const before = index > 0 ? values[index - 1] : null;
-  const after = index < values.length ? values[index] : null;
-
-  if (after !== null) {
-    marks[after] = 'compare';
-    push(`${after} ≥ ${value}: o novo nó entra antes de ${after}.`, 3, [{ name: 'p', value: before !== null ? `${before}` : 'início' }], [novo]);
-    marks[after] = 'default';
+  const after = index < state.cells.length ? state.cells[index] : null;
+  if (after) {
+    marks[after.id] = 'compare';
+    push(`${after.value} ≥ ${value}: o laço para; o novo nó entra antes de ${after.value}.`, 2, [], [novo]);
+    marks[after.id] = 'default';
+  } else {
+    push('Chegou ao fim: o novo nó entra antes de ∅.', 2, [], [novo]);
   }
 
-  push(`Primeiro: novo.prox aponta para ${after ?? '∅'}. Ninguém fica órfão.`, 4, [{ name: 'novo.prox', value: after !== null ? `${after}` : '∅' }], [novo]);
+  push(`tmp.prox = p.prox (${after ? after.value : '∅'}): ninguém fica órfão.`, 6, [{ name: 'tmp.prox', value: after ? `${after.value}` : '∅' }], [novo]);
 
-  values.splice(index, 0, value);
-  marks[value] = 'inserted';
-  push(before !== null ? `Depois: ${before}.prox = novo. Corrente religada.` : 'Novo nó vira o início da lista.', 5, [{ name: 'p.prox', value: `${value}` }]);
+  const cell: Cell = { id: `l${(state.seq += 1)}`, value };
+  state.cells.splice(index, 0, cell);
+  marks[cell.id] = 'inserted';
+  push('p.prox = tmp: a corrente foi religada.', 7, [{ name: 'p.prox', value: `${value}` }]);
+  marks[cell.id] = 'found';
+  push(`${value} está no lugar: busca O(n), religação O(1).`, 7);
 
-  marks[value] = 'found';
-  push(`${value} está no lugar certo: busca O(n), religação O(1).`, 5);
-
-  return { operation: `inserir(${value})`, complexity: 'O(n)', code, frames, width: 460, height: 300 };
+  return { scene: listScene(frames, listInsertCode, `inserir(${value})`), next: state };
 }
 
-function listSearchScene(raw: string): VizScene {
+function listSearch(previous: ListState, raw: string): OpResult {
+  const state: ListState = structuredClone(previous);
   const value = parseNumber(raw, 20);
-  const code = ['buscar(x):', '  p = inicio', '  enquanto p != null e p.valor < x:', '    p = p.prox', '  return p != null e p.valor == x'];
-
-  const values = [...LIST_BASE];
   const frames: VizFrame[] = [];
-  const marks: Record<number, VizNodeState> = {};
-
+  const marks: Record<string, VizNodeState> = {};
   const push = (caption: string, codeLine?: number, vars?: VizVar[]) => {
-    const { nodes, edges } = listNodes(values, marks);
-    frames.push(snap(nodes, edges, listPtr(values), caption, codeLine, vars));
+    const { nodes, edges, pointers } = listRender(state, marks);
+    frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
   };
 
-  push(`buscar(${value}): a lista ordenada permite parar cedo.`, 1, [{ name: 'x', value: `${value}` }]);
+  push(`pesquisar(${value}): i parte do início.`, 1, [{ name: 'x', value: `${value}` }]);
 
-  for (const current of values) {
-    marks[current] = 'compare';
+  for (const cell of state.cells) {
+    marks[cell.id] = 'compare';
 
-    if (current === value) {
-      push(`p em ${current}: é igual a ${value} → encontrado!`, 4, [{ name: 'p', value: `${current}` }, { name: 'resultado', value: 'true' }]);
-      marks[current] = 'found';
-      push('Busca termina no próprio nó: O(n) no pior caso.', 4);
-      return { operation: `buscar(${value})`, complexity: 'O(n)', code, frames, width: 460, height: 300 };
+    if (cell.value >= value) {
+      if (cell.value === value) {
+        push(`i.elemento == ${value} → encontrado!`, 5, [{ name: 'retorno', value: 'true' }]);
+        marks[cell.id] = 'found';
+        push('A lista ordenada permitiu parar exatamente no ponto certo.', 5);
+      } else {
+        push(`i.elemento = ${cell.value} > ${value}: como a lista é ordenada, ${value} não está.`, 5, [{ name: 'retorno', value: 'false' }]);
+        marks[cell.id] = 'error';
+        push('Parada antecipada: vantagem de manter a ordem.', 5);
+      }
+      return { scene: listScene(frames, listSearchCode, `pesquisar(${value})`), next: state };
     }
 
-    if (current > value) {
-      push(`p em ${current}: ${current} > ${value}. A lista é ordenada → ${value} não está.`, 2, [{ name: 'p', value: `${current}` }, { name: 'resultado', value: 'false' }]);
-      marks[current] = 'error';
-      push('Parada antecipada: vantagem de manter a lista ordenada.', 4);
-      return { operation: `buscar(${value})`, complexity: 'O(n)', code, frames, width: 460, height: 300 };
-    }
-
-    push(`p em ${current}: ${current} < ${value} → avança.`, 3, [{ name: 'p', value: `${current}` }]);
-    marks[current] = 'visited';
+    push(`i.elemento = ${cell.value} < ${value} → i = i.prox.`, 3, [{ name: 'i', value: `${cell.value}` }]);
+    marks[cell.id] = 'visited';
   }
 
-  push(`Chegou em ∅ sem achar ${value}: não está na lista.`, 4, [{ name: 'resultado', value: 'false' }]);
-  return { operation: `buscar(${value})`, complexity: 'O(n)', code, frames, width: 460, height: 300 };
+  push(`i == null: chegou em ∅ sem achar ${value}.`, 5, [{ name: 'retorno', value: 'false' }]);
+  return { scene: listScene(frames, listSearchCode, `pesquisar(${value})`), next: state };
 }
 
-function listRemoveScene(raw: string): VizScene {
+function listRemove(previous: ListState, raw: string): OpResult {
+  const state: ListState = structuredClone(previous);
   const value = parseNumber(raw, 20);
-  const code = ['remover(x):', '  p = inicio; anterior = null', '  avança até achar x', '  anterior.prox = p.prox', '  libera o nó'];
-
-  const values = [...LIST_BASE];
   const frames: VizFrame[] = [];
-  const marks: Record<number, VizNodeState> = {};
-
+  const marks: Record<string, VizNodeState> = {};
   const push = (caption: string, codeLine?: number, vars?: VizVar[]) => {
-    const { nodes, edges } = listNodes(values, marks);
-    frames.push(snap(nodes, edges, listPtr(values), caption, codeLine, vars));
+    const { nodes, edges, pointers } = listRender(state, marks);
+    frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
   };
 
-  push(`remover(${value}): localizar mantendo o anterior por perto.`, 1, [{ name: 'x', value: `${value}` }]);
+  push(`remover(${value}): p caminha guardando o anterior.`, 1, [{ name: 'x', value: `${value}` }]);
 
-  if (!values.includes(value)) {
-    for (const current of values) {
-      if (current > value) break;
-      marks[current] = 'visited';
+  const index = state.cells.findIndex((cell) => cell.value === value);
+
+  if (index < 0) {
+    for (const cell of state.cells) {
+      marks[cell.id] = 'visited';
     }
-    push(`${value} não está na lista: nada a remover.`, 2, [{ name: 'resultado', value: 'false' }]);
-    return { operation: `remover(${value})`, complexity: 'O(n)', code, frames, width: 460, height: 300 };
+    push(`p.prox == null: ${value} não está na lista.`, 5, [{ name: 'resultado', value: 'erro' }]);
+    push('Erro: nao encontrado!', 6);
+    return { scene: listScene(frames, listRemoveCode, `remover(${value})`), next: state };
   }
 
-  for (const current of values) {
-    if (current === value) break;
-    marks[current] = 'compare';
-    push(`p em ${current}: ainda não é ${value} → avança guardando o anterior.`, 2, [{ name: 'anterior', value: `${current}` }]);
-    marks[current] = 'visited';
+  for (let i = 0; i < index; i += 1) {
+    const cell = state.cells[i];
+    marks[cell.id] = 'compare';
+    push(`p.prox.elemento = ${cell.value} ≠ ${value} → p avança.`, 3, [{ name: 'p', value: `${cell.value}` }]);
+    marks[cell.id] = 'visited';
   }
 
-  const index = values.indexOf(value);
-  const before = index > 0 ? values[index - 1] : null;
-  const after = index + 1 < values.length ? values[index + 1] : null;
+  const alvo = state.cells[index];
+  const depois = index + 1 < state.cells.length ? state.cells[index + 1] : null;
+  marks[alvo.id] = 'removed';
+  push(`Achou ${value}. p.prox = p.prox.prox religa direto em ${depois ? depois.value : '∅'}.`, 8, [{ name: 'p.prox', value: depois ? `${depois.value}` : '∅' }]);
 
-  marks[value] = 'removed';
-  push(`Achou ${value}. O anterior passa a apontar para ${after ?? '∅'}.`, 3, [{ name: 'anterior.prox', value: after !== null ? `${after}` : '∅' }]);
+  state.cells.splice(index, 1);
+  push(`${value} saiu; a corrente se fechou sem deslocar ninguém.`, 8, [{ name: 'resultado', value: 'ok' }]);
 
-  values.splice(index, 1);
-  if (before !== null) marks[before] = 'visited';
-  push(`${value} saiu; a corrente se fecha sem deslocar ninguém.`, 4, [{ name: 'resultado', value: 'true' }]);
-
-  return { operation: `remover(${value})`, complexity: 'O(n)', code, frames, width: 460, height: 300 };
+  return { scene: listScene(frames, listRemoveCode, `remover(${value})`), next: state };
 }
 
 /* =====================================================================
-   TABELA HASH (encadeamento)
+   TABELA HASH COM ÁREA DE RESERVA — hashDiretoReserva/Hash.java (Max)
    ===================================================================== */
 
-const HASH_SIZE = 7;
-const HASH_Y = 176;
+type HashState = { main: Array<Cell | null>; reserva: Array<Cell & { homePos: number }>; seq: number };
+
+const HASH_M1 = 7;
+const HASH_M2 = 3;
+const HASH_Y = 150;
+const RES_Y = 272;
 const hashSlotX = (index: number) => 55 + index * 58;
+const resSlotX = (index: number) => hashSlotX(2 + index);
 
-type HashBuckets = number[][];
+const hashInsertCode = [
+  'public boolean inserir(int x) {',
+  '   int pos = h(x);            // x % 7',
+  '   if (tabela[pos] == NULO) {',
+  '      tabela[pos] = x;',
+  '   } else if (reserva < m2) { // colisão!',
+  '      tabela[m1 + reserva] = x;',
+  '      reserva++;',
+  '   } else {',
+  '      // erro: reserva cheia!',
+  '   }',
+  '}',
+];
 
-function hashBase(): HashBuckets {
-  const buckets: HashBuckets = Array.from({ length: HASH_SIZE }, () => []);
-  buckets[0] = [42];
-  buckets[2] = [23, 30];
-  return buckets;
+const hashSearchCode = [
+  'public boolean pesquisar(int x) {',
+  '   int pos = h(x);            // x % 7',
+  '   if (tabela[pos] == x) {',
+  '      resp = true;',
+  '   } else if (tabela[pos] != NULO) {',
+  '      for (int i = 0; i < reserva; i++) {',
+  '         if (tabela[m1 + i] == x) {',
+  '            resp = true;',
+  '         }',
+  '      }',
+  '   }',
+  '   return resp;   // NULO: nem olha a reserva',
+  '}',
+];
+
+const hashRemoveCode = [
+  'public boolean remover(int x) {',
+  '   int pos = h(x);            // x % 7',
+  '   if (tabela[pos] == x) {',
+  '      tabela[pos] = NULO;',
+  '   } else if (tabela[pos] != NULO) {',
+  '      procura x na área de reserva;',
+  '      compacta a reserva;     // reserva--',
+  '   }',
+  '}',
+];
+
+function hashCodeFor(opId: string): string[] {
+  return opId === 'inserir' ? hashInsertCode : opId === 'buscar' ? hashSearchCode : hashRemoveCode;
 }
 
-function hashNodes(buckets: HashBuckets, marks: Record<number, VizNodeState> = {}): { nodes: VizNode[]; edges: VizEdge[] } {
+function hashRender(state: HashState, marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []): { nodes: VizNode[]; edges: VizEdge[] } {
   const nodes: VizNode[] = [];
   const edges: VizEdge[] = [];
 
-  for (let index = 0; index < HASH_SIZE; index += 1) {
-    nodes.push(n(`slot${index}`, hashSlotX(index), HASH_Y, '', { shape: 'slot', w: 50, h: 46, sub: `${index}` }));
+  nodes.push(n('lbl-main', hashSlotX(0) - 8, HASH_Y - 62, 'tabela (m1 = 7)', { shape: 'pill', w: 110, h: 22, state: 'muted' }));
 
-    buckets[index].forEach((value, depth) => {
-      nodes.push(
-        n(`hv${value}`, hashSlotX(index), HASH_Y + depth * 62, `${value}`, {
-          shape: 'pill',
-          w: 52,
-          h: 32,
-          state: marks[value] ?? 'default',
-        }),
-      );
-      if (depth > 0) {
-        edges.push(e(`hv${buckets[index][depth - 1]}`, `hv${value}`, { arrow: true }));
-      }
-    });
+  state.main.forEach((cell, index) => {
+    nodes.push(n(`slot${index}`, hashSlotX(index), HASH_Y, '', { shape: 'slot', w: 50, h: 46, sub: `${index}` }));
+    if (cell) {
+      nodes.push(n(cell.id, hashSlotX(index), HASH_Y, `${cell.value}`, { shape: 'pill', w: 50, h: 32, state: marks[cell.id] ?? 'default' }));
+    }
+  });
+
+  nodes.push(n('lbl-res', resSlotX(0) - 8, RES_Y - 46, 'área de reserva (m2 = 3)', { shape: 'pill', w: 150, h: 22, state: 'muted' }));
+
+  for (let index = 0; index < HASH_M2; index += 1) {
+    nodes.push(n(`res${index}`, resSlotX(index), RES_Y, '', { shape: 'slot', w: 50, h: 46, sub: `${HASH_M1 + index}` }));
   }
+
+  state.reserva.forEach((cell, index) => {
+    nodes.push(n(cell.id, resSlotX(index), RES_Y, `${cell.value}`, { shape: 'pill', w: 50, h: 32, state: marks[cell.id] ?? 'default' }));
+    edges.push(e(`slot${cell.homePos}`, cell.id, { dashed: true, arrow: true }));
+  });
+
+  nodes.push(...extra);
 
   return { nodes, edges };
 }
 
-function hashOpScene(op: 'inserir' | 'buscar' | 'remover', raw: string): VizScene {
-  const value = parseNumber(raw, op === 'inserir' ? 16 : 30);
-  const pos = value % HASH_SIZE;
-  const buckets = hashBase();
+function hashScene(frames: VizFrame[], code: string[], operation: string): VizScene {
+  return { operation, complexity: 'O(1) médio', code, frames, width: 460, height: 350 };
+}
+
+function hashFindAll(state: HashState, value: number): Cell | null {
+  const pos = value % HASH_M1;
+  if (state.main[pos]?.value === value) return state.main[pos];
+  return state.reserva.find((cell) => cell.value === value) ?? null;
+}
+
+function hashInsert(previous: HashState, raw: string): OpResult {
+  const state: HashState = structuredClone(previous);
+  const value = parseNumber(raw, 16);
+  const pos = value % HASH_M1;
   const frames: VizFrame[] = [];
-  const marks: Record<number, VizNodeState> = {};
-
-  const code =
-    op === 'inserir'
-      ? [`inserir(chave):`, `  pos = chave % ${HASH_SIZE}`, '  se tabela[pos] livre: entra direto', '  senão: encadeia na posição  // colisão']
-      : op === 'buscar'
-        ? [`buscar(chave):`, `  pos = chave % ${HASH_SIZE}`, '  se tabela[pos] vazia: não está', '  percorre a corrente comparando', '  só conclui ausência no fim da corrente']
-        : [`remover(chave):`, `  pos = chave % ${HASH_SIZE}`, '  localiza a chave na corrente', '  religa a corrente sem a chave'];
-
-  const push = (caption: string, codeLine?: number, vars?: VizVar[], extra?: VizNode[], pointers?: VizPointer[]) => {
-    const { nodes, edges } = hashNodes(buckets, marks);
-    frames.push(snap([...nodes, ...(extra ?? [])], edges, pointers ?? [], caption, codeLine, vars));
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []) => {
+    const { nodes, edges } = hashRender(state, marks, extra);
+    frames.push(snap(nodes, edges, [], caption, codeLine, vars));
   };
 
-  const staging = n('chave', 230, 60, `${value}`, { shape: 'pill', w: 56, h: 34, state: 'active' });
-  const posPtr = [p(`slot${pos}`, 'pos', 'bottom', 'warning')];
+  const staging = n('staging', 230, 56, `${value}`, { shape: 'pill', w: 56, h: 34, state: 'active' });
+  push(`inserir(${value}): a chave chega para ser posicionada.`, 0, [{ name: 'x', value: `${value}` }], {}, [staging]);
+  push(`pos = h(${value}) = ${value} % 7 = ${pos}.`, 1, [{ name: 'pos', value: `${pos}` }], { [`slot${pos}`]: 'compare' }, [staging]);
 
-  push('Tabela hash com encadeamento: a chave vira índice por uma conta.', 0, [{ name: 'chave', value: `${value}` }], [staging]);
-  push(`pos = ${value} % ${HASH_SIZE} = ${pos}: acesso direto, sem varrer a tabela.`, 1, [{ name: 'pos', value: `${pos}` }], [staging], posPtr);
-
-  const bucket = buckets[pos];
-
-  if (op === 'inserir') {
-    if (bucket.includes(value)) {
-      marks[value] = 'found';
-      push(`${value} já está na posição ${pos}: nada muda.`, 2, [{ name: 'resultado', value: 'já existe' }]);
-    } else if (bucket.length === 0) {
-      bucket.push(value);
-      marks[value] = 'inserted';
-      push(`Posição ${pos} livre: ${value} entra sem nenhuma comparação.`, 2, [{ name: 'pos', value: `${pos}` }]);
-      marks[value] = 'found';
-      push('Inserção direta: o caso médio da hash é O(1).', 2);
-    } else {
-      marks[bucket[0]] = 'compare';
-      push(`Colisão! ${bucket[0]} já ocupa a posição ${pos}.`, 3, [{ name: 'pos', value: `${pos}` }], [{ ...staging, state: 'error' }]);
-      marks[bucket[0]] = 'visited';
-      bucket.push(value);
-      marks[value] = 'inserted';
-      push(`${value} entra encadeado na posição ${pos}: colisão não é ausência.`, 3, [{ name: 'corrente', value: `${bucket.length}` }]);
-      marks[value] = 'found';
-      push('A corrente cresce, mas continua curta se a função espalhar bem.', 3);
-    }
-  } else {
-    if (bucket.length === 0) {
-      push(`Posição ${pos} vazia: se ${value} existisse, estaria aqui → não está.`, 2, [{ name: 'resultado', value: 'false' }], [{ ...staging, state: 'error' }], posPtr);
-      return { operation: `${op}(${value})`, complexity: 'O(1) médio', code, frames, width: 460, height: 330 };
-    }
-
-    let found = false;
-
-    for (const current of bucket) {
-      marks[current] = 'compare';
-
-      if (current === value) {
-        push(`Compara com ${current}: é a chave procurada!`, 2, [{ name: 'atual', value: `${current}` }, { name: 'resultado', value: 'true' }], [staging]);
-        marks[current] = 'found';
-        found = true;
-        break;
-      }
-
-      push(`Compara com ${current}: diferente → segue pela corrente.`, 3, [{ name: 'atual', value: `${current}` }], [staging]);
-      marks[current] = 'visited';
-    }
-
-    if (!found) {
-      push(`Fim da corrente sem achar ${value}: só agora se conclui ausência.`, 4, [{ name: 'resultado', value: 'false' }]);
-    } else if (op === 'remover') {
-      marks[value] = 'removed';
-      push(`${value} sai da corrente.`, 2, [{ name: 'resultado', value: 'true' }]);
-      buckets[pos] = bucket.filter((item) => item !== value);
-      delete marks[value];
-      push('A corrente se religa; quem estava abaixo sobe uma posição.', 3);
-    } else {
-      push(`Busca resolvida na posição ${pos} com ${bucket.indexOf(value) + 1} comparação(ões).`, 4);
-    }
+  const existente = hashFindAll(state, value);
+  if (existente) {
+    push(`${value} já está na tabela: chave repetida não é inserida de novo.`, 2, [{ name: 'resultado', value: 'já existe' }], {
+      [existente.id]: 'error',
+    }, [{ ...staging, state: 'error' }]);
+    return { scene: hashScene(frames, hashInsertCode, `inserir(${value})`), next: state };
   }
 
-  return { operation: `${op}(${value})`, complexity: 'O(1) médio', code, frames, width: 460, height: 330 };
+  const occupant = state.main[pos];
+
+  if (!occupant) {
+    const cell: Cell = { id: `h${(state.seq += 1)}`, value };
+    state.main[pos] = cell;
+    push(`tabela[${pos}] == NULO: ${value} entra direto, sem comparação.`, 3, [{ name: 'pos', value: `${pos}` }], { [cell.id]: 'inserted' });
+    push('Inserção direta: caso médio O(1).', 3, [], { [cell.id]: 'found' });
+    return { scene: hashScene(frames, hashInsertCode, `inserir(${value})`), next: state };
+  }
+
+  push(`Colisão! tabela[${pos}] já guarda ${occupant.value} (posição ocupada por OUTRO valor).`, 4, [{ name: 'pos', value: `${pos}` }], {
+    [occupant.id]: 'compare',
+  }, [{ ...staging, state: 'error' }]);
+
+  if (state.reserva.length >= HASH_M2) {
+    push('reserva == m2: a área de reserva está cheia → Erro ao inserir!', 8, [{ name: 'reserva', value: `${state.reserva.length}` }], {
+      [occupant.id]: 'visited',
+      'lbl-res': 'error',
+    }, [{ ...staging, state: 'error' }]);
+    return { scene: hashScene(frames, hashInsertCode, `inserir(${value})`), next: state };
+  }
+
+  const cell = { id: `h${(state.seq += 1)}`, value, homePos: pos };
+  state.reserva.push(cell);
+  push(`tabela[m1 + ${state.reserva.length - 1}] = ${value}: a colisão vai para a PRÓXIMA posição livre da reserva.`, 5, [
+    { name: 'reserva', value: `${state.reserva.length - 1}` },
+  ], { [occupant.id]: 'visited', [cell.id]: 'inserted' });
+  push(`reserva++ → ${state.reserva.length}. A seta tracejada lembra de onde a chave veio.`, 6, [{ name: 'reserva', value: `${state.reserva.length}` }], {
+    [cell.id]: 'found',
+  });
+
+  return { scene: hashScene(frames, hashInsertCode, `inserir(${value})`), next: state };
+}
+
+function hashSearch(previous: HashState, raw: string): OpResult {
+  const state: HashState = structuredClone(previous);
+  const value = parseNumber(raw, 30);
+  const pos = value % HASH_M1;
+  const frames: VizFrame[] = [];
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []) => {
+    const { nodes, edges } = hashRender(state, marks, extra);
+    frames.push(snap(nodes, edges, [], caption, codeLine, vars));
+  };
+
+  const staging = n('staging', 230, 56, `${value}`, { shape: 'pill', w: 56, h: 34, state: 'active' });
+  push(`pesquisar(${value}): pos = ${value} % 7 = ${pos}.`, 1, [{ name: 'pos', value: `${pos}` }], { [`slot${pos}`]: 'compare' }, [staging]);
+
+  const occupant = state.main[pos];
+
+  if (occupant?.value === value) {
+    push(`tabela[${pos}] == ${value}: encontrado na primeira comparação.`, 3, [{ name: 'resp', value: 'true' }], { [occupant.id]: 'found' });
+    return { scene: hashScene(frames, hashSearchCode, `pesquisar(${value})`), next: state };
+  }
+
+  if (!occupant) {
+    push(`tabela[${pos}] == NULO: se ${value} existisse, estaria aqui. Nem precisa olhar a reserva.`, 11, [{ name: 'resp', value: 'false' }], {
+      [`slot${pos}`]: 'error',
+    }, [{ ...staging, state: 'error' }]);
+    return { scene: hashScene(frames, hashSearchCode, `pesquisar(${value})`), next: state };
+  }
+
+  push(`tabela[${pos}] = ${occupant.value} ≠ ${value}, mas a posição NÃO é NULA → pode estar na reserva.`, 4, [], { [occupant.id]: 'compare' }, [staging]);
+
+  const marks: Record<string, VizNodeState> = { [occupant.id]: 'visited' };
+
+  for (let i = 0; i < state.reserva.length; i += 1) {
+    const cell = state.reserva[i];
+    marks[cell.id] = 'compare';
+
+    if (cell.value === value) {
+      push(`tabela[m1 + ${i}] == ${value}: encontrado na reserva.`, 6, [{ name: 'i', value: `${i}` }, { name: 'resp', value: 'true' }], {
+        ...marks,
+        [cell.id]: 'found',
+      });
+      return { scene: hashScene(frames, hashSearchCode, `pesquisar(${value})`), next: state };
+    }
+
+    push(`tabela[m1 + ${i}] = ${cell.value} ≠ ${value} → segue a varredura.`, 5, [{ name: 'i', value: `${i}` }], { ...marks });
+    marks[cell.id] = 'visited';
+  }
+
+  push(`Varredura completa da reserva sem achar ${value} → resp = false.`, 11, [{ name: 'resp', value: 'false' }], { ...marks, 'lbl-res': 'error' });
+  return { scene: hashScene(frames, hashSearchCode, `pesquisar(${value})`), next: state };
+}
+
+function hashRemove(previous: HashState, raw: string): OpResult {
+  const state: HashState = structuredClone(previous);
+  const value = parseNumber(raw, 23);
+  const pos = value % HASH_M1;
+  const frames: VizFrame[] = [];
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []) => {
+    const { nodes, edges } = hashRender(state, marks, extra);
+    frames.push(snap(nodes, edges, [], caption, codeLine, vars));
+  };
+
+  push(`remover(${value}): pos = ${value} % 7 = ${pos}.`, 1, [{ name: 'pos', value: `${pos}` }], { [`slot${pos}`]: 'compare' });
+
+  const occupant = state.main[pos];
+
+  if (occupant?.value === value) {
+    push(`tabela[${pos}] == ${value}: remove da tabela principal.`, 2, [], { [occupant.id]: 'removed' });
+    state.main[pos] = null;
+    push(`tabela[${pos}] = NULO. Atenção: colisões antigas desta posição continuam na reserva.`, 3, [{ name: 'resultado', value: 'ok' }], {
+      [`slot${pos}`]: 'found',
+    });
+    return { scene: hashScene(frames, hashRemoveCode, `remover(${value})`), next: state };
+  }
+
+  if (!occupant) {
+    push(`tabela[${pos}] == NULO: ${value} não está na estrutura.`, 4, [{ name: 'resultado', value: 'erro' }], { [`slot${pos}`]: 'error' });
+    return { scene: hashScene(frames, hashRemoveCode, `remover(${value})`), next: state };
+  }
+
+  const marks: Record<string, VizNodeState> = { [occupant.id]: 'visited' };
+  push(`tabela[${pos}] = ${occupant.value} ≠ ${value} → procurar na reserva.`, 4, [], { [occupant.id]: 'compare' });
+
+  const index = state.reserva.findIndex((cell) => cell.value === value);
+
+  for (let i = 0; i < (index < 0 ? state.reserva.length : index); i += 1) {
+    const cell = state.reserva[i];
+    marks[cell.id] = 'compare';
+    push(`tabela[m1 + ${i}] = ${cell.value} ≠ ${value}.`, 5, [{ name: 'i', value: `${i}` }], { ...marks });
+    marks[cell.id] = 'visited';
+  }
+
+  if (index < 0) {
+    push(`Reserva varrida sem achar ${value}: nada a remover.`, 5, [{ name: 'resultado', value: 'erro' }], { ...marks, 'lbl-res': 'error' });
+    return { scene: hashScene(frames, hashRemoveCode, `remover(${value})`), next: state };
+  }
+
+  const alvo = state.reserva[index];
+  push(`Achou ${value} na reserva: remove e compacta as posições seguintes.`, 5, [], { ...marks, [alvo.id]: 'removed' });
+  state.reserva.splice(index, 1);
+  push(`reserva-- → ${state.reserva.length}. Quem estava depois andou uma posição.`, 6, [{ name: 'reserva', value: `${state.reserva.length}` }], marks);
+
+  return { scene: hashScene(frames, hashRemoveCode, `remover(${value})`), next: state };
 }
 
 /* =====================================================================
-   ABB — árvore binária de pesquisa
+   ABB — ArvoreBinaria.java (Max)
    ===================================================================== */
 
 type BstNode = { key: number; left?: BstNode; right?: BstNode };
+type BstState = { root: BstNode | null };
 
-const BST_BASE = [50, 30, 70, 20, 40, 60, 80];
+const BST_CAP = 15;
+
+const bstInsertCode = [
+  'private No inserir(int x, No i) {',
+  '   if (i == null) {',
+  '      i = new No(x);',
+  '   } else if (x < i.elemento) {',
+  '      i.esq = inserir(x, i.esq);',
+  '   } else if (x > i.elemento) {',
+  '      i.dir = inserir(x, i.dir);',
+  '   } else {',
+  '      throw new Exception("Erro ao inserir!");',
+  '   }',
+  '   return i;',
+  '}',
+];
+
+const bstSearchCode = [
+  'private boolean pesquisar(int x, No i) {',
+  '   if (i == null) {',
+  '      resp = false;',
+  '   } else if (x == i.elemento) {',
+  '      resp = true;',
+  '   } else if (x < i.elemento) {',
+  '      resp = pesquisar(x, i.esq);',
+  '   } else {',
+  '      resp = pesquisar(x, i.dir);',
+  '   }',
+  '   return resp;',
+  '}',
+];
+
+const bstRemoveCode = [
+  'private No remover(int x, No i) {',
+  '   if (i == null) {',
+  '      throw new Exception("Erro ao remover!");',
+  '   } else if (x < i.elemento) {',
+  '      i.esq = remover(x, i.esq);',
+  '   } else if (x > i.elemento) {',
+  '      i.dir = remover(x, i.dir);',
+  '   } else if (i.dir == null) {',
+  '      i = i.esq;               // sem no a direita',
+  '   } else if (i.esq == null) {',
+  '      i = i.dir;               // sem no a esquerda',
+  '   } else {',
+  '      i.esq = maiorEsq(i, i.esq);',
+  '   }',
+  '   return i;',
+  '}',
+];
+
+const bstWalkCode = [
+  'private void caminharCentral(No i) {',
+  '   if (i != null) {',
+  '      caminharCentral(i.esq);',
+  '      System.out.print(i.elemento + " ");',
+  '      caminharCentral(i.dir);',
+  '   }',
+  '}',
+];
+
+function bstCodeFor(opId: string): string[] {
+  if (opId === 'inserir') return bstInsertCode;
+  if (opId === 'buscar') return bstSearchCode;
+  if (opId === 'remover') return bstRemoveCode;
+  return bstWalkCode;
+}
 
 function bstInsertNode(root: BstNode | undefined, key: number): BstNode {
   if (!root) return { key };
@@ -589,26 +1034,22 @@ function bstInsertNode(root: BstNode | undefined, key: number): BstNode {
   return root;
 }
 
-function bstBuild(values: number[]): BstNode | undefined {
-  return values.reduce<BstNode | undefined>((root, value) => bstInsertNode(root, value), undefined);
-}
-
-function bstMax(node: BstNode): number {
-  return node.right ? bstMax(node.right) : node.key;
-}
-
 function bstRemoveNode(root: BstNode | undefined, key: number): BstNode | undefined {
   if (!root) return undefined;
   if (key < root.key) return { ...root, left: bstRemoveNode(root.left, key) };
   if (key > root.key) return { ...root, right: bstRemoveNode(root.right, key) };
-  if (!root.left && !root.right) return undefined;
-  if (!root.left) return root.right;
   if (!root.right) return root.left;
-  const predecessor = bstMax(root.left);
-  return { key: predecessor, left: bstRemoveNode(root.left, predecessor), right: root.right };
+  if (!root.left) return root.right;
+  let pred = root.left;
+  while (pred.right) pred = pred.right;
+  return { key: pred.key, left: bstRemoveNode(root.left, pred.key), right: root.right };
 }
 
-function bstToViz(root: BstNode | undefined, marks: Record<number, VizNodeState> = {}): { nodes: VizNode[]; edges: VizEdge[]; pointers: VizPointer[] } {
+function bstCount(root?: BstNode | null): number {
+  return root ? 1 + bstCount(root.left) + bstCount(root.right) : 0;
+}
+
+function bstToViz(root: BstNode | null, marks: Record<number, VizNodeState> = {}): { nodes: VizNode[]; edges: VizEdge[]; pointers: VizPointer[] } {
   if (!root) return { nodes: [], edges: [], pointers: [] };
 
   const toTree = (node: BstNode): TreeNode => ({
@@ -639,12 +1080,18 @@ function bstToViz(root: BstNode | undefined, marks: Record<number, VizNodeState>
   return { nodes, edges, pointers: [p(`b${root.key}`, 'RAIZ', 'top', 'accent')] };
 }
 
+function bstScene(frames: VizFrame[], code: string[], operation: string, complexity = 'O(altura)'): VizScene {
+  return { operation, complexity, code, frames, width: 460, height: 300 };
+}
+
+type BstPush = (caption: string, codeLine?: number, vars?: VizVar[]) => void;
+
 function bstDescendFrames(
   root: BstNode,
   value: number,
   marks: Record<number, VizNodeState>,
-  push: (caption: string, codeLine?: number, vars?: VizVar[]) => void,
-  codeLines: { less: number; more: number; equal: number },
+  push: BstPush,
+  lines: { less: number; more: number; equal: number },
 ): BstNode | undefined {
   let cursor: BstNode | undefined = root;
 
@@ -652,13 +1099,13 @@ function bstDescendFrames(
     marks[cursor.key] = 'compare';
 
     if (value === cursor.key) {
-      push(`${value} == ${cursor.key}: nó localizado.`, codeLines.equal, [{ name: 'no', value: `${cursor.key}` }]);
+      push(`x == i.elemento (${cursor.key}): nó localizado.`, lines.equal, [{ name: 'i', value: `${cursor.key}` }]);
       return cursor;
     }
 
     const goLeft: boolean = value < cursor.key;
-    push(`${value} ${goLeft ? '<' : '>'} ${cursor.key} → desce para a ${goLeft ? 'esquerda' : 'direita'}.`, goLeft ? codeLines.less : codeLines.more, [
-      { name: 'no', value: `${cursor.key}` },
+    push(`${value} ${goLeft ? '<' : '>'} ${cursor.key} → ${goLeft ? 'i.esq' : 'i.dir'}.`, goLeft ? lines.less : lines.more, [
+      { name: 'i', value: `${cursor.key}` },
       { name: 'x', value: `${value}` },
     ]);
     marks[cursor.key] = 'visited';
@@ -668,298 +1115,377 @@ function bstDescendFrames(
   return undefined;
 }
 
-function bstSearchScene(raw: string): VizScene {
-  const value = parseNumber(raw, 40);
-  const code = ['buscar(no, x):', '  se no == null: não está', '  se x == no.valor: achou!', '  se x < no.valor: buscar(no.esq)', '  senão: buscar(no.dir)'];
-  const root = bstBuild(BST_BASE)!;
+function bstInsert(previous: BstState, raw: string): OpResult {
+  const state: BstState = structuredClone(previous);
+  const value = parseNumber(raw, 45);
   const marks: Record<number, VizNodeState> = {};
   const frames: VizFrame[] = [];
-
-  const push = (caption: string, codeLine?: number, vars?: VizVar[]) => {
-    const { nodes, edges, pointers } = bstToViz(root, marks);
+  const push: BstPush = (caption, codeLine, vars) => {
+    const { nodes, edges, pointers } = bstToViz(state.root, marks);
     frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
   };
 
-  push(`ABB: menores à esquerda, maiores à direita. Vamos buscar ${value}.`, 0, [{ name: 'x', value: `${value}` }]);
+  if (!state.root) {
+    push(`inserir(${value}): i == null logo na raiz.`, 1, [{ name: 'x', value: `${value}` }]);
+    state.root = { key: value };
+    marks[value] = 'inserted';
+    push(`i = new No(${value}): a árvore ganha a primeira raiz.`, 2);
+    return { scene: bstScene(frames, bstInsertCode, `inserir(${value})`), next: state };
+  }
 
-  const found = bstDescendFrames(root, value, marks, push, { less: 3, more: 4, equal: 2 });
+  if (bstCount(state.root) >= BST_CAP) {
+    push(`Limite didático de ${BST_CAP} nós atingido: inserção não realizada.`, 0, [{ name: 'x', value: `${value}` }]);
+    return { scene: bstScene(frames, bstInsertCode, `inserir(${value})`), next: state };
+  }
+
+  push(`inserir(${value}): a descida é igual à da pesquisa.`, 0, [{ name: 'x', value: `${value}` }]);
+
+  const existing = bstDescendFrames(state.root, value, marks, push, { less: 4, more: 6, equal: 8 });
+
+  if (existing) {
+    marks[existing.key] = 'error';
+    push(`Elemento repetido → throw new Exception("Erro ao inserir!"). A ABB da matéria NÃO aceita duplicata.`, 8, [{ name: 'resultado', value: 'erro' }]);
+  } else {
+    push('i == null: achou o ponteiro onde o novo nó nasce.', 1);
+    state.root = bstInsertNode(state.root, value);
+    marks[value] = 'inserted';
+    push(`i = new No(${value}): entra como folha, sem mover ninguém.`, 2, [{ name: 'x', value: `${value}` }]);
+    marks[value] = 'found';
+    push('Os returns religam o caminho até a raiz.', 10);
+  }
+
+  return { scene: bstScene(frames, bstInsertCode, `inserir(${value})`), next: state };
+}
+
+function bstSearch(previous: BstState, raw: string): OpResult {
+  const state: BstState = structuredClone(previous);
+  const value = parseNumber(raw, 40);
+  const marks: Record<number, VizNodeState> = {};
+  const frames: VizFrame[] = [];
+  const push: BstPush = (caption, codeLine, vars) => {
+    const { nodes, edges, pointers } = bstToViz(state.root, marks);
+    frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
+  };
+
+  if (!state.root) {
+    push(`pesquisar(${value}): i == null → resp = false. Árvore vazia.`, 2, [{ name: 'resp', value: 'false' }]);
+    return { scene: bstScene(frames, bstSearchCode, `pesquisar(${value})`), next: state };
+  }
+
+  push(`pesquisar(${value}): menores à esquerda, maiores à direita.`, 0, [{ name: 'x', value: `${value}` }]);
+
+  const found = bstDescendFrames(state.root, value, marks, push, { less: 6, more: 8, equal: 4 });
 
   if (found) {
     marks[found.key] = 'found';
-    push(`Encontrado! Cada comparação descarta metade da árvore.`, 2, [{ name: 'resultado', value: 'true' }]);
+    push('resp = true: cada comparação descartou uma subárvore inteira.', 4, [{ name: 'resp', value: 'true' }]);
   } else {
-    push(`Chegou em um ponteiro nulo: ${value} não está na árvore.`, 1, [{ name: 'resultado', value: 'false' }]);
+    push(`i == null: ${value} não está na árvore → resp = false.`, 2, [{ name: 'resp', value: 'false' }]);
   }
 
-  return { operation: `buscar(${value})`, complexity: 'O(altura)', code, frames, width: 460, height: 300 };
+  return { scene: bstScene(frames, bstSearchCode, `pesquisar(${value})`), next: state };
 }
 
-function bstInsertScene(raw: string): VizScene {
-  const value = parseNumber(raw, 45);
-  const code = ['inserir(no, x):', '  desce comparando, como na busca', '  ao achar ponteiro nulo:', '    cria a folha x'];
-  let root = bstBuild(BST_BASE)!;
-  const marks: Record<number, VizNodeState> = {};
-  const frames: VizFrame[] = [];
-
-  const push = (caption: string, codeLine?: number, vars?: VizVar[]) => {
-    const { nodes, edges, pointers } = bstToViz(root, marks);
-    frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
-  };
-
-  push(`inserir(${value}): a descida é a mesma da busca.`, 0, [{ name: 'x', value: `${value}` }]);
-
-  const existing = bstDescendFrames(root, value, marks, push, { less: 1, more: 1, equal: 1 });
-
-  if (existing) {
-    marks[existing.key] = 'found';
-    push('ABB não guarda valores repetidos: inserção ignorada.', 1);
-  } else {
-    push('Ponteiro nulo encontrado: é aqui que o novo nó nasce.', 2);
-    root = bstInsertNode(root, value);
-    marks[value] = 'inserted';
-    push(`${value} entra como folha, sem mover nenhum outro nó.`, 3, [{ name: 'x', value: `${value}` }]);
-    marks[value] = 'found';
-    push('Inserção proporcional à altura: O(log n) se balanceada.', 3);
-  }
-
-  return { operation: `inserir(${value})`, complexity: 'O(altura)', code, frames, width: 460, height: 300 };
-}
-
-function bstRemoveScene(raw: string): VizScene {
+function bstRemove(previous: BstState, raw: string): OpResult {
+  const state: BstState = structuredClone(previous);
   const value = parseNumber(raw, 30);
-  const code = [
-    'remover(no, x):',
-    '  localiza x descendo como na busca',
-    '  folha: remove direto',
-    '  1 filho: o filho assume o lugar',
-    '  2 filhos: substitui pelo MAIOR da esquerda',
-  ];
-  let root = bstBuild(BST_BASE)!;
   const marks: Record<number, VizNodeState> = {};
   const frames: VizFrame[] = [];
-
-  const push = (caption: string, codeLine?: number, vars?: VizVar[]) => {
-    const { nodes, edges, pointers } = bstToViz(root, marks);
+  const push: BstPush = (caption, codeLine, vars) => {
+    const { nodes, edges, pointers } = bstToViz(state.root, marks);
     frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
   };
 
-  push(`remover(${value}): primeiro é preciso localizar o nó.`, 1, [{ name: 'x', value: `${value}` }]);
+  if (!state.root) {
+    push(`remover(${value}): i == null → Erro ao remover! Árvore vazia.`, 2, [{ name: 'resultado', value: 'erro' }]);
+    return { scene: bstScene(frames, bstRemoveCode, `remover(${value})`), next: state };
+  }
 
-  const target = bstDescendFrames(root, value, marks, push, { less: 1, more: 1, equal: 1 });
+  push(`remover(${value}): primeiro, localizar o nó.`, 0, [{ name: 'x', value: `${value}` }]);
+
+  const target = bstDescendFrames(state.root, value, marks, push, { less: 4, more: 6, equal: 7 });
 
   if (!target) {
-    push(`${value} não está na árvore: nada a remover.`, 1, [{ name: 'resultado', value: 'false' }]);
-    return { operation: `remover(${value})`, complexity: 'O(altura)', code, frames, width: 460, height: 300 };
+    push(`i == null: ${value} não está → throw new Exception("Erro ao remover!").`, 2, [{ name: 'resultado', value: 'erro' }]);
+    return { scene: bstScene(frames, bstRemoveCode, `remover(${value})`), next: state };
   }
 
   const children = (target.left ? 1 : 0) + (target.right ? 1 : 0);
 
   if (children === 0) {
     marks[value] = 'removed';
-    push(`${value} é folha: pode sair sem afetar ninguém.`, 2);
-    root = bstRemoveNode(root, value)!;
-    push('Remoção de folha: o pai apenas solta o ponteiro.', 2);
+    push(`i.dir == null → i = i.esq (também null): a folha simplesmente sai.`, 8);
+    state.root = bstRemoveNode(state.root ?? undefined, value) ?? null;
+    push('O pai passou a apontar para null.', 8);
   } else if (children === 1) {
-    marks[value] = 'removed';
     const child = (target.left ?? target.right)!;
+    marks[value] = 'removed';
     marks[child.key] = 'inserted';
-    push(`${value} tem um único filho: ${child.key} assume o lugar dele.`, 3, [{ name: 'filho', value: `${child.key}` }]);
-    root = bstRemoveNode(root, value)!;
+    push(target.right == null ? `i.dir == null → i = i.esq: ${child.key} sobe com toda a subárvore.` : `i.esq == null → i = i.dir: ${child.key} sobe com toda a subárvore.`, target.right == null ? 8 : 10, [
+      { name: 'filho', value: `${child.key}` },
+    ]);
+    state.root = bstRemoveNode(state.root ?? undefined, value) ?? null;
     marks[child.key] = 'found';
-    push('O filho sobe com toda a sua subárvore intacta.', 3);
+    push('O filho ocupou o lugar sem quebrar a ordenação.', target.right == null ? 8 : 10);
   } else {
     marks[value] = 'removed';
-    push(`${value} tem 2 filhos: procurar o MAIOR da subárvore esquerda.`, 4);
+    push('Dois filhos → maiorEsq: substituir pelo MAIOR da subárvore esquerda.', 12);
 
     let walker = target.left!;
     marks[walker.key] = 'compare';
-    push(`Desce para a esquerda (${walker.key}) e depois sempre à direita.`, 4, [{ name: 'no', value: `${walker.key}` }]);
+    push(`maiorEsq desce para ${walker.key} e segue sempre à direita.`, 12, [{ name: 'j', value: `${walker.key}` }]);
 
     while (walker.right) {
       marks[walker.key] = 'visited';
       walker = walker.right;
       marks[walker.key] = 'compare';
-      push(`Ainda há filho à direita → segue até ${walker.key}.`, 4, [{ name: 'no', value: `${walker.key}` }]);
+      push(`j.dir existe → caminha até ${walker.key}.`, 12, [{ name: 'j', value: `${walker.key}` }]);
     }
 
     marks[walker.key] = 'found';
-    push(`${walker.key} é o antecessor: maior valor menor que ${value}.`, 4, [{ name: 'antecessor', value: `${walker.key}` }]);
+    push(`j.dir == null: ${walker.key} é o antecessor (maior da esquerda).`, 12, [{ name: 'antecessor', value: `${walker.key}` }]);
 
-    root = bstRemoveNode(root, value)!;
+    state.root = bstRemoveNode(state.root ?? undefined, value) ?? null;
     delete marks[value];
     marks[walker.key] = 'inserted';
-    push(`${walker.key} assume a posição de ${value}; a regra da ABB continua válida.`, 4);
+    push(`i.elemento = j.elemento: ${walker.key} assume a posição de ${value}.`, 12);
     marks[walker.key] = 'found';
-    push('Remoção com 2 filhos concluída sem quebrar a ordenação.', 4);
+    push('Remoção com dois filhos concluída; a regra da ABB continua válida.', 14);
   }
 
-  return { operation: `remover(${value})`, complexity: 'O(altura)', code, frames, width: 460, height: 300 };
+  return { scene: bstScene(frames, bstRemoveCode, `remover(${value})`), next: state };
 }
 
-function bstTraverseScene(): VizScene {
-  const code = ['central(no):', '  se no == null: retorna', '  central(no.esq)', '  processa(no.valor)', '  central(no.dir)'];
-  const root = bstBuild(BST_BASE)!;
+function bstWalk(previous: BstState): OpResult {
+  const state: BstState = structuredClone(previous);
   const marks: Record<number, VizNodeState> = {};
   const frames: VizFrame[] = [];
-  const output: number[] = [];
-
-  const push = (caption: string, codeLine?: number, vars?: VizVar[]) => {
-    const { nodes, edges, pointers } = bstToViz(root, marks);
+  const push: BstPush = (caption, codeLine, vars) => {
+    const { nodes, edges, pointers } = bstToViz(state.root, marks);
     frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
   };
 
-  push('Caminhamento central (in-ordem): esquerda → nó → direita.', 0);
+  if (!state.root) {
+    push('caminharCentral(): i == null logo na raiz. Nada a imprimir.', 1);
+    return { scene: bstScene(frames, bstWalkCode, 'caminhamento central', 'O(n)'), next: state };
+  }
 
+  push('Caminhamento central: esquerda → nó → direita.', 0);
+
+  const output: number[] = [];
   const inOrder: number[] = [];
   (function walk(node?: BstNode) {
     if (!node) return;
     walk(node.left);
     inOrder.push(node.key);
     walk(node.right);
-  })(root);
+  })(state.root);
 
   for (const key of inOrder) {
     marks[key] = 'active';
     output.push(key);
-    push(`Processa ${key}.`, 3, [{ name: 'saída', value: output.join(' ') }]);
+    push(`System.out.print(${key}): imprime o nó entre as duas subárvores.`, 3, [{ name: 'saída', value: output.join(' ') }]);
     marks[key] = 'visited';
   }
 
-  push('Na ABB, o caminhamento central visita os valores EM ORDEM crescente.', 4, [{ name: 'saída', value: output.join(' ') }]);
-
-  return { operation: 'caminhamento central', complexity: 'O(n)', code, frames, width: 460, height: 300 };
+  push('Na ABB, o caminhamento central visita os valores EM ORDEM crescente.', 3, [{ name: 'saída', value: output.join(' ') }]);
+  return { scene: bstScene(frames, bstWalkCode, 'caminhamento central', 'O(n)'), next: state };
 }
 
 /* =====================================================================
-   AVL
+   AVL — AVL.java (Max): inserir devolve balancear(i)
    ===================================================================== */
 
-const AVL_BASE = [40, 30, 50, 20];
+type AvlState = { root: AvlNode | null };
 
-function avlBuild(values: number[]): AvlNode | undefined {
-  let tree: AvlNode | undefined;
-  for (const value of values) {
-    tree = rebalance(insertPlain(tree, value)).node;
-  }
-  return tree;
+const avlInsertCode = [
+  'private No inserir(int x, No i) {',
+  '   if (i == null) {',
+  '      i = new No(x);',
+  '   } else if (x < i.elemento) {',
+  '      i.esq = inserir(x, i.esq);',
+  '   } else if (x > i.elemento) {',
+  '      i.dir = inserir(x, i.dir);',
+  '   } else {',
+  '      throw new Exception("Erro ao inserir!");',
+  '   }',
+  '   return balancear(i);   // rotaciona se |fator| = 2',
+  '}',
+];
+
+const avlSearchCode = bstSearchCode;
+
+function avlCodeFor(opId: string): string[] {
+  return opId === 'inserir' ? avlInsertCode : avlSearchCode;
 }
 
-function avlInsertScene(raw: string): VizScene {
-  const value = parseNumber(raw, 10);
-  const code = ['inserir(no, x):', '  desce comparando, como na ABB', '  cria a folha x', '  recalcula fb = h(esq) - h(dir)', '  se fb = +2 ou -2: rotaciona'];
-  let tree = avlBuild(AVL_BASE);
-  const frames: VizFrame[] = [];
+function avlSceneOf(frames: VizFrame[], code: string[], operation: string): VizScene {
+  return { operation, complexity: 'O(log n)', code, frames, width: 460, height: 300 };
+}
 
-  const push = (caption: string, codeLine: number | undefined, marks: Record<number, VizNodeState>, vars?: VizVar[]) => {
-    const { nodes, edges, rootId } = avlToViz(tree, 460);
+function avlRenderPush(state: AvlState, frames: VizFrame[]) {
+  return (caption: string, codeLine: number | undefined, marks: Record<number, VizNodeState>, vars?: VizVar[]) => {
+    const { nodes, edges, rootId } = avlToViz(state.root ?? undefined, 460);
     for (const node of nodes) {
       const key = Number(node.label);
       if (marks[key]) node.state = marks[key];
     }
     frames.push(snap(nodes, edges, rootId ? [p(rootId, 'RAIZ', 'top', 'accent')] : [], caption, codeLine, vars));
   };
+}
 
-  push(`AVL equilibrada (fatores no intervalo [-1, 1]). Vamos inserir ${value}.`, 0, {}, [{ name: 'x', value: `${value}` }]);
+function avlCount(root?: AvlNode | null): number {
+  return root ? 1 + avlCount(root.left) + avlCount(root.right) : 0;
+}
 
-  let cursor: AvlNode | undefined = tree;
-  let exists = false;
+function avlInsert(previous: AvlState, raw: string): OpResult {
+  const state: AvlState = structuredClone(previous);
+  const value = parseNumber(raw, 10);
+  const frames: VizFrame[] = [];
+  const push = avlRenderPush(state, frames);
+
+  if (!state.root) {
+    push(`inserir(${value}): i == null → a árvore ganha a raiz.`, 1, {}, [{ name: 'x', value: `${value}` }]);
+    state.root = { key: value };
+    push(`i = new No(${value}).`, 2, { [value]: 'inserted' });
+    return { scene: avlSceneOf(frames, avlInsertCode, `inserir(${value})`), next: state };
+  }
+
+  if (avlCount(state.root) >= BST_CAP) {
+    push(`Limite didático de ${BST_CAP} nós: inserção não realizada.`, 0, {}, [{ name: 'x', value: `${value}` }]);
+    return { scene: avlSceneOf(frames, avlInsertCode, `inserir(${value})`), next: state };
+  }
+
+  push(`inserir(${value}): desce como na ABB; fatores conferidos na volta.`, 0, {}, [{ name: 'x', value: `${value}` }]);
+
+  let cursor: AvlNode | undefined = state.root;
 
   while (cursor) {
     if (value === cursor.key) {
-      push(`${value} já existe: AVL não guarda repetidos.`, 1, { [cursor.key]: 'found' });
-      exists = true;
-      break;
+      push(`Elemento repetido → throw new Exception("Erro ao inserir!").`, 8, { [cursor.key]: 'error' }, [{ name: 'resultado', value: 'erro' }]);
+      return { scene: avlSceneOf(frames, avlInsertCode, `inserir(${value})`), next: state };
     }
-    push(`${value} ${value < cursor.key ? '<' : '>'} ${cursor.key} → desce para a ${value < cursor.key ? 'esquerda' : 'direita'}.`, 1, { [cursor.key]: 'compare' }, [
-      { name: 'no', value: `${cursor.key}` },
+
+    const goLeft: boolean = value < cursor.key;
+    push(`${value} ${goLeft ? '<' : '>'} ${cursor.key} → ${goLeft ? 'i.esq' : 'i.dir'}.`, goLeft ? 4 : 6, { [cursor.key]: 'compare' }, [
+      { name: 'i', value: `${cursor.key}` },
     ]);
-    cursor = value < cursor.key ? cursor.left : cursor.right;
+    cursor = goLeft ? cursor.left : cursor.right;
   }
 
-  if (!exists) {
-    tree = insertPlain(tree, value);
-    push(`${value} entra como folha. Agora, conferir os fatores no caminho de volta.`, 2, { [value]: 'inserted' });
+  state.root = insertPlain(state.root, value);
+  push(`i = new No(${value}): folha criada. Agora, balancear(i) na volta da recursão.`, 2, { [value]: 'inserted' });
 
-    const factorRoot = tree ? balance(tree) : 0;
-    const { node: balanced, rotation, pivot } = rebalance(tree);
+  const factorRoot = state.root ? balance(state.root) : 0;
+  const { node: balanced, rotation, pivot } = rebalance(state.root ?? undefined);
 
-    if (rotation && pivot !== undefined) {
-      push(`fb estourou o intervalo → ${rotation} no nó ${pivot}.`, 4, { [pivot]: 'error', [value]: 'inserted' }, [{ name: 'fb', value: `${factorRoot}` }]);
-      tree = balanced;
-      push(`Depois da ${rotation}, a altura O(log n) está garantida de novo.`, 4, { [pivot]: 'found' }, [{ name: 'fb', value: '0' }]);
-    } else {
-      tree = balanced;
-      push('Fatores dentro do intervalo: nenhuma rotação necessária.', 3, { [value]: 'found' }, [{ name: 'fb', value: `${factorRoot}` }]);
-    }
+  if (rotation && pivot !== undefined) {
+    push(`balancear: fator = 2 no nó ${pivot} → ${rotation}.`, 10, { [pivot]: 'error', [value]: 'inserted' }, [{ name: 'fator', value: `${factorRoot}` }]);
+    state.root = balanced ?? null;
+    push(`Depois da ${rotation}, todos os fatores voltam para -1, 0 ou +1.`, 10, { [pivot]: 'found' }, [{ name: 'fator', value: '0' }]);
+  } else {
+    state.root = balanced ?? null;
+    push('balancear: fatores dentro do intervalo, nenhuma rotação.', 10, { [value]: 'found' }, [{ name: 'fator', value: `${factorRoot}` }]);
   }
 
-  return { operation: `inserir(${value})`, complexity: 'O(log n)', code, frames, width: 460, height: 300 };
+  return { scene: avlSceneOf(frames, avlInsertCode, `inserir(${value})`), next: state };
 }
 
-function avlSearchScene(raw: string): VizScene {
+function avlSearch(previous: AvlState, raw: string): OpResult {
+  const state: AvlState = structuredClone(previous);
   const value = parseNumber(raw, 50);
-  const code = ['buscar(no, x):', '  se no == null: não está', '  se x == no.valor: achou!', '  desce pelo lado correto'];
-  const tree = avlBuild(AVL_BASE);
   const frames: VizFrame[] = [];
+  const push = avlRenderPush(state, frames);
   const marks: Record<number, VizNodeState> = {};
 
-  const push = (caption: string, codeLine?: number, vars?: VizVar[]) => {
-    const { nodes, edges, rootId } = avlToViz(tree, 460);
-    for (const node of nodes) {
-      const key = Number(node.label);
-      if (marks[key]) node.state = marks[key];
-    }
-    frames.push(snap(nodes, edges, rootId ? [p(rootId, 'RAIZ', 'top', 'accent')] : [], caption, codeLine, vars));
-  };
+  if (!state.root) {
+    push(`pesquisar(${value}): i == null → resp = false. Árvore vazia.`, 2, {}, [{ name: 'resp', value: 'false' }]);
+    return { scene: avlSceneOf(frames, avlSearchCode, `pesquisar(${value})`), next: state };
+  }
 
-  push(`Na AVL a busca é igual à da ABB — mas a altura é sempre O(log n).`, 0, [{ name: 'x', value: `${value}` }]);
+  push(`pesquisar(${value}): igual à ABB, mas com altura garantida O(log n).`, 0, {}, [{ name: 'x', value: `${value}` }]);
 
-  let cursor: AvlNode | undefined = tree;
-  let found = false;
+  let cursor: AvlNode | undefined = state.root;
 
   while (cursor) {
     marks[cursor.key] = 'compare';
 
     if (value === cursor.key) {
-      push(`${value} == ${cursor.key}: encontrado!`, 2, [{ name: 'resultado', value: 'true' }]);
-      marks[cursor.key] = 'found';
-      found = true;
-      break;
+      push(`x == i.elemento → resp = true.`, 4, { ...marks, [cursor.key]: 'found' }, [{ name: 'resp', value: 'true' }]);
+      return { scene: avlSceneOf(frames, avlSearchCode, `pesquisar(${value})`), next: state };
     }
 
-    push(`${value} ${value < cursor.key ? '<' : '>'} ${cursor.key} → desce para a ${value < cursor.key ? 'esquerda' : 'direita'}.`, 3, [{ name: 'no', value: `${cursor.key}` }]);
+    const goLeft: boolean = value < cursor.key;
+    push(`${value} ${goLeft ? '<' : '>'} ${cursor.key} → ${goLeft ? 'i.esq' : 'i.dir'}.`, goLeft ? 6 : 8, { ...marks }, [{ name: 'i', value: `${cursor.key}` }]);
     marks[cursor.key] = 'visited';
-    cursor = value < cursor.key ? cursor.left : cursor.right;
+    cursor = goLeft ? cursor.left : cursor.right;
   }
 
-  if (!found) {
-    push(`Ponteiro nulo: ${value} não está. Mesmo assim, poucas comparações.`, 1, [{ name: 'resultado', value: 'false' }]);
-  } else {
-    push('O balanceamento garante que o pior caso continua logarítmico.', 2);
-  }
-
-  return { operation: `buscar(${value})`, complexity: 'O(log n)', code, frames, width: 460, height: 300 };
+  push(`i == null → resp = false. Mesmo assim foram poucas comparações.`, 2, marks, [{ name: 'resp', value: 'false' }]);
+  return { scene: avlSceneOf(frames, avlSearchCode, `pesquisar(${value})`), next: state };
 }
 
 /* =====================================================================
-   TRIE (com ramificação)
+   TRIE — ArvoreTrie.java (Max): folha marca fim; prefixo conflita
    ===================================================================== */
 
-type TrieNode = { id: string; char: string; end: boolean; children: Map<string, TrieNode> };
+type TrieState = { words: string[] };
 
-function trieBuild(words: string[]): TrieNode {
-  const root: TrieNode = { id: 't', char: '•', end: false, children: new Map() };
+const TRIE_WORD_CAP = 5;
 
-  for (const word of words) {
+const trieInsertCode = [
+  'private void inserir(String s, No no, int i) {',
+  '   if (no.prox[s.charAt(i)] == null) {',
+  '      no.prox[s.charAt(i)] = new No(s.charAt(i));',
+  '      if (i == s.length() - 1) {',
+  '         no.prox[s.charAt(i)].folha = true;',
+  '      } else {',
+  '         inserir(s, no.prox[s.charAt(i)], i + 1);',
+  '      }',
+  '   } else if (!no.prox[s.charAt(i)].folha && i < s.length() - 1) {',
+  '      inserir(s, no.prox[s.charAt(i)], i + 1);',
+  '   } else {',
+  '      throw new Exception("Erro ao inserir!");',
+  '   }',
+  '}',
+];
+
+const trieSearchCode = [
+  'private boolean pesquisar(String s, No no, int i) {',
+  '   if (no.prox[s.charAt(i)] == null) {',
+  '      resp = false;',
+  '   } else if (i == s.length() - 1) {',
+  '      resp = no.prox[s.charAt(i)].folha;',
+  '   } else {',
+  '      resp = pesquisar(s, no.prox[s.charAt(i)], i + 1);',
+  '   }',
+  '   return resp;',
+  '}',
+];
+
+function trieCodeFor(opId: string): string[] {
+  return opId === 'inserir' ? trieInsertCode : trieSearchCode;
+}
+
+type TrieNode = { id: string; char: string; folha: boolean; children: Map<string, TrieNode> };
+
+/** Monta a TRIE das palavras; `paths` desenham nós em criação, sem folha. */
+function trieBuild(words: string[], paths: string[] = []): TrieNode {
+  const root: TrieNode = { id: 't', char: '•', folha: false, children: new Map() };
+
+  const walk = (word: string, markFolha: boolean) => {
     let cursor = root;
     for (const char of word) {
       if (!cursor.children.has(char)) {
-        cursor.children.set(char, { id: `${cursor.id}${char}`, char, end: false, children: new Map() });
+        cursor.children.set(char, { id: `${cursor.id}${char}`, char, folha: false, children: new Map() });
       }
       cursor = cursor.children.get(char)!;
     }
-    cursor.end = true;
-  }
+    if (markFolha) cursor.folha = true;
+  };
+
+  for (const word of words) walk(word, true);
+  for (const path of paths) walk(path, false);
 
   return root;
 }
@@ -1000,7 +1526,7 @@ function trieToViz(root: TrieNode, marks: Record<string, VizNodeState> = {}): { 
 
   (function collect(node: TrieNode) {
     const at = positions.get(node.id)!;
-    nodes.push(n(node.id, at.x, at.y, node.char, { sub: node.end ? '✓ fim' : undefined, state: marks[node.id] ?? 'default' }));
+    nodes.push(n(node.id, at.x, at.y, node.char, { sub: node.folha ? '✓ folha' : undefined, state: marks[node.id] ?? 'default' }));
     for (const child of node.children.values()) {
       edges.push(e(node.id, child.id));
       collect(child);
@@ -1010,237 +1536,371 @@ function trieToViz(root: TrieNode, marks: Record<string, VizNodeState> = {}): { 
   return { nodes, edges, height: Math.max(280, 110 + maxDepth * 52) };
 }
 
-const TRIE_BASE = ['ar', 'arte'];
-
-function trieOpScene(op: 'inserir' | 'buscar', raw: string): VizScene {
-  const word = parseWord(raw, op === 'inserir' ? 'asa' : 'art');
-  const code =
-    op === 'inserir'
-      ? ['inserir(palavra):', '  no = raiz', '  para cada letra:', '    se filho não existe: cria o nó', '    no = no.filho[letra]', '  no.fim = true  // marca a palavra']
-      : ['buscar(palavra):', '  no = raiz', '  para cada letra:', '    se filho não existe: falso', '    no = no.filho[letra]', '  retorna no.fim  // marcador!'];
-
-  const root = trieBuild(TRIE_BASE);
-  const marks: Record<string, VizNodeState> = {};
+function trieOp(previous: TrieState, opId: 'inserir' | 'buscar', raw: string): OpResult {
+  const state: TrieState = structuredClone(previous);
+  const word = parseWord(raw, opId === 'inserir' ? 'ave' : 'art');
+  const code = opId === 'inserir' ? trieInsertCode : trieSearchCode;
   const frames: VizFrame[] = [];
+  const marks: Record<string, VizNodeState> = {};
   let sceneHeight = 280;
+  let growth = '';
 
   const push = (caption: string, codeLine?: number, vars?: VizVar[]) => {
-    const { nodes, edges, height } = trieToViz(root, marks);
+    const { nodes, edges, height } = trieToViz(trieBuild(state.words, growth ? [growth] : []), marks);
     sceneHeight = Math.max(sceneHeight, height);
     frames.push(snap(nodes, edges, [p('t', 'RAIZ', 'left', 'accent')], caption, codeLine, vars));
   };
 
-  push(`TRIE com "${TRIE_BASE.join('" e "')}". ${op === 'inserir' ? 'Inserir' : 'Buscar'} "${word}".`, 1, [{ name: 'palavra', value: word }]);
+  const done = (operation: string): OpResult => ({
+    scene: { operation, complexity: 'O(k)', code, frames, width: 460, height: sceneHeight },
+    next: state,
+  });
 
+  if (opId === 'inserir' && state.words.length >= TRIE_WORD_CAP) {
+    push(`Limite didático de ${TRIE_WORD_CAP} palavras: inserção não realizada.`, 0, [{ name: 's', value: `"${word}"` }]);
+    return done(`inserir("${word}")`);
+  }
+
+  push(
+    state.words.length
+      ? `${opId === 'inserir' ? 'inserir' : 'pesquisar'}("${word}") na TRIE atual.`
+      : `TRIE vazia. ${opId === 'inserir' ? `inserir("${word}") cria o primeiro caminho.` : `pesquisar("${word}") em árvore vazia.`}`,
+    0,
+    [{ name: 's', value: `"${word}"` }],
+  );
+
+  // Simula fielmente as regras do ArvoreTrie.java.
+  const root = trieBuild(state.words);
   let cursor = root;
+  let creating = false;
 
   for (let i = 0; i < word.length; i += 1) {
     const char = word[i];
-    const child = cursor.children.get(char);
+    const child = creating ? undefined : cursor.children.get(char);
+    const last = i === word.length - 1;
 
-    if (child) {
+    if (!child) {
+      if (opId === 'buscar') {
+        marks[cursor.id] = 'error';
+        push(`no.prox['${char}'] == null → resp = false: o caminho não existe.`, 2, [{ name: 'resp', value: 'false' }]);
+        return done(`pesquisar("${word}")`);
+      }
+
+      creating = true;
+      growth = word.slice(0, i + 1);
+      const id = `t${growth}`;
+      marks[id] = 'inserted';
+      push(`no.prox['${char}'] == null → new No('${char}').${last ? ' É a última letra: folha = true.' : ''}`, last ? 4 : 2, [
+        { name: 'i', value: `${i}` },
+        { name: 'letra', value: char },
+      ]);
+      marks[id] = 'visited';
+      continue;
+    }
+
+    if (opId === 'buscar') {
       marks[child.id] = 'compare';
-      push(`Letra '${char}' já existe como filho → desce um nível.`, op === 'inserir' ? 4 : 4, [{ name: 'letra', value: char }, { name: 'nível', value: `${i + 1}` }]);
+      if (last) {
+        if (child.folha) {
+          marks[child.id] = 'found';
+          push(`Última letra e o nó é folha → resp = true: "${word}" é palavra.`, 4, [{ name: 'resp', value: 'true' }]);
+        } else {
+          marks[child.id] = 'error';
+          push(`Última letra, mas folha == false → resp = false: "${word}" é só PREFIXO de outra palavra.`, 4, [{ name: 'resp', value: 'false' }]);
+        }
+        return done(`pesquisar("${word}")`);
+      }
+      push(`no.prox['${char}'] existe → desce um nível.`, 6, [{ name: 'i', value: `${i}` }]);
       marks[child.id] = 'visited';
       cursor = child;
       continue;
     }
 
-    if (op === 'buscar') {
-      marks[cursor.id] = 'error';
-      push(`Não há filho '${char}' aqui: o caminho acaba → "${word}" não está na TRIE.`, 3, [{ name: 'resultado', value: 'false' }]);
-      return { operation: `buscar("${word}")`, complexity: 'O(k)', code, frames, width: 460, height: sceneHeight };
+    // inserir com filho existente: regras do Max.
+    if (!child.folha && !last) {
+      marks[child.id] = 'compare';
+      push(`'${char}' já existe e não é folha → continua descendo.`, 9, [{ name: 'i', value: `${i}` }]);
+      marks[child.id] = 'visited';
+      cursor = child;
+      continue;
     }
 
-    const novo: TrieNode = { id: `${cursor.id}${char}`, char, end: false, children: new Map() };
-    cursor.children.set(char, novo);
-    marks[novo.id] = 'inserted';
-    push(`Filho '${char}' não existia: um novo nó é criado.`, 3, [{ name: 'letra', value: char }]);
-    marks[novo.id] = 'visited';
-    cursor = novo;
-  }
-
-  if (op === 'inserir') {
-    const already = cursor.end;
-    cursor.end = true;
-    marks[cursor.id] = 'found';
+    marks[child.id] = 'error';
     push(
-      already
-        ? `O nó final já tinha marcador: "${word}" já era palavra.`
-        : `Liga o marcador fim no último nó: agora "${word}" é palavra, não só caminho.`,
-      5,
-      [{ name: 'no.fim', value: 'true' }],
+      child.folha && last
+        ? `"${word}" já existe na TRIE → Erro ao inserir!`
+        : child.folha
+          ? `'${char}' é folha de outra palavra: a TRIE básica NÃO deixa estender palavra existente → Erro ao inserir!`
+          : `"${word}" terminaria num nó interno: palavra que é PREFIXO de outra não entra na TRIE básica → Erro ao inserir!`,
+      11,
+      [{ name: 'resultado', value: 'erro' }],
     );
-  } else if (cursor.end) {
-    marks[cursor.id] = 'found';
-    push(`Letras acabaram e o nó tem marcador ✓ → "${word}" é palavra da TRIE.`, 5, [{ name: 'no.fim', value: 'true' }, { name: 'resultado', value: 'true' }]);
-  } else {
-    marks[cursor.id] = 'error';
-    push(`O caminho existe, mas SEM marcador fim: "${word}" é só prefixo, não palavra.`, 5, [{ name: 'no.fim', value: 'false' }, { name: 'resultado', value: 'false' }]);
+    return done(`inserir("${word}")`);
   }
 
-  push(`Custo O(k): proporcional ao tamanho da palavra, não à quantidade de palavras.`, 5, [{ name: 'k', value: `${word.length}` }]);
+  if (opId === 'inserir') {
+    state.words = [...state.words, word];
+    growth = '';
+    marks[`t${word}`] = 'found';
+    push(`"${word}" registrada: o nó final é folha (✓).`, 4, [{ name: 'folha', value: 'true' }]);
+  }
 
-  return { operation: `${op}("${word}")`, complexity: 'O(k)', code, frames, width: 460, height: sceneHeight };
+  return done(`${opId === 'inserir' ? 'inserir' : 'pesquisar'}("${word}")`);
 }
 
 /* =====================================================================
-   HEAP (máximo)
+   HEAP MÁXIMO — construção do Heapsort (unidade03f)
    ===================================================================== */
 
-const HEAP_BASE = [90, 70, 80, 30, 40, 60];
+type HeapState = { cells: Cell[]; seq: number };
+
+const HEAP_CAP = 15;
+
+const heapInsertCode = [
+  '// construção do heap (heapsort)',
+  'array[n] = x; n++;',
+  'int i = n - 1;',
+  'while (i > 0 && array[i] > array[(i-1)/2]) {',
+  '   troca(i, (i-1)/2);        // sobe',
+  '   i = (i-1)/2;',
+  '}',
+];
+
+const heapRemoveCode = [
+  'int max = array[0];          // a raiz é o maior',
+  'n--;',
+  'array[0] = array[n];         // última folha sobe',
+  'int i = 0;',
+  'while (algum filho > array[i]) {',
+  '   troca com o MAIOR filho;  // desce',
+  '   i = filho;',
+  '}',
+  'return max;',
+];
+
+function heapCodeFor(opId: string): string[] {
+  return opId === 'inserir' ? heapInsertCode : heapRemoveCode;
+}
 
 function heapPositions(count: number): Array<{ x: number; y: number }> {
-  const labels = Array.from({ length: count }, (_, index) => `${index}`);
+  const labels = Array.from({ length: Math.max(count, 1) }, (_, index) => `${index}`);
   const root = buildLevelOrderTree(labels)!;
   const positions = layoutTree(root, 460, { top: 52, levelGap: 74 });
   return labels.map((_, index) => positions.get(`t${index}`)!);
 }
 
-type HeapElement = { id: string; value: number };
+function heapRender(state: HeapState, marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []): { nodes: VizNode[]; edges: VizEdge[]; pointers: VizPointer[] } {
+  if (!state.cells.length) {
+    return { nodes: [...extra], edges: [], pointers: [] };
+  }
 
-function heapToViz(elements: HeapElement[], marks: Record<string, VizNodeState> = {}): { nodes: VizNode[]; edges: VizEdge[]; pointers: VizPointer[] } {
-  const positions = heapPositions(elements.length);
-  const nodes = elements.map((element, index) =>
-    n(element.id, positions[index].x, positions[index].y, `${element.value}`, {
-      sub: `i=${index}`,
-      state: marks[element.id] ?? 'default',
-    }),
+  const positions = heapPositions(state.cells.length);
+  const nodes = state.cells.map((cell, index) =>
+    n(cell.id, positions[index].x, positions[index].y, `${cell.value}`, { sub: `i=${index}`, state: marks[cell.id] ?? 'default' }),
   );
-  const edges = elements.slice(1).map((element, k) => e(elements[Math.floor(k / 2)].id, element.id));
-  const pointers = elements.length ? [p(elements[0].id, 'RAIZ (máximo)', 'top', 'accent')] : [];
+  nodes.push(...extra);
+  const edges = state.cells.slice(1).map((cell, k) => e(state.cells[Math.floor(k / 2)].id, cell.id));
+  const pointers = [p(state.cells[0].id, 'RAIZ (máximo)', 'top', 'accent')];
   return { nodes, edges, pointers };
 }
 
-function heapBase(): HeapElement[] {
-  return HEAP_BASE.map((value) => ({ id: `h${value}`, value }));
+function heapSceneOf(frames: VizFrame[], code: string[], operation: string): VizScene {
+  return { operation, complexity: 'O(log n)', code, frames, width: 460, height: 300 };
 }
 
-function heapInsertScene(raw: string): VizScene {
+function heapInsert(previous: HeapState, raw: string): OpResult {
+  const state: HeapState = structuredClone(previous);
   const value = parseNumber(raw, 85);
-  const code = ['inserir(x):', '  coloca x na próxima folha livre', '  enquanto x > pai:', '    troca x com o pai', '  // x parou na posição certa'];
-  const elements = heapBase();
-  const marks: Record<string, VizNodeState> = {};
   const frames: VizFrame[] = [];
-
-  const push = (caption: string, codeLine?: number, vars?: VizVar[], extra?: VizNode[]) => {
-    const { nodes, edges, pointers } = heapToViz(elements, marks);
-    frames.push(snap([...nodes, ...(extra ?? [])], edges, pointers, caption, codeLine, vars));
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []) => {
+    const { nodes, edges, pointers } = heapRender(state, marks, extra);
+    frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
   };
 
-  push('Heap máximo: todo pai é maior ou igual aos filhos.', 0, [{ name: 'x', value: `${value}` }]);
+  if (state.cells.length >= HEAP_CAP) {
+    push(`Limite didático de ${HEAP_CAP} nós: inserção não realizada.`, 1, [{ name: 'x', value: `${value}` }]);
+    return { scene: heapSceneOf(frames, heapInsertCode, `inserir(${value})`), next: state };
+  }
 
-  const id = elements.some((element) => element.id === `h${value}`) ? `h${value}x` : `h${value}`;
-  const staging = n(id, 402, 56, `${value}`, { state: 'inserted' });
-  push(`inserir(${value}): o valor chega para entrar no heap.`, 0, [{ name: 'x', value: `${value}` }], [staging]);
+  const cell: Cell = { id: `p${(state.seq += 1)}`, value };
 
-  elements.push({ id, value });
-  marks[id] = 'inserted';
-  push(`${value} ocupa a próxima folha (índice ${elements.length - 1}): árvore continua completa.`, 1, [{ name: 'i', value: `${elements.length - 1}` }]);
+  if (!state.cells.length) {
+    state.cells.push(cell);
+    push(`array[0] = ${value}: o heap ganha a raiz. Duplicatas são permitidas.`, 1, [{ name: 'n', value: '1' }], { [cell.id]: 'found' });
+    return { scene: heapSceneOf(frames, heapInsertCode, `inserir(${value})`), next: state };
+  }
 
-  let index = elements.length - 1;
+  const staging = n(cell.id, 402, 56, `${value}`, { state: 'inserted' });
+  push(`inserir(${value}): entra na próxima folha para manter a árvore completa.`, 1, [{ name: 'x', value: `${value}` }], {}, [staging]);
+
+  state.cells.push(cell);
+  push(`array[${state.cells.length - 1}] = ${value}; n++ → ${state.cells.length}.`, 1, [{ name: 'n', value: `${state.cells.length}` }], { [cell.id]: 'inserted' });
+
+  let index = state.cells.length - 1;
 
   while (index > 0) {
     const parentIndex = Math.floor((index - 1) / 2);
-    const parent = elements[parentIndex];
-
-    marks[parent.id] = 'compare';
+    const parent = state.cells[parentIndex];
 
     if (parent.value >= value) {
-      push(`${value} ≤ ${parent.value} (pai): a regra do heap vale → a subida para.`, 2, [{ name: 'pai', value: `${parent.value}` }]);
-      marks[parent.id] = 'default';
+      push(`array[${index}] = ${value} ≤ pai ${parent.value}: a regra do heap vale → laço para.`, 3, [{ name: 'i', value: `${index}` }], {
+        [cell.id]: 'inserted',
+        [parent.id]: 'compare',
+      });
       break;
     }
 
-    push(`${value} > ${parent.value} (pai): viola a regra → troca.`, 2, [{ name: 'pai', value: `${parent.value}` }]);
-    [elements[index], elements[parentIndex]] = [elements[parentIndex], elements[index]];
-    marks[parent.id] = 'visited';
-    push(`${value} sobe; ${parent.value} desce uma posição.`, 3, [{ name: 'i', value: `${parentIndex}` }]);
+    push(`array[${index}] = ${value} > pai ${parent.value}: viola a regra → troca.`, 4, [{ name: 'i', value: `${index}` }], {
+      [cell.id]: 'inserted',
+      [parent.id]: 'compare',
+    });
+    [state.cells[index], state.cells[parentIndex]] = [state.cells[parentIndex], state.cells[index]];
+    push(`i = (i-1)/2 = ${parentIndex}: ${value} subiu; ${parent.value} desceu.`, 5, [{ name: 'i', value: `${parentIndex}` }], {
+      [cell.id]: 'inserted',
+      [parent.id]: 'visited',
+    });
     index = parentIndex;
   }
 
-  marks[id] = 'found';
-  push('Heap restaurado: a subida percorre no máximo a altura, O(log n).', 4);
-
-  return { operation: `inserir(${value})`, complexity: 'O(log n)', code, frames, width: 460, height: 300 };
+  push('Heap restaurado: a subida custa no máximo a altura, O(log n).', 6, [], { [cell.id]: 'found' });
+  return { scene: heapSceneOf(frames, heapInsertCode, `inserir(${value})`), next: state };
 }
 
-function heapRemoveMaxScene(): VizScene {
-  const code = ['removerMax():', '  max = dados[0]  // a raiz', '  última folha vira a raiz', '  enquanto menor que algum filho:', '    troca com o MAIOR filho', '  return max'];
-  const elements = heapBase();
-  const marks: Record<string, VizNodeState> = {};
+function heapRemoveMax(previous: HeapState): OpResult {
+  const state: HeapState = structuredClone(previous);
   const frames: VizFrame[] = [];
-
-  const push = (caption: string, codeLine?: number, vars?: VizVar[], extra?: VizNode[]) => {
-    const { nodes, edges, pointers } = heapToViz(elements, marks);
-    frames.push(snap([...nodes, ...(extra ?? [])], edges, pointers, caption, codeLine, vars));
+  const push = (caption: string, codeLine?: number, vars?: VizVar[], marks: Record<string, VizNodeState> = {}, extra: VizNode[] = []) => {
+    const { nodes, edges, pointers } = heapRender(state, marks, extra);
+    frames.push(snap(nodes, edges, pointers, caption, codeLine, vars));
   };
 
-  const raiz = elements[0];
-  marks[raiz.id] = 'active';
-  push('No heap máximo, o maior valor está SEMPRE na raiz.', 1, [{ name: 'max', value: `${raiz.value}` }]);
+  if (!state.cells.length) {
+    push('removerMax(): n = 0 → heap vazio, nada a remover.', 0, [{ name: 'n', value: '0' }]);
+    return { scene: heapSceneOf(frames, heapRemoveCode, 'remover máximo'), next: state };
+  }
 
-  marks[raiz.id] = 'removed';
-  push(`${raiz.value} sai do heap.`, 1, [{ name: 'max', value: `${raiz.value}` }]);
+  const raiz = state.cells[0];
+  push(`max = array[0] = ${raiz.value}: no heap máximo o maior está SEMPRE na raiz.`, 0, [{ name: 'max', value: `${raiz.value}` }], { [raiz.id]: 'active' });
 
-  const last = elements.pop()!;
-  elements[0] = last;
-  delete marks[raiz.id];
-  marks[last.id] = 'inserted';
-  push(`A última folha (${last.value}) assume a raiz para manter a árvore completa.`, 2, [{ name: 'raiz', value: `${last.value}` }]);
+  if (state.cells.length === 1) {
+    push(`${raiz.value} sai e o heap fica vazio.`, 1, [{ name: 'n', value: '0' }], { [raiz.id]: 'removed' });
+    state.cells = [];
+    push('Heap vazio (n = 0).', 8);
+    return { scene: heapSceneOf(frames, heapRemoveCode, 'remover máximo'), next: state };
+  }
+
+  push(`${raiz.value} sai do heap.`, 1, [{ name: 'max', value: `${raiz.value}` }], { [raiz.id]: 'removed' });
+
+  const last = state.cells.pop()!;
+  state.cells[0] = last;
+  push(`array[0] = array[n] = ${last.value}: a última folha assume a raiz.`, 2, [{ name: 'n', value: `${state.cells.length}` }], { [last.id]: 'inserted' });
 
   let index = 0;
 
   for (;;) {
     const leftIndex = index * 2 + 1;
     const rightIndex = index * 2 + 2;
-    if (leftIndex >= elements.length) break;
+    if (leftIndex >= state.cells.length) break;
 
     let bigger = leftIndex;
-    if (rightIndex < elements.length && elements[rightIndex].value > elements[leftIndex].value) {
+    if (rightIndex < state.cells.length && state.cells[rightIndex].value > state.cells[leftIndex].value) {
       bigger = rightIndex;
     }
 
-    marks[elements[leftIndex].id] = 'compare';
-    if (rightIndex < elements.length) marks[elements[rightIndex].id] = 'compare';
+    const marks: Record<string, VizNodeState> = { [last.id]: 'inserted', [state.cells[leftIndex].id]: 'compare' };
+    if (rightIndex < state.cells.length) marks[state.cells[rightIndex].id] = 'compare';
 
-    if (elements[bigger].value <= last.value) {
-      push(`${last.value} já é maior que os filhos: a descida para aqui.`, 3, [{ name: 'atual', value: `${last.value}` }]);
-      marks[elements[leftIndex].id] = 'default';
-      if (rightIndex < elements.length) marks[elements[rightIndex].id] = 'default';
+    if (state.cells[bigger].value <= last.value) {
+      push(`${last.value} ≥ filhos: a regra vale → a descida para.`, 4, [{ name: 'i', value: `${index}` }], marks);
       break;
     }
 
-    push(`${last.value} < ${elements[bigger].value}: troca com o MAIOR filho.`, 4, [{ name: 'maior filho', value: `${elements[bigger].value}` }]);
-
-    marks[elements[leftIndex].id] = 'default';
-    if (rightIndex < elements.length) marks[elements[rightIndex].id] = 'default';
-    marks[elements[bigger].id] = 'visited';
-
-    [elements[index], elements[bigger]] = [elements[bigger], elements[index]];
-    push(`${elements[index].value} sobe; ${last.value} desce para o índice ${bigger}.`, 4, [{ name: 'i', value: `${bigger}` }]);
+    push(`${last.value} < ${state.cells[bigger].value} (MAIOR filho) → troca.`, 5, [{ name: 'i', value: `${index}` }], marks);
+    [state.cells[index], state.cells[bigger]] = [state.cells[bigger], state.cells[index]];
+    push(`i = ${bigger}: ${state.cells[index].value} subiu; ${last.value} desceu.`, 6, [{ name: 'i', value: `${bigger}` }], {
+      [last.id]: 'inserted',
+      [state.cells[index].id]: 'visited',
+    });
     index = bigger;
   }
 
-  marks[last.id] = 'found';
-  push(`Heap válido de novo. removerMax devolve ${raiz.value} em O(log n).`, 5, [{ name: 'retorno', value: `${raiz.value}` }]);
-
-  return { operation: 'remover máximo', complexity: 'O(log n)', code, frames, width: 460, height: 300 };
+  push(`Heap válido: removerMax devolve ${raiz.value} em O(log n).`, 8, [{ name: 'return', value: `${raiz.value}` }], { [last.id]: 'found' });
+  return { scene: heapSceneOf(frames, heapRemoveCode, 'remover máximo'), next: state };
 }
 
 /* =====================================================================
-   Catálogo (fonte: pasta materiais — sem grafos)
+   Catálogo — estados iniciais, vazios, previews e operações
    ===================================================================== */
 
 const numberInput = (label: string, sample: string): OpInput => ({ kind: 'number', label, sample });
 const textInput = (label: string, sample: string): OpInput => ({ kind: 'text', label, sample });
 
-function doidonaOp(op: DoidonaOpId, sample: string): StructureOp {
+function makePreview(
+  scene: { nodes: VizNode[]; edges?: VizEdge[]; pointers?: VizPointer[] },
+  caption: string,
+  code: string[],
+  width: number,
+  height: number,
+  operation = 'estado atual',
+): VizScene {
   return {
-    id: op,
-    label: op === 'inserir' ? 'Inserir' : op === 'buscar' ? 'Buscar' : 'Remover',
-    input: numberInput('Valor', sample),
-    run: (value, config) => doidonaScene(op, parseNumber(value, Number(sample)), config),
+    operation,
+    complexity: '—',
+    code,
+    frames: [previewFrame(scene.nodes, scene.edges ?? [], scene.pointers ?? [], caption)],
+    width,
+    height,
+  };
+}
+
+function initialStack(): StackState {
+  return { cells: [{ id: 's1', value: 5 }, { id: 's2', value: 8 }], seq: 2 };
+}
+
+function initialQueue(): QueueState {
+  return { cells: [{ id: 'q1', value: 4, slot: 0 }, { id: 'q2', value: 9, slot: 1 }], primeiro: 0, ultimo: 2, seq: 2 };
+}
+
+function initialRing(): RingState {
+  const slots: Array<Cell | null> = Array.from({ length: RING_TOTAL }, () => null);
+  slots[5] = { id: 'c1', value: 7 };
+  slots[6] = { id: 'c2', value: 1 };
+  slots[7] = { id: 'c3', value: 6 };
+  return { slots, primeiro: 5, ultimo: 0, seq: 3 };
+}
+
+function initialList(): ListState {
+  return { cells: [{ id: 'l1', value: 10 }, { id: 'l2', value: 20 }, { id: 'l3', value: 30 }], seq: 3 };
+}
+
+function initialHash(): HashState {
+  return {
+    main: [{ id: 'h1', value: 42 }, null, { id: 'h2', value: 23 }, null, null, null, null],
+    reserva: [{ id: 'h3', value: 30, homePos: 2 }],
+    seq: 3,
+  };
+}
+
+function initialBst(): BstState {
+  let root: BstNode | undefined;
+  for (const value of [50, 30, 70, 20, 40, 60, 80]) root = bstInsertNode(root, value);
+  return { root: root ?? null };
+}
+
+function initialAvl(): AvlState {
+  let root: AvlNode | undefined;
+  for (const value of [40, 30, 50, 20]) root = rebalance(insertPlain(root, value)).node;
+  return { root: root ?? null };
+}
+
+function initialTrie(): TrieState {
+  return { words: ['asa', 'arte'] };
+}
+
+function initialHeap(): HeapState {
+  return {
+    cells: [90, 70, 80, 30, 40, 60].map((value, index) => ({ id: `p${index + 1}`, value })),
+    seq: 6,
   };
 }
 
@@ -1248,96 +1908,183 @@ export const structureCatalog: StructureEntry[] = [
   {
     id: 'pilha',
     name: 'Pilha',
-    blurb: 'LIFO: insere e remove pelo topo em O(1).',
+    blurb: 'Sequencial: array + n. LIFO em O(1).',
+    initial: initialStack,
+    empty: () => ({ cells: [], seq: 0 }) satisfies StackState,
+    preview: (state, opId) => {
+      const s = state as StackState;
+      const { nodes, pointers } = stackRender(s);
+      return makePreview({ nodes, pointers }, stateCaption(!s.cells.length, 'pilha'), stackCodeFor(opId), 460, 310);
+    },
     ops: [
-      { id: 'inserir', label: 'Inserir (push)', input: numberInput('Valor', '7'), run: (value) => stackInsertScene(value) },
-      { id: 'remover', label: 'Remover (pop)', run: () => stackRemoveScene() },
-      { id: 'topo', label: 'Consultar topo', run: () => stackPeekScene() },
+      { id: 'inserir', label: 'Inserir (push)', input: numberInput('Valor', '7'), run: (state, raw) => stackInsert(state as StackState, raw) },
+      { id: 'remover', label: 'Remover (pop)', run: (state) => stackRemove(state as StackState) },
+      { id: 'topo', label: 'Consultar topo', run: (state) => stackPeek(state as StackState) },
     ],
   },
   {
     id: 'fila',
     name: 'Fila',
-    blurb: 'FIFO: entra no final, sai pela frente.',
+    blurb: 'Em fileira: frente e trás só avançam.',
+    initial: initialQueue,
+    empty: () => ({ cells: [], primeiro: 0, ultimo: 0, seq: 0 }) satisfies QueueState,
+    preview: (state, opId) => {
+      const s = state as QueueState;
+      const { nodes, pointers } = queueRender(s);
+      return makePreview({ nodes, pointers }, stateCaption(s.primeiro === s.ultimo, 'fila'), queueCodeFor(opId), 460, 260);
+    },
     ops: [
-      { id: 'enfileirar', label: 'Enfileirar', input: numberInput('Valor', '2'), run: (value) => queueInsertScene(value) },
-      { id: 'desenfileirar', label: 'Desenfileirar', run: () => queueRemoveScene() },
-      { id: 'frente', label: 'Consultar frente', run: () => queuePeekScene() },
+      { id: 'enfileirar', label: 'Enfileirar', input: numberInput('Valor', '2'), run: (state, raw) => queueInsert(state as QueueState, raw) },
+      { id: 'desenfileirar', label: 'Desenfileirar', run: (state) => queueRemove(state as QueueState) },
+      { id: 'frente', label: 'Consultar frente', run: (state) => queuePeek(state as QueueState) },
     ],
   },
   {
     id: 'fila-circular',
     name: 'Fila circular',
-    blurb: 'Índices com módulo: o vetor dá a volta.',
+    blurb: 'Fila.java do Max: índices com módulo.',
+    initial: initialRing,
+    empty: () => ({ slots: Array.from({ length: RING_TOTAL }, () => null), primeiro: 0, ultimo: 0, seq: 0 }) satisfies RingState,
+    preview: (state, opId) => {
+      const s = state as RingState;
+      const { nodes, pointers } = ringRender(s);
+      return makePreview({ nodes, pointers }, stateCaption(s.primeiro === s.ultimo, 'fila circular'), ringCodeFor(opId), 460, 344);
+    },
     ops: [
-      { id: 'enfileirar', label: 'Enfileirar', input: numberInput('Valor', '9'), run: (value) => ringInsertScene(value) },
-      { id: 'desenfileirar', label: 'Desenfileirar', run: () => ringRemoveScene() },
+      { id: 'enfileirar', label: 'Enfileirar', input: numberInput('Valor', '9'), run: (state, raw) => ringInsert(state as RingState, raw) },
+      { id: 'desenfileirar', label: 'Desenfileirar', run: (state) => ringRemove(state as RingState) },
     ],
   },
   {
     id: 'lista',
     name: 'Lista encadeada',
-    blurb: 'Nós ligados por ponteiros; religação sem deslocar.',
+    blurb: 'Células ordenadas; religação de ponteiros.',
+    initial: initialList,
+    empty: () => ({ cells: [], seq: 0 }) satisfies ListState,
+    preview: (state, opId) => {
+      const s = state as ListState;
+      const { nodes, edges, pointers } = listRender(s);
+      return makePreview({ nodes, edges, pointers }, stateCaption(!s.cells.length, 'lista'), listCodeFor(opId), 460, 300);
+    },
     ops: [
-      { id: 'inserir', label: 'Inserir', input: numberInput('Valor', '25'), run: (value) => listInsertScene(value) },
-      { id: 'buscar', label: 'Buscar', input: numberInput('Valor', '20'), run: (value) => listSearchScene(value) },
-      { id: 'remover', label: 'Remover', input: numberInput('Valor', '20'), run: (value) => listRemoveScene(value) },
+      { id: 'inserir', label: 'Inserir', input: numberInput('Valor', '25'), run: (state, raw) => listInsert(state as ListState, raw) },
+      { id: 'buscar', label: 'Buscar', input: numberInput('Valor', '20'), run: (state, raw) => listSearch(state as ListState, raw) },
+      { id: 'remover', label: 'Remover', input: numberInput('Valor', '20'), run: (state, raw) => listRemove(state as ListState, raw) },
     ],
   },
   {
     id: 'hash',
     name: 'Tabela hash',
-    blurb: 'Chave vira índice; colisões viram corrente.',
+    blurb: 'hashDiretoReserva: colisão vai para a reserva.',
+    initial: initialHash,
+    empty: () => ({ main: [null, null, null, null, null, null, null], reserva: [], seq: 0 }) satisfies HashState,
+    preview: (state, opId) => {
+      const s = state as HashState;
+      const { nodes, edges } = hashRender(s);
+      const empty = s.main.every((cell) => !cell) && !s.reserva.length;
+      return makePreview({ nodes, edges }, stateCaption(empty, 'tabela hash'), hashCodeFor(opId), 460, 350);
+    },
     ops: [
-      { id: 'inserir', label: 'Inserir', input: numberInput('Chave', '16'), run: (value) => hashOpScene('inserir', value) },
-      { id: 'buscar', label: 'Buscar', input: numberInput('Chave', '30'), run: (value) => hashOpScene('buscar', value) },
-      { id: 'remover', label: 'Remover', input: numberInput('Chave', '23'), run: (value) => hashOpScene('remover', value) },
+      { id: 'inserir', label: 'Inserir', input: numberInput('Chave', '16'), run: (state, raw) => hashInsert(state as HashState, raw) },
+      { id: 'buscar', label: 'Buscar', input: numberInput('Chave', '30'), run: (state, raw) => hashSearch(state as HashState, raw) },
+      { id: 'remover', label: 'Remover', input: numberInput('Chave', '23'), run: (state, raw) => hashRemove(state as HashState, raw) },
     ],
   },
   {
     id: 'abb',
     name: 'Árvore de busca (ABB)',
-    blurb: 'Menores à esquerda, maiores à direita.',
+    blurb: 'ArvoreBinaria.java: sem duplicatas.',
+    initial: initialBst,
+    empty: () => ({ root: null }) satisfies BstState,
+    preview: (state, opId) => {
+      const s = state as BstState;
+      const { nodes, edges, pointers } = bstToViz(s.root);
+      return makePreview({ nodes, edges, pointers }, stateCaption(!s.root, 'ABB'), bstCodeFor(opId), 460, 300);
+    },
     ops: [
-      { id: 'inserir', label: 'Inserir', input: numberInput('Valor', '45'), run: (value) => bstInsertScene(value) },
-      { id: 'buscar', label: 'Buscar', input: numberInput('Valor', '40'), run: (value) => bstSearchScene(value) },
-      { id: 'remover', label: 'Remover', input: numberInput('Valor', '30'), run: (value) => bstRemoveScene(value) },
-      { id: 'caminhar', label: 'Caminhamento central', run: () => bstTraverseScene() },
+      { id: 'inserir', label: 'Inserir', input: numberInput('Valor', '45'), run: (state, raw) => bstInsert(state as BstState, raw) },
+      { id: 'buscar', label: 'Buscar', input: numberInput('Valor', '40'), run: (state, raw) => bstSearch(state as BstState, raw) },
+      { id: 'remover', label: 'Remover', input: numberInput('Valor', '30'), run: (state, raw) => bstRemove(state as BstState, raw) },
+      { id: 'caminhar', label: 'Caminhamento central', run: (state) => bstWalk(state as BstState) },
     ],
   },
   {
     id: 'avl',
     name: 'Árvore AVL',
-    blurb: 'Fator de balanceamento e rotações automáticas.',
+    blurb: 'AVL.java: inserir devolve balancear(i).',
+    initial: initialAvl,
+    empty: () => ({ root: null }) satisfies AvlState,
+    preview: (state, opId) => {
+      const s = state as AvlState;
+      const { nodes, edges, rootId } = avlToViz(s.root ?? undefined, 460);
+      return makePreview(
+        { nodes, edges, pointers: rootId ? [p(rootId, 'RAIZ', 'top', 'accent')] : [] },
+        stateCaption(!s.root, 'AVL'),
+        avlCodeFor(opId),
+        460,
+        300,
+      );
+    },
     ops: [
-      { id: 'inserir', label: 'Inserir', input: numberInput('Valor', '10'), run: (value) => avlInsertScene(value) },
-      { id: 'buscar', label: 'Buscar', input: numberInput('Valor', '50'), run: (value) => avlSearchScene(value) },
+      { id: 'inserir', label: 'Inserir', input: numberInput('Valor', '10'), run: (state, raw) => avlInsert(state as AvlState, raw) },
+      { id: 'buscar', label: 'Buscar', input: numberInput('Valor', '50'), run: (state, raw) => avlSearch(state as AvlState, raw) },
     ],
   },
   {
     id: 'trie',
     name: 'Árvore TRIE',
-    blurb: 'Uma letra por nível; palavra exige marcador fim.',
+    blurb: 'ArvoreTrie.java: folha marca a palavra.',
+    initial: initialTrie,
+    empty: () => ({ words: [] }) satisfies TrieState,
+    preview: (state, opId) => {
+      const s = state as TrieState;
+      const { nodes, edges, height } = trieToViz(trieBuild(s.words));
+      return makePreview(
+        { nodes, edges, pointers: [p('t', 'RAIZ', 'left', 'accent')] },
+        stateCaption(!s.words.length, 'TRIE'),
+        trieCodeFor(opId),
+        460,
+        height,
+      );
+    },
     ops: [
-      { id: 'inserir', label: 'Inserir palavra', input: textInput('Palavra', 'asa'), run: (value) => trieOpScene('inserir', value) },
-      { id: 'buscar', label: 'Buscar palavra', input: textInput('Palavra', 'art'), run: (value) => trieOpScene('buscar', value) },
+      { id: 'inserir', label: 'Inserir palavra', input: textInput('Palavra', 'ave'), run: (state, raw) => trieOp(state as TrieState, 'inserir', raw) },
+      { id: 'buscar', label: 'Buscar palavra', input: textInput('Palavra', 'art'), run: (state, raw) => trieOp(state as TrieState, 'buscar', raw) },
     ],
   },
   {
     id: 'heap',
     name: 'Heap',
-    blurb: 'Árvore completa: pai sempre maior que os filhos.',
+    blurb: 'Construção do heapsort: pai ≥ filhos.',
+    initial: initialHeap,
+    empty: () => ({ cells: [], seq: 0 }) satisfies HeapState,
+    preview: (state, opId) => {
+      const s = state as HeapState;
+      const { nodes, edges, pointers } = heapRender(s);
+      return makePreview({ nodes, edges, pointers }, stateCaption(!s.cells.length, 'heap'), heapCodeFor(opId), 460, 300);
+    },
     ops: [
-      { id: 'inserir', label: 'Inserir', input: numberInput('Valor', '85'), run: (value) => heapInsertScene(value) },
-      { id: 'remover-max', label: 'Remover máximo', run: () => heapRemoveMaxScene() },
+      { id: 'inserir', label: 'Inserir', input: numberInput('Valor', '85'), run: (state, raw) => heapInsert(state as HeapState, raw) },
+      { id: 'remover-max', label: 'Remover máximo', run: (state) => heapRemoveMax(state as HeapState) },
     ],
   },
   {
     id: 'doidona',
     name: 'Estrutura Doidona',
-    blurb: 'Hash T1 + reserva T2 desviando para subestruturas.',
+    blurb: 'DoidonaSemTADsProntas: T1 + hashT2 roteando a reserva.',
     configurable: true,
-    ops: [doidonaOp('inserir', '22'), doidonaOp('buscar', '17'), doidonaOp('remover', '24')],
+    initial: () => initialDoidonaState(),
+    empty: () => emptyDoidonaState(),
+    preview: (state, opId) => doidonaPreviewScene(state as DoidonaState, opId as DoidonaOpId),
+    ops: (['inserir', 'buscar', 'remover'] as DoidonaOpId[]).map((op) => ({
+      id: op,
+      label: op === 'inserir' ? 'Inserir' : op === 'buscar' ? 'Buscar' : 'Remover',
+      input: numberInput('Valor', op === 'inserir' ? '20' : op === 'buscar' ? '17' : '22'),
+      run: (state, raw) => {
+        const result = doidonaOpScene(state as DoidonaState, op, parseNumber(raw, op === 'inserir' ? 20 : op === 'buscar' ? 17 : 22));
+        return { scene: result.scene, next: result.next };
+      },
+    })),
   },
 ];
 

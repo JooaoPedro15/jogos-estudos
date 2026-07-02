@@ -1,73 +1,106 @@
 import { useMemo, useState } from 'react';
-import { Play, Settings2, Shapes } from 'lucide-react';
+import { Eraser, Play, Settings2, Shapes, Trash2 } from 'lucide-react';
 
-import { doidonaSubKinds, type DoidonaSubKind } from '../viz/doidona';
-import { defaultDoidonaConfig, structureCatalog, type DoidonaConfig } from '../viz/structureOps';
+import { doidonaKinds, doidonaSubKinds, withDoidonaKind, type DoidonaState, type DoidonaSubKind } from '../viz/doidona';
+import { structureCatalog } from '../viz/structureOps';
 import { StructureViz } from '../viz/StructureViz';
+import type { VizScene } from '../viz/vizTypes';
+import {
+  getStructureState,
+  resetAllStructureStates,
+  resetStructureState,
+  setStructureState,
+} from '../viz/vizStore';
 
 /**
- * Galeria interativa: escolha a estrutura, a operação e o valor;
- * a animação correspondente é gerada na hora. A Doidona ainda
- * permite configurar a subestrutura de cada área de reserva.
+ * Galeria interativa com estado persistente: cada estrutura abre com
+ * um exemplo padrão; operações modificam o estado atual (que sobrevive
+ * a trocas de aba/operação); resets deixam tudo vazio para construir
+ * do zero.
  */
 export function ExploreScreen() {
   const [selectedId, setSelectedId] = useState(structureCatalog[0].id);
   const [opId, setOpId] = useState(structureCatalog[0].ops[0].id);
   const [inputValue, setInputValue] = useState(structureCatalog[0].ops[0].input?.sample ?? '');
-  const [config, setConfig] = useState<DoidonaConfig>(defaultDoidonaConfig);
-  const [run, setRun] = useState(0);
+  const [version, setVersion] = useState(0);
+  const [lastRun, setLastRun] = useState<{ scene: VizScene; runId: number } | null>(null);
 
-  const selected = structureCatalog.find((entry) => entry.id === selectedId) ?? structureCatalog[0];
-  const op = selected.ops.find((item) => item.id === opId) ?? selected.ops[0];
+  const entry = structureCatalog.find((item) => item.id === selectedId) ?? structureCatalog[0];
+  const op = entry.ops.find((item) => item.id === opId) ?? entry.ops[0];
+  const state = getStructureState(entry.id, entry.initial);
 
-  const scene = useMemo(
-    () => op.run(inputValue, config),
-    // Recalcula só quando o usuário executa, troca estrutura/operação ou reconfigura.
+  const previewScene = useMemo(
+    () => entry.preview(state, op.id),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selected.id, op.id, config, run],
+    [entry.id, op.id, version],
   );
 
+  const scene = lastRun?.scene ?? previewScene;
+
   function pickStructure(id: string) {
-    const entry = structureCatalog.find((item) => item.id === id) ?? structureCatalog[0];
+    const next = structureCatalog.find((item) => item.id === id) ?? structureCatalog[0];
     setSelectedId(id);
-    setOpId(entry.ops[0].id);
-    setInputValue(entry.ops[0].input?.sample ?? '');
-    setRun((value) => value + 1);
+    setOpId(next.ops[0].id);
+    setInputValue(next.ops[0].input?.sample ?? '');
+    setLastRun(null);
   }
 
   function pickOp(id: string) {
-    const next = selected.ops.find((item) => item.id === id) ?? selected.ops[0];
-    setOpId(id);
+    const next = entry.ops.find((item) => item.id === id) ?? entry.ops[0];
+    setOpId(next.id);
     setInputValue(next.input?.sample ?? '');
-    setRun((value) => value + 1);
+    setLastRun(null);
   }
 
   function execute() {
-    setRun((value) => value + 1);
+    const result = op.run(state, inputValue);
+    setStructureState(entry.id, result.next);
+    setLastRun({ scene: result.scene, runId: (lastRun?.runId ?? 0) + 1 });
+    setVersion((value) => value + 1);
   }
 
-  function updateConfig(area: number, kind: DoidonaSubKind) {
-    setConfig((current) => {
-      const next = [...current] as DoidonaConfig;
-      next[area] = kind;
-      return next;
-    });
+  function resetCurrent() {
+    if (!window.confirm(`Resetar ${entry.name}? A estrutura ficará completamente vazia (o exemplo padrão não volta).`)) {
+      return;
+    }
+    resetStructureState(entry.id, entry.empty);
+    setLastRun(null);
+    setInputValue(op.input?.sample ?? '');
+    setVersion((value) => value + 1);
   }
+
+  function resetAll() {
+    if (!window.confirm('Resetar TODAS as estruturas? Todos os dados (padrão e inseridos) serão apagados.')) {
+      return;
+    }
+    resetAllStructureStates(structureCatalog);
+    setLastRun(null);
+    setInputValue(op.input?.sample ?? '');
+    setVersion((value) => value + 1);
+  }
+
+  function updateKind(area: number, kind: DoidonaSubKind) {
+    setStructureState(entry.id, withDoidonaKind(state as DoidonaState, area, kind));
+    setLastRun(null);
+    setVersion((value) => value + 1);
+  }
+
+  const kinds = entry.configurable ? doidonaKinds(state as DoidonaState) : null;
 
   return (
     <div className="explore-screen">
       <div className="explore-menu" role="tablist" aria-label="Escolha uma estrutura de dados">
-        {structureCatalog.map((entry) => (
+        {structureCatalog.map((item) => (
           <button
-            aria-selected={entry.id === selectedId}
-            className={`explore-item ${entry.id === selectedId ? 'is-active' : ''}`}
-            key={entry.id}
-            onClick={() => pickStructure(entry.id)}
+            aria-selected={item.id === selectedId}
+            className={`explore-item ${item.id === selectedId ? 'is-active' : ''}`}
+            key={item.id}
+            onClick={() => pickStructure(item.id)}
             role="tab"
             type="button"
           >
-            <strong>{entry.name}</strong>
-            <span>{entry.blurb}</span>
+            <strong>{item.name}</strong>
+            <span>{item.blurb}</span>
           </button>
         ))}
       </div>
@@ -76,14 +109,24 @@ export function ExploreScreen() {
         <div className="explore-heading">
           <Shapes aria-hidden="true" size={18} />
           <div>
-            <h3>{selected.name}</h3>
-            <p>{selected.blurb}</p>
+            <h3>{entry.name}</h3>
+            <p>{entry.blurb}</p>
+          </div>
+          <div className="reset-actions">
+            <button className="reset-button" onClick={resetCurrent} title="Deixa esta estrutura vazia" type="button">
+              <Eraser aria-hidden="true" size={14} />
+              Resetar estrutura
+            </button>
+            <button className="reset-button is-danger" onClick={resetAll} title="Deixa todas as estruturas vazias" type="button">
+              <Trash2 aria-hidden="true" size={14} />
+              Resetar tudo
+            </button>
           </div>
         </div>
 
         <div className="op-bar" role="group" aria-label="Escolha a operação">
           <div className="op-choices">
-            {selected.ops.map((item) => (
+            {entry.ops.map((item) => (
               <button
                 aria-pressed={item.id === op.id}
                 className={`op-chip ${item.id === op.id ? 'is-active' : ''}`}
@@ -122,17 +165,17 @@ export function ExploreScreen() {
           </form>
         </div>
 
-        {selected.configurable && (
+        {kinds && (
           <div className="doidona-config" role="group" aria-label="Configurar áreas de reserva">
             <div className="doidona-config-title">
               <Settings2 aria-hidden="true" size={15} />
-              <span>Subestrutura de cada área de reserva (T2)</span>
+              <span>Subestrutura de cada área de reserva (T2) — hashT2(x) = x % 3</span>
             </div>
             <div className="doidona-config-fields">
-              {config.map((kind, area) => (
+              {kinds.map((kind, area) => (
                 <label key={area}>
                   <span>Área R{area}</span>
-                  <select onChange={(event) => updateConfig(area, event.target.value as DoidonaSubKind)} value={kind}>
+                  <select onChange={(event) => updateKind(area, event.target.value as DoidonaSubKind)} value={kind}>
                     {doidonaSubKinds.map((option) => (
                       <option key={option.id} value={option.id}>
                         {option.label}
@@ -145,7 +188,7 @@ export function ExploreScreen() {
           </div>
         )}
 
-        <StructureViz key={`${selected.id}-${op.id}-${run}`} scene={scene} />
+        <StructureViz key={`${entry.id}-${op.id}-${version}-${lastRun ? `run${lastRun.runId}` : 'estado'}`} scene={scene} />
       </div>
     </div>
   );
