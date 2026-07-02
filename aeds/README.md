@@ -1,4 +1,4 @@
-# AEDS - Algoritmos e Estruturas de Dados
+﻿# AEDS - Algoritmos e Estruturas de Dados
 
 ## Objetivo
 
@@ -23,13 +23,13 @@ Conteudos trabalhados:
 - TRIE e PATRICIA;
 - Doidona.
 
-### [jogo-reavaliacao-aeds-2/](jogo-reavaliacao-aeds-2/) - Reavaliacao AEDS II
+### [reavaliacao-aeds-2/](reavaliacao-aeds-2/) - Reavaliacao AEDS II
 
-**Estado:** Design/spec aprovado.
+**Estado:** Primeira versao jogavel.
 
 Jogo novo, em pasta separada, focado em preparar especificamente para a
-reavaliacao de AEDS II. A experiencia planejada combina campanha de 6 dominios,
-oficina de codigo, caderno adaptativo de erros e simulado final no formato das
+reavaliacao de AEDS II. A primeira versao combina painel de 6 dominios, oficina
+de codigo, caderno adaptativo de erros e simulado final no formato das
 reavaliacoes.
 
 Dominios iniciais:
@@ -46,7 +46,7 @@ Dominios iniciais:
 | Pasta | Conteudo |
 | --- | --- |
 | [`jogo-aeds-2/`](jogo-aeds-2/) | Jogo geral de estruturas de dados |
-| [`jogo-reavaliacao-aeds-2/`](jogo-reavaliacao-aeds-2/) | Novo jogo focado na reavaliacao |
+| [`reavaliacao-aeds-2/`](reavaliacao-aeds-2/) | Novo jogo focado na reavaliacao |
 | [`materiais/`](materiais/) | Materiais academicos e provas usadas como referencia |
 | [`docs/`](docs/) | Documentacao cruzada entre jogos da materia |
 
@@ -56,3 +56,4 @@ Nesta materia, `aeds/materiais/` pode conter slides, provas, imagens e outros
 materiais de referencia que o dono do repositorio decidiu manter versionados.
 Materiais que nao devem subir para o Git ainda podem ficar em
 `aeds/materiais-privados/`.
+

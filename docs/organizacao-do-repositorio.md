@@ -1,4 +1,4 @@
-# Organizacao do Repositorio
+﻿# Organizacao do Repositorio
 
 Este documento explica a estrutura do repositorio "jogos-estudos" e como novos
 jogos devem ser adicionados.
@@ -26,7 +26,7 @@ jogos-estudos/
   aeds/
     README.md
     jogo-aeds-2/
-    jogo-reavaliacao-aeds-2/
+    reavaliacao-aeds-2/
     materiais/
     docs/
   arquitetura-computadores/
@@ -42,8 +42,8 @@ jogos-estudos/
 | Item | Regra | Exemplo |
 | --- | --- | --- |
 | Materia | minusculo, sem acento, hifenizado quando necessario | `arquitetura-computadores` |
-| Jogo | `jogo-<nome>` | `jogo-reavaliacao-aeds-2` |
-| Docs do projeto | dentro do proprio jogo | `aeds/jogo-reavaliacao-aeds-2/docs/` |
+| Jogo | nome hifenizado e descritivo | `reavaliacao-aeds-2` |
+| Docs do projeto | dentro do proprio jogo | `aeds/reavaliacao-aeds-2/docs/` |
 | Materiais versionados | dentro da materia | `aeds/materiais/` |
 | Materiais privados | pasta ignorada localmente | `aeds/materiais-privados/` |
 
@@ -75,7 +75,7 @@ o dono do repositorio decidir que eles podem subir.
 
 No caso atual de AEDS II, `aeds/materiais/Provas/` e
 `aeds/materiais/Slides AEDS 2/` podem ser versionados e sao usados como base do
-jogo `aeds/jogo-reavaliacao-aeds-2`.
+jogo `aeds/reavaliacao-aeds-2`.
 
 ## Independencia dos projetos
 
@@ -84,3 +84,4 @@ jogo `aeds/jogo-reavaliacao-aeds-2`.
 - Dependencias nao devem ser compartilhadas implicitamente entre jogos.
 - O `.gitignore` raiz cobre dependencias, builds, temporarios e pastas privadas.
 - Caminhos internos de um projeto devem funcionar a partir da propria pasta.
+

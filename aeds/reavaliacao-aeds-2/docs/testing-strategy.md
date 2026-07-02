@@ -19,8 +19,8 @@ ou revisao adaptativa.
 | --- | --- |
 | `evaluator` | escolha correta, lacuna normalizada, ordem de blocos, codigo curto. |
 | `adaptiveReview` | priorizar erro recorrente, remover erro apos acertos seguidos. |
-| `progression` | calcular marcos de dominio e liberar simulado. |
-| `examBlueprint` | garantir exatamente 6 questoes e formatos esperados. |
+| `examSession` | garantir exatamente 6 questoes, formatos esperados, avanco e conclusao. |
+| `persistence` | salvar, carregar e ignorar dados invalidos. |
 
 ## Testes de componente
 
@@ -37,11 +37,10 @@ o modelo de dados e avaliadores, porque eles sustentam o resto do jogo.
 
 ## Comandos esperados
 
-Quando o app existir:
+Dentro de `aeds/reavaliacao-aeds-2`:
 
 ```bash
 npm test
 npm run lint
 npm run build
 ```
-

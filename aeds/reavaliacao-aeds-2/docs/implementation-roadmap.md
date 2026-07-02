@@ -1,48 +1,47 @@
 # Roadmap de Implementacao
 
+## Estado atual
+
+Primeira versao jogavel concluida em `aeds/reavaliacao-aeds-2`.
+
 ## Fase 0: Fundacao documental
 
-- Criar pasta do novo jogo.
-- Registrar spec, formato da reavaliacao, mecanicas, conteudo e arquitetura.
-- Validar com o usuario antes de implementar.
+- [x] Criar pasta do novo jogo.
+- [x] Registrar spec, formato da reavaliacao, mecanicas, conteudo e arquitetura.
+- [x] Validar direcao com o usuario antes de implementar.
 
 ## Fase 1: Modelo e engine
 
-- Criar projeto React + TypeScript + Vite.
-- Definir tipos de dominio, desafio, etapa, erro e progresso.
-- Implementar avaliadores puros com testes.
-- Implementar blueprint do simulado de 6 questoes.
+- [x] Criar projeto React + TypeScript + Vite.
+- [x] Definir tipos de dominio, desafio, etapa, erro e progresso.
+- [x] Implementar avaliadores puros com testes.
+- [x] Implementar blueprint do simulado de 6 questoes.
+- [x] Implementar controle de sessao do simulado.
 
-## Fase 2: Campanha
+## Fase 2: Experiencia jogavel inicial
 
-- Criar tela principal com os 6 dominios.
-- Implementar uma trilha vertical por dominio.
-- Criar o primeiro recorte jogavel para Somatorios e Ordenacao.
-- Persistir progresso local.
+- [x] Criar tela principal com os 6 dominios.
+- [x] Mostrar questao atual, habilidade e formato da reavaliacao.
+- [x] Implementar respostas por escolha, lacuna, blocos, correcao e codigo curto.
+- [x] Persistir progresso local.
 
-## Fase 3: Oficina de codigo
+## Fase 3: Caderno adaptativo
 
-- Implementar lacunas, blocos, correcao de linha e resposta curta.
-- Criar desafios de AVL, arvore normal, TRIE e Doidona.
-- Adicionar feedback por erro comum.
+- [x] Registrar erros com tags.
+- [x] Priorizar erros recorrentes.
+- [x] Selecionar treinos parecidos por variacoes predefinidas.
+- [x] Marcar erro como resolvido apos 2 acertos seguidos.
 
-## Fase 4: Caderno adaptativo
+## Fase 4: Simulado final
 
-- Registrar erros com tags.
-- Priorizar erros recorrentes.
-- Gerar treinos parecidos com variacoes predefinidas.
-- Marcar erro como resolvido apos acertos seguidos.
+- [x] Montar prova curta com 6 questoes.
+- [x] Enviar erros do simulado para o caderno.
+- [x] Exibir pontuacao e estado de conclusao.
 
-## Fase 5: Simulado final
+## Proximos passos recomendados
 
-- Montar prova curta com 6 questoes.
-- Gerar relatorio por dominio e formato.
-- Enviar erros do simulado para o caderno.
-
-## Fase 6: Polimento
-
-- Melhorar visual, responsividade e acessibilidade.
-- Adicionar diagramas mais ricos.
-- Revisar texto pedagogico.
-- Rodar testes, lint e build.
-
+1. Adicionar mais variacoes por erro, principalmente AVL, Doidona e TRIE.
+2. Criar diagramas interativos para arvores, TRIE e camadas da Doidona.
+3. Separar a UI em componentes menores quando novas telas entrarem.
+4. Criar campanha completa por dominio antes do simulado final.
+5. Adicionar relatorio final por dominio, habilidade e tag de erro.

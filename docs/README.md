@@ -1,4 +1,4 @@
-# Documentacao do Repositorio
+﻿# Documentacao do Repositorio
 
 Documentacao geral e cruzada sobre o repositorio "jogos-estudos". Nao confunda
 com as pastas `docs/` dentro de cada projeto, que contem documentacao especifica
@@ -17,6 +17,7 @@ do jogo.
 Cada jogo possui sua propria documentacao em sua pasta:
 
 - [`aeds/jogo-aeds-2/docs/`](../aeds/jogo-aeds-2/docs/) - specs e planos do jogo geral de AEDS;
-- [`aeds/jogo-reavaliacao-aeds-2/docs/`](../aeds/jogo-reavaliacao-aeds-2/docs/) - spec e documentacao do jogo de reavaliacao de AEDS II;
+- [`aeds/reavaliacao-aeds-2/docs/`](../aeds/reavaliacao-aeds-2/docs/) - spec e documentacao do jogo de reavaliacao de AEDS II;
 - [`arquitetura-computadores/jogo-arquitetura-roguelike/docs/`](../arquitetura-computadores/jogo-arquitetura-roguelike/docs/) - decisoes de design do roguelike de arquitetura;
 - [`arquitetura-computadores/docs/superpowers/`](../arquitetura-computadores/docs/superpowers/) - spec e plano do modo roguelike legacy.
+

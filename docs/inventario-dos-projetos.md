@@ -1,4 +1,4 @@
-# Inventario dos Projetos
+﻿# Inventario dos Projetos
 
 Inventario tecnico dos projetos do repositorio. Ultima atualizacao: 2026-07-01.
 
@@ -48,16 +48,16 @@ Dentro de `aeds/jogo-aeds-2/`:
 | Campo | Valor |
 | --- | --- |
 | Nome | Reavaliacao AEDS II |
-| Pasta | `aeds/jogo-reavaliacao-aeds-2/` |
+| Pasta | `aeds/reavaliacao-aeds-2/` |
 | Materia | AEDS II |
-| Tecnologia | Planejada: React, TypeScript, Vite, Vitest, Testing Library |
-| Estado | Design/spec aprovado |
+| Tecnologia | React, TypeScript, Vite, Vitest, Testing Library |
+| Estado | Primeira versao jogavel |
 
 ### Objetivo
 
-Novo jogo focado em preparar para a reavaliacao de AEDS II. A experiencia
-planejada combina campanha de 6 dominios, oficina de codigo, caderno adaptativo
-de erros e simulado final no formato das reavaliacoes.
+Novo jogo focado em preparar para a reavaliacao de AEDS II. A primeira versao
+combina painel de 6 dominios, oficina de codigo, caderno adaptativo de erros e
+simulado final no formato das reavaliacoes.
 
 ### Dominios iniciais
 
@@ -65,8 +65,8 @@ Doidona, TRIE, AVL, arvore normal/binaria, somatorios e algoritmos de ordenacao.
 
 ### Documentacao
 
-- `aeds/jogo-reavaliacao-aeds-2/README.md`
-- `aeds/jogo-reavaliacao-aeds-2/docs/`
+- `aeds/reavaliacao-aeds-2/README.md`
+- `aeds/reavaliacao-aeds-2/docs/`
 - `docs/superpowers/specs/2026-07-01-reavaliacao-aeds-2-design.md`
 
 ### Materiais relacionados
@@ -151,3 +151,4 @@ Abrir `mips-datapath-quest.html` no navegador.
 | HTML avulso duplicado | `arquivos-avulsos/mips-datapath-quest.html` | Copia preservada do legacy |
 | Specs formais | `docs/superpowers/specs/` | Specs geradas no fluxo de design |
 | Materiais de AEDS | `aeds/materiais/` | Slides, provas e referencias usadas pelos jogos de AEDS |
+

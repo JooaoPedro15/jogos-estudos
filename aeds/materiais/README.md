@@ -1,10 +1,10 @@
-# Materiais Academicos - AEDS II
+﻿# Materiais Academicos - AEDS II
 
 Esta pasta centraliza materiais usados como referencia para os jogos de AEDS II.
 
 ## Uso atual
 
-O novo jogo `aeds/jogo-reavaliacao-aeds-2` usa esta pasta para entender:
+O novo jogo `aeds/reavaliacao-aeds-2` usa esta pasta para entender:
 
 - o formato das reavaliacoes;
 - os tipos de questao cobrados;
@@ -44,3 +44,4 @@ aeds/materiais-privados/
 O jogo deve usar os materiais como referencia de formato e conteudo, criando
 exercicios proprios com valores, enunciados e variacoes novas. A ideia nao e
 copiar uma prova inteira, mas treinar as habilidades que ela cobra.
+

@@ -8,7 +8,9 @@ simulado final.
 
 ## Estado
 
-Design aprovado e documentado. A implementacao ainda nao foi iniciada.
+Primeira versao jogavel implementada. O app ja possui painel dos 6 dominios,
+simulado de 6 questoes, avaliador de etapas, caderno adaptativo de erros e
+persistencia local.
 
 ## Objetivo educacional
 
@@ -33,12 +35,12 @@ locais em `aeds/materiais/Provas`:
 5. Somatorios e contagem de custo.
 6. Algoritmos de ordenacao.
 
-## Modos planejados
+## Modos da primeira versao
 
 | Modo | Papel no jogo |
 | --- | --- |
-| Campanha | Trilha guiada pelos 6 dominios da reavaliacao. |
-| Oficina de codigo | Etapas de completar, corrigir, escrever e simular codigo. |
+| Campanha | Painel dos 6 dominios da reavaliacao. |
+| Oficina de codigo | Etapas de escolha, lacuna, blocos, correcao e codigo curto. |
 | Caderno de erros | Revisao adaptativa dos erros mais repetidos. |
 | Simulado final | Prova curta com 6 questoes no formato da reavaliacao. |
 | Materiais | Referencias locais usadas para mapear conteudo e questoes. |
@@ -50,13 +52,13 @@ locais em `aeds/materiais/Provas`:
 - [Mecanicas de jogo](docs/game-mechanics.md)
 - [Mapa de conteudo](docs/content-map.md)
 - [Caderno adaptativo de erros](docs/adaptive-error-notebook.md)
-- [Arquitetura planejada](docs/architecture.md)
+- [Arquitetura](docs/architecture.md)
 - [Estrategia de testes](docs/testing-strategy.md)
 - [Roadmap](docs/implementation-roadmap.md)
 
-## Tecnologia planejada
+## Tecnologia
 
-A implementacao deve seguir o padrao ja usado em AEDS:
+Stack atual:
 
 - React
 - TypeScript
@@ -65,9 +67,20 @@ A implementacao deve seguir o padrao ja usado em AEDS:
 - Lucide React para icones
 - `localStorage` para progresso local na primeira versao
 
+## Comandos
+
+Dentro desta pasta:
+
+```bash
+npm install
+npm run dev
+npm test
+npm run lint
+npm run build
+```
+
 ## Relacao com o jogo existente
 
 O `jogo-aeds-2` continua existindo como experiencia geral de biblioteca/trilha.
 Este projeto pode reaproveitar ideias, tipos e componentes, mas deve manter uma
 interface e um modelo de progresso proprios, centrados na reavaliacao.
-
