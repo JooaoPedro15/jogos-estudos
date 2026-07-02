@@ -7,6 +7,7 @@ import {
   Code2,
   ListChecks,
   RotateCcw,
+  Shapes,
   Target,
   Trophy,
   XCircle,
@@ -39,9 +40,10 @@ import type {
   QuestionFormat,
   SkillId,
   StepAnswer,
-  StructureVisual,
 } from '../types/content';
 import type { StepAttempt } from '../types/progress';
+import { StructureVizCard } from '../viz/StructureViz';
+import { ExploreScreen } from './ExploreScreen';
 
 const formatLabels: Record<QuestionFormat, string> = {
   'summation-from-code': 'Somatorio por codigo',
@@ -86,7 +88,7 @@ function loadInitialGame(): SavedGameState {
 
 export function App() {
   const [game, setGame] = useState<SavedGameState>(() => loadInitialGame());
-  const [activeMode, setActiveMode] = useState<'exam' | 'practice'>('exam');
+  const [activeMode, setActiveMode] = useState<'exam' | 'practice' | 'explore'>('exam');
   const [selectedDomainId, setSelectedDomainId] = useState<DomainId>('somatorio');
   const [choiceAnswer, setChoiceAnswer] = useState('');
   const [textAnswer, setTextAnswer] = useState('');
@@ -204,15 +206,22 @@ export function App() {
     <main className="app-shell">
       <header className="app-topbar">
         <div>
-          <p className="app-kicker">AEDS II</p>
+          <p className="app-kicker">AEDS II · PUC Minas</p>
           <h1>Reavaliacao AEDS II</h1>
         </div>
         <div className="score-board" aria-label="Pontuacao do simulado">
-          <Trophy aria-hidden="true" size={20} />
-          <strong>
-            {game.session.score}/{game.session.maxScore}
-          </strong>
-          <span>{progressPercent}%</span>
+          <span className="score-board-icon">
+            <Trophy aria-hidden="true" size={18} />
+          </span>
+          <div className="score-board-info">
+            <strong>
+              {game.session.score}/{game.session.maxScore} pts
+            </strong>
+            <span className="score-track" aria-hidden="true">
+              <span className="score-track-fill" style={{ width: `${progressPercent}%` }} />
+            </span>
+          </div>
+          <span className="score-percent">{progressPercent}%</span>
         </div>
       </header>
 
@@ -222,6 +231,7 @@ export function App() {
           onClick={() => setActiveMode('exam')}
           type="button"
         >
+          <ClipboardList aria-hidden="true" size={16} />
           Simulado
         </button>
         <button
@@ -229,10 +239,28 @@ export function App() {
           onClick={() => setActiveMode('practice')}
           type="button"
         >
+          <Code2 aria-hidden="true" size={16} />
           Treino de Codigo
+        </button>
+        <button
+          className={activeMode === 'explore' ? 'is-active' : ''}
+          onClick={() => setActiveMode('explore')}
+          type="button"
+        >
+          <Shapes aria-hidden="true" size={16} />
+          Estruturas
         </button>
       </nav>
 
+      {activeMode === 'explore' ? (
+        <section className="exam-panel explore-panel" aria-labelledby="explore-title">
+          <div className="panel-title">
+            <Shapes aria-hidden="true" size={18} />
+            <h2 id="explore-title">Estruturas de dados animadas</h2>
+          </div>
+          <ExploreScreen />
+        </section>
+      ) : (
       <div className="app-grid">
         <section className="domain-panel" aria-labelledby="domains-title">
           <div className="panel-title">
@@ -303,8 +331,31 @@ export function App() {
             </div>
           ) : (
             <>
+              <div className="question-progress" aria-label={`Questao ${currentQuestion.number} de ${reavaliacaoBlueprint.questions.length}`}>
+                <div className="question-progress-dots" aria-hidden="true">
+                  {reavaliacaoBlueprint.questions.map((question, index) => (
+                    <span
+                      className={`question-dot ${
+                        index < game.session.currentQuestionIndex
+                          ? 'is-done'
+                          : index === game.session.currentQuestionIndex
+                            ? 'is-current'
+                            : ''
+                      }`}
+                      key={question.id}
+                    />
+                  ))}
+                </div>
+                <span>
+                  Questao {currentQuestion.number} de {reavaliacaoBlueprint.questions.length} · Etapa{' '}
+                  {game.session.currentStepIndex + 1} de {currentQuestion.steps.length}
+                </span>
+              </div>
+
               <div className="question-header">
-                <span className="question-badge">Q{currentQuestion.number}</span>
+                <span className="question-badge" data-domain={currentQuestion.domainId}>
+                  Q{currentQuestion.number}
+                </span>
                 <div>
                   <h3>{currentQuestion.title}</h3>
                   <p>{formatLabels[currentQuestion.format]}</p>
@@ -312,7 +363,7 @@ export function App() {
               </div>
 
               <p className="question-stem">{currentQuestion.stem}</p>
-              {currentQuestion.visual && <StructureVisualCard visual={currentQuestion.visual} />}
+              {currentQuestion.visual && <StructureVizCard visual={currentQuestion.visual} />}
 
               <div className="step-panel">
                 <div className="step-meta">
@@ -415,6 +466,7 @@ export function App() {
           )}
         </section>
       </div>
+      )}
     </main>
   );
 }
@@ -517,7 +569,7 @@ function PracticeExperience({
         <pre className="code-scaffold">
           <code>{currentPracticeDrill.scaffold}</code>
         </pre>
-        <StructureVisualCard visual={currentPracticeDrill.visual} />
+        <StructureVizCard visual={currentPracticeDrill.visual} />
       </div>
 
       <div className="step-panel">
@@ -566,109 +618,6 @@ function PracticeExperience({
           <span>{lastAttempt.feedback}</span>
         </div>
       )}
-    </>
-  );
-}
-
-function StructureVisualCard({ visual }: { visual: StructureVisual }) {
-  return (
-    <figure className={`structure-visual is-${visual.kind}`}>
-      <figcaption>
-        <strong>{visual.title}</strong>
-        <span>{visual.caption}</span>
-      </figcaption>
-      <svg aria-hidden="true" viewBox="0 0 320 180" role="img">
-        <VisualDrawing visual={visual} />
-      </svg>
-    </figure>
-  );
-}
-
-function VisualDrawing({ visual }: { visual: StructureVisual }) {
-  if (visual.kind === 'binary-tree' || visual.kind === 'avl') {
-    const labels = visual.labels;
-    const nodes = [
-      { x: 160, y: 32, label: labels[0] ?? 'r' },
-      { x: 95, y: 88, label: labels[1] ?? 'e' },
-      { x: 225, y: 88, label: labels[2] ?? 'd' },
-      { x: 65, y: 145, label: labels[3] ?? '' },
-      { x: 125, y: 145, label: labels[4] ?? '' },
-      { x: 200, y: 145, label: labels[5] ?? '' },
-      { x: 260, y: 145, label: labels[6] ?? '' },
-    ].filter((node) => node.label);
-
-    return (
-      <>
-        <line x1="160" x2="95" y1="52" y2="72" />
-        <line x1="160" x2="225" y1="52" y2="72" />
-        <line x1="95" x2="65" y1="108" y2="128" />
-        <line x1="95" x2="125" y1="108" y2="128" />
-        <line x1="225" x2="200" y1="108" y2="128" />
-        <line x1="225" x2="260" y1="108" y2="128" />
-        {nodes.map((node) => (
-          <g key={`${node.x}-${node.y}-${node.label}`}>
-            <circle cx={node.x} cy={node.y} r="21" />
-            <text x={node.x} y={node.y + 5}>
-              {node.label}
-            </text>
-          </g>
-        ))}
-      </>
-    );
-  }
-
-  if (visual.kind === 'trie') {
-    return (
-      <>
-        {visual.labels.map((label, index) => {
-          const x = 35 + index * 48;
-          return (
-            <g key={`${label}-${index}`}>
-              {index > 0 && <line x1={x - 26} x2={x - 8} y1="88" y2="88" />}
-              <circle cx={x} cy="88" r="20" />
-              <text x={x} y="93">
-                {label}
-              </text>
-            </g>
-          );
-        })}
-      </>
-    );
-  }
-
-  if (visual.kind === 'array') {
-    return (
-      <>
-        {visual.labels.map((label, index) => {
-          const x = 22 + index * 46;
-          return (
-            <g key={`${label}-${index}`}>
-              <rect height="42" rx="6" width="42" x={x} y="72" />
-              <text x={x + 21} y="98">
-                {label}
-              </text>
-            </g>
-          );
-        })}
-      </>
-    );
-  }
-
-  return (
-    <>
-      {visual.labels.map((label, index) => {
-        const x = 24 + index * 58;
-        const y = index % 2 === 0 ? 54 : 104;
-        return (
-          <g key={`${label}-${index}`}>
-            {index > 0 && <line x1={x - 26} x2={x - 6} y1={index % 2 === 0 ? 104 : 54} y2={y} />}
-            <rect height="42" rx="6" width="52" x={x} y={y} />
-            <text x={x + 26} y={y + 26}>
-              {label}
-            </text>
-          </g>
-        );
-      })}
     </>
   );
 }

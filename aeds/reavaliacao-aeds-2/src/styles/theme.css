@@ -1,0 +1,128 @@
+/* =============================================================
+   Design tokens — identidade visual central do jogo
+   Tudo que é cor, sombra, raio, espaçamento e tipografia vem daqui.
+   ============================================================= */
+
+:root {
+  /* Tipografia */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.85rem;
+  --text-md: 0.95rem;
+  --text-lg: 1.1rem;
+  --text-xl: 1.35rem;
+  --text-2xl: 1.75rem;
+
+  /* Superfícies claras (UI) */
+  --bg: #eef1f8;
+  --bg-soft: #f6f8fd;
+  --surface: #ffffff;
+  --surface-2: #f4f6fc;
+  --surface-3: #e9edf7;
+  --border: #dde3f0;
+  --border-strong: #c3cde2;
+
+  /* Texto */
+  --ink: #101a2e;
+  --ink-soft: #3c4a63;
+  --ink-muted: #64748b;
+  --ink-faint: #94a3b8;
+
+  /* Marca */
+  --primary: #4f46e5;
+  --primary-strong: #4338ca;
+  --primary-soft: #e5e4fb;
+  --primary-ink: #3730a3;
+  --accent: #0d9488;
+  --accent-soft: #d5f5f0;
+  --accent-ink: #0f5f57;
+
+  /* Semânticas */
+  --success: #059669;
+  --success-soft: #d9f4e7;
+  --success-ink: #065f46;
+  --danger: #e11d48;
+  --danger-soft: #fde5eb;
+  --danger-ink: #9f1239;
+  --warning: #d97706;
+  --warning-soft: #fdeed3;
+  --warning-ink: #92400e;
+  --info: #0284c7;
+  --info-soft: #dcf1fc;
+
+  /* Canvas escuro das visualizações */
+  --viz-bg: #101a2e;
+  --viz-bg-2: #0b1424;
+  --viz-grid: rgb(148 163 184 / 8%);
+  --viz-node-fill: #1b2a44;
+  --viz-node-stroke: #46628a;
+  --viz-node-text: #e6edf7;
+  --viz-edge: #46628a;
+  --viz-label: #8aa0be;
+
+  /* Estados dos nós (visualizações) */
+  --state-active: #818cf8;
+  --state-compare: #fbbf24;
+  --state-found: #34d399;
+  --state-inserted: #22d3ee;
+  --state-removed: #fb7185;
+  --state-visited: #a78bfa;
+  --state-error: #f87171;
+
+  /* Cores por domínio */
+  --domain-doidona: #9333ea;
+  --domain-trie: #0d9488;
+  --domain-avl: #4f46e5;
+  --domain-arvore: #059669;
+  --domain-somatorio: #d97706;
+  --domain-ordenacao: #e11d48;
+
+  /* Geometria */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgb(16 26 46 / 6%), 0 2px 8px rgb(16 26 46 / 5%);
+  --shadow-md: 0 2px 4px rgb(16 26 46 / 6%), 0 10px 24px rgb(16 26 46 / 8%);
+  --shadow-lg: 0 4px 8px rgb(16 26 46 / 8%), 0 18px 44px rgb(16 26 46 / 12%);
+  --shadow-primary: 0 6px 18px rgb(79 70 229 / 30%);
+
+  /* Espaçamento */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Movimento */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 140ms;
+  --dur-med: 260ms;
+  --dur-slow: 420ms;
+
+  /* Foco */
+  --focus-ring: 0 0 0 3px rgb(79 70 229 / 30%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 1ms;
+    --dur-med: 1ms;
+    --dur-slow: 1ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
