@@ -673,6 +673,11 @@ h1 {
     grid-template-columns: 1fr;
   }
 
+  .code-scaffold code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
   .domain-button {
     min-height: auto;
   }

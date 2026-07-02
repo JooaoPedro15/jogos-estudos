@@ -18,7 +18,7 @@ ou revisao adaptativa.
 
 | Area | Exemplos |
 | --- | --- |
-| `evaluator` | escolha correta, lacuna normalizada, ordem de blocos, codigo curto. |
+| `evaluator` | escolha correta, lacuna normalizada, ordem de blocos, codigo curto, funcao inteira por trechos obrigatorios. |
 | `adaptiveReview` | priorizar erro recorrente, remover erro apos acertos seguidos. |
 | `examSession` | garantir exatamente 6 questoes, formatos esperados, avanco e conclusao. |
 | `codePractice` | sessao rapida, maratona, tentativas e metadados para caderno. |
@@ -31,7 +31,7 @@ ou revisao adaptativa.
 - caderno mostra erros prioritarios;
 - simulado mostra questoes no formato correto;
 - treino de codigo mostra codigo, visual, sessoes rapidas e maratona;
-- `Me ensine` mostra resposta modelo e explicacao;
+- `Me ensine` mostra funcao modelo e explicacao linha a linha;
 - feedback explica erro comum;
 - botoes e formularios sao acessiveis por teclado.
 

@@ -94,6 +94,31 @@ export type CodeStep = {
   mistakeTag?: MistakeTag;
 };
 
+export type FunctionRequirement = {
+  id: string;
+  label: string;
+  code: string;
+  mistakeTag?: MistakeTag;
+};
+
+export type FunctionLineExplanation = {
+  code: string;
+  note: string;
+};
+
+export type FunctionStep = {
+  id: string;
+  kind: 'function';
+  prompt: string;
+  signature: string;
+  solution: string;
+  requiredFragments: FunctionRequirement[];
+  lineExplanations: FunctionLineExplanation[];
+  score?: number;
+  explanation?: string;
+  mistakeTag?: MistakeTag;
+};
+
 export type RubricStep = {
   id: string;
   kind: 'rubric';
@@ -104,7 +129,7 @@ export type RubricStep = {
   explanation?: string;
 };
 
-export type ChallengeStep = ChoiceStep | GapStep | BlocksStep | FixStep | CodeStep | RubricStep;
+export type ChallengeStep = ChoiceStep | GapStep | BlocksStep | FixStep | CodeStep | FunctionStep | RubricStep;
 
 export type ExamStep = ChallengeStep & {
   skillId: SkillId;

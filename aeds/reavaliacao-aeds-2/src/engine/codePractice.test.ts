@@ -14,22 +14,48 @@ test('cria uma sessao rapida para fazer uma ou duas questoes', () => {
   expect(session.completed).toBe(false);
   expect(getPracticeProgressLabel(session)).toBe('0/2');
   expect(getCurrentPracticeDrill(codeDrillCatalog, session)?.id).toBe(codeDrillCatalog[0].id);
+  expect(getCurrentPracticeDrill(codeDrillCatalog, session)?.step.kind).toBe('function');
 });
 
 test('sessao rapida conclui no alvo e maratona continua gerando proxima questao', () => {
   let quick = createPracticeSession(codeDrillCatalog, { mode: 'quick', targetCount: 2 });
 
-  quick = answerCurrentPracticeStep(codeDrillCatalog, quick, { kind: 'choice', optionId: 'base-null' });
-  quick = answerCurrentPracticeStep(codeDrillCatalog, quick, { kind: 'text', text: 'return contar(i.esq) + contar(i.dir) + 1' });
+  quick = answerCurrentPracticeStep(codeDrillCatalog, quick, {
+    kind: 'text',
+    text: `private int contar(No i) {
+      if (i == null) return 0;
+      return contar(i.esq) + contar(i.dir) + 1;
+    }`,
+  });
+  quick = answerCurrentPracticeStep(codeDrillCatalog, quick, {
+    kind: 'text',
+    text: `private boolean ehEstritamenteBinaria(No i) {
+      if (i == null) return true;
+      if (i.esq == null && i.dir == null) return true;
+      if (i.esq != null && i.dir != null) return ehEstritamenteBinaria(i.esq) && ehEstritamenteBinaria(i.dir);
+      return false;
+    }`,
+  });
 
   expect(quick.completed).toBe(true);
   expect(quick.completedCount).toBe(2);
 
   let marathon = createPracticeSession(codeDrillCatalog, { mode: 'marathon' });
-  marathon = answerCurrentPracticeStep(codeDrillCatalog, marathon, { kind: 'choice', optionId: 'base-null' });
   marathon = answerCurrentPracticeStep(codeDrillCatalog, marathon, {
     kind: 'text',
-    text: 'return contar(i.esq) + contar(i.dir) + 1',
+    text: `private int contar(No i) {
+      if (i == null) return 0;
+      return contar(i.esq) + contar(i.dir) + 1;
+    }`,
+  });
+  marathon = answerCurrentPracticeStep(codeDrillCatalog, marathon, {
+    kind: 'text',
+    text: `private boolean ehEstritamenteBinaria(No i) {
+      if (i == null) return true;
+      if (i.esq == null && i.dir == null) return true;
+      if (i.esq != null && i.dir != null) return ehEstritamenteBinaria(i.esq) && ehEstritamenteBinaria(i.dir);
+      return false;
+    }`,
   });
 
   expect(marathon.completed).toBe(false);
@@ -40,8 +66,10 @@ test('sessao rapida conclui no alvo e maratona continua gerando proxima questao'
 test('registra tentativas com metadados de dominio e erro para o caderno', () => {
   const session = createPracticeSession(codeDrillCatalog, { mode: 'quick', targetCount: 2 });
   const nextSession = answerCurrentPracticeStep(codeDrillCatalog, session, {
-    kind: 'choice',
-    optionId: 'retorna-um',
+    kind: 'text',
+    text: `private int contar(No i) {
+      return contar(i.esq) + contar(i.dir);
+    }`,
   });
 
   expect(nextSession.attempts[0]).toMatchObject({

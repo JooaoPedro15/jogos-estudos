@@ -53,6 +53,7 @@ Formatos de treino:
 - ordenar blocos;
 - corrigir linha errada;
 - digitar trecho de codigo;
+- escrever funcao inteira com trechos obrigatorios;
 - simular passo a passo;
 - justificar verdadeiro/falso com rubrica;
 - questao estilo simulado.
@@ -64,4 +65,3 @@ Formatos de treino:
 - O simulado final tem 6 questoes, uma por macroformato da reavaliacao.
 - Cada dominio tem pelo menos uma etapa de codigo real.
 - O projeto possui testes para avaliadores, selecao adaptativa e progresso.
-

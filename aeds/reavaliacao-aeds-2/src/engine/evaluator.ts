@@ -53,6 +53,24 @@ export function evaluateStep(step: ChallengeStep, answer: StepAnswer): StepResul
     return correct ? correctResult(step.score, step.explanation) : incorrectResult(step.mistakeTag);
   }
 
+  if (step.kind === 'function' && answer.kind === 'text') {
+    const normalizedAnswer = normalizeCodeLikeText(answer.text);
+    const missingRequirements = step.requiredFragments.filter(
+      (requirement) => !normalizedAnswer.includes(normalizeCodeLikeText(requirement.code)),
+    );
+
+    if (missingRequirements.length === 0) {
+      return correctResult(step.score, step.explanation);
+    }
+
+    return {
+      correct: false,
+      scoreDelta: 0,
+      feedback: `Faltou: ${missingRequirements.map((requirement) => requirement.label).join(', ')}.`,
+      mistakeTag: missingRequirements[0]?.mistakeTag ?? step.mistakeTag,
+    };
+  }
+
   if (step.kind === 'blocks' && answer.kind === 'blocks') {
     const correct =
       step.correctOrder.length === answer.order.length &&

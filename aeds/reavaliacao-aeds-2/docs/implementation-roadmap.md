@@ -23,7 +23,7 @@ Primeira versao jogavel concluida em `aeds/reavaliacao-aeds-2`.
 - [x] Criar tela principal com os 6 dominios.
 - [x] Mostrar questao atual, habilidade e formato da reavaliacao.
 - [x] Mostrar visual da estrutura no estilo de prova.
-- [x] Implementar respostas por escolha, lacuna, blocos, correcao e codigo curto.
+- [x] Implementar respostas por escolha, lacuna, blocos, correcao, codigo curto e funcao inteira.
 - [x] Persistir progresso local.
 
 ## Fase 2.5: Treino continuo de codigo
@@ -33,6 +33,7 @@ Primeira versao jogavel concluida em `aeds/reavaliacao-aeds-2`.
 - [x] Criar modo maratona para varias questoes.
 - [x] Alternar entre repeticao e modificacao logica.
 - [x] Adicionar botao `Me ensine` com resposta modelo e explicacao.
+- [x] Expandir para 30 treinos de codigo com funcao inteira em todos os 6 dominios.
 
 ## Fase 3: Caderno adaptativo
 
@@ -49,7 +50,7 @@ Primeira versao jogavel concluida em `aeds/reavaliacao-aeds-2`.
 
 ## Proximos passos recomendados
 
-1. Adicionar mais variacoes de codigo da lista da prova 3, principalmente 2-3-4, alvinegra, PATRICIA e estruturas hibridas.
+1. Adicionar mais variacoes avancadas da lista da prova 3, principalmente 2-3-4, alvinegra, PATRICIA e remocoes em estruturas hibridas.
 2. Criar diagramas interativos para arvores, TRIE e camadas da Doidona.
 3. Separar a UI em componentes menores quando novas telas entrarem.
 4. Criar campanha completa por dominio antes do simulado final.

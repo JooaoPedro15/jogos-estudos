@@ -43,6 +43,7 @@ test('oferece treino de codigo para uso rapido ou maratona', async () => {
   expect(screen.getByText('Maratona')).toBeInTheDocument();
   expect(screen.getByText(/class No/)).toBeInTheDocument();
   expect(screen.getByText('Arvore binaria')).toBeInTheDocument();
+  expect(screen.getByLabelText('Resposta')).toHaveAttribute('placeholder', 'Escreva a funcao completa');
 });
 
 test('mostra explicacao linha a linha quando a pessoa pede ensino', async () => {
@@ -55,6 +56,6 @@ test('mostra explicacao linha a linha quando a pessoa pede ensino', async () => 
 
   const teaching = screen.getByLabelText('Explicacao guiada');
 
-  expect(within(teaching).getByText('if (i == null) return 0;')).toBeInTheDocument();
+  expect(within(teaching).getByText(/private int contar/)).toBeInTheDocument();
   expect(within(teaching).getByText(/Subarvore vazia/)).toBeInTheDocument();
 });

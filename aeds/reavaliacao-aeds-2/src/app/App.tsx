@@ -690,6 +690,11 @@ function TeachingBox({ step }: { step: ChallengeStep }) {
           </li>
         ))}
       </ol>
+      {step.kind === 'function' && (
+        <pre className="code-scaffold">
+          <code>{step.solution}</code>
+        </pre>
+      )}
       {step.explanation && <p>{step.explanation}</p>}
     </aside>
   );
@@ -734,6 +739,10 @@ function getTeachingItems(step: ChallengeStep): Array<{ code: string; note: stri
         note: 'Essa linha e a resposta modelo; repare nos ponteiros, indices e chamadas usadas.',
       },
     ];
+  }
+
+  if (step.kind === 'function') {
+    return step.lineExplanations;
   }
 
   if (step.kind === 'blocks') {
@@ -808,14 +817,14 @@ function AnswerControl({
     );
   }
 
-  if (step.kind === 'gap' || step.kind === 'code') {
+  if (step.kind === 'gap' || step.kind === 'code' || step.kind === 'function') {
     return (
       <textarea
         aria-label="Resposta"
         className="text-answer"
         onChange={(event) => onText(event.target.value)}
-        placeholder="Digite a resposta"
-        rows={4}
+        placeholder={step.kind === 'function' ? 'Escreva a funcao completa' : 'Digite a resposta'}
+        rows={step.kind === 'function' ? 8 : 4}
         value={textAnswer}
       />
     );
@@ -933,7 +942,7 @@ function buildAnswer(
     return choiceAnswer ? { kind: 'choice', optionId: choiceAnswer } : undefined;
   }
 
-  if (step.kind === 'gap' || step.kind === 'code') {
+  if (step.kind === 'gap' || step.kind === 'code' || step.kind === 'function') {
     return textAnswer.trim() ? { kind: 'text', text: textAnswer } : undefined;
   }
 

@@ -22,6 +22,11 @@ implementar ou modificar metodos. Os padroes iniciais do treino de codigo sao:
 - estruturas hibridas: decidir a camada correta antes de inserir, pesquisar ou remover;
 - ordenacao: repetir o esqueleto e depois modificar a regra de comparacao.
 
+O catalogo jogavel atual possui 30 treinos de codigo, com cinco exercicios de
+funcao inteira para cada um dos 6 dominios do simulado. Cada dominio mistura
+repeticao de padrao com pelo menos uma modificacao logica para obrigar o aluno a
+reescrever a estrutura completa com uma regra nova.
+
 ## Dominios
 
 ### 1. Doidona

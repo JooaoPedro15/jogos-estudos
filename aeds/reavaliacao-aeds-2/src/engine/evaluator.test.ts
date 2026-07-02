@@ -97,6 +97,58 @@ test('avalia codigo digitado com normalizacao', () => {
   expect(evaluateStep(step, { kind: 'text', text: 'N*(N + 1)/2;' }).correct).toBe(true);
 });
 
+test('avalia funcao inteira por trechos obrigatorios', () => {
+  const step: ChallengeStep = {
+    id: 'arvore-contar-funcao',
+    kind: 'function',
+    prompt: 'Escreva a funcao contar completa.',
+    signature: 'private int contar(No i)',
+    solution: `private int contar(No i) {
+  if (i == null) return 0;
+  return 1 + contar(i.esq) + contar(i.dir);
+}`,
+    requiredFragments: [
+      { id: 'base', label: 'caso base nulo', code: 'if (i == null) return 0;' },
+      { id: 'left', label: 'chamada esquerda', code: 'contar(i.esq)' },
+      { id: 'right', label: 'chamada direita', code: 'contar(i.dir)' },
+      { id: 'self', label: 'conta no atual', code: '+ 1' },
+    ],
+    lineExplanations: [
+      { code: 'if (i == null) return 0;', note: 'Subarvore vazia nao possui nos.' },
+      { code: 'return 1 + contar(i.esq) + contar(i.dir);', note: 'Soma o no atual e as duas subarvores.' },
+    ],
+    mistakeTag: 'missing-base-case',
+  };
+
+  const result = evaluateStep(step, {
+    kind: 'text',
+    text: `private int contar(No i) {
+      if (i == null) return 0;
+      return contar(i.esq) + contar(i.dir) + 1;
+    }`,
+  });
+
+  expect(result).toEqual({
+    correct: true,
+    scoreDelta: 10,
+    feedback: 'Resposta correta.',
+  });
+
+  expect(
+    evaluateStep(step, {
+      kind: 'text',
+      text: `private int contar(No i) {
+        return contar(i.esq) + contar(i.dir);
+      }`,
+    }),
+  ).toEqual({
+    correct: false,
+    scoreDelta: 0,
+    feedback: 'Faltou: caso base nulo, conta no atual.',
+    mistakeTag: 'missing-base-case',
+  });
+});
+
 test('avalia rubrica de provar ou refutar', () => {
   const step: ChallengeStep = {
     id: 'ordenacao-rubrica-1',

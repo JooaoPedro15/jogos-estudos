@@ -29,6 +29,8 @@ Tipos de etapa:
 - `blocos`: ordenar a logica de um metodo.
 - `corrigir`: encontrar linha errada e escolher conserto.
 - `digitar`: escrever uma linha ou expressao curta.
+- `funcao`: escrever a funcao inteira ou quase inteira, repetindo o esqueleto
+  completo da estrutura.
 - `simular`: prever caminho, estado final ou contador.
 - `rubrica`: selecionar justificativa aceitavel para uma resposta discursiva.
 
@@ -39,11 +41,13 @@ O treino de codigo existe para uso casual e para estudo longo:
 - `Pegar 2 questoes`: sessao curta para fazer quando a pessoa tem pouco tempo.
 - `Maratona`: fluxo continuo para resolver varias questoes em sequencia.
 - `Repeticao`: refazer padroes fundamentais ate automatizar a estrutura.
-- `Modificacao`: depois da repeticao, adaptar a estrutura para uma regra nova.
+- `Modificacao`: depois da repeticao, adaptar a estrutura para uma regra nova,
+  reescrevendo a funcao completa modificada.
 - `Me ensine`: abrir uma explicacao local da resposta modelo, linha ou bloco.
 
 Os exercicios devem se inspirar na lista da prova 3: classes prontas, metodo a
-implementar, estrutura visual e analise de logica.
+implementar, estrutura visual e analise de logica. No treino de codigo, o foco
+principal e escrever metodos completos, nao apenas uma linha isolada.
 
 ## Caderno de erros
 
