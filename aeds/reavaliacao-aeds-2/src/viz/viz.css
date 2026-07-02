@@ -269,6 +269,10 @@
 .viz-pointer.tone-warning line { stroke: var(--state-compare); }
 .viz-pointer.tone-warning text { fill: var(--state-compare); }
 
+.viz-pointer-tip.tone-primary { fill: var(--state-active); }
+.viz-pointer-tip.tone-accent { fill: var(--state-found); }
+.viz-pointer-tip.tone-warning { fill: var(--state-compare); }
+
 /* Explicação do passo atual */
 
 .viz-caption {

@@ -1,250 +1,15 @@
 import type { StructureVisual } from '../types/content';
+import { avlToViz, balance, insertPlain, rebalance, type AvlNode } from './avlModel';
+import { defaultDoidonaConfig, doidonaScene } from './doidona';
 import { buildLevelOrderTree, e, layoutTree, n, p, snap, type TreeNode } from './sceneUtils';
-import type { VizEdge, VizFrame, VizNode, VizPointer, VizScene } from './vizTypes';
+import type { VizEdge, VizFrame, VizNode, VizScene } from './vizTypes';
 
 /* =====================================================================
-   PILHA — push e pop pelo topo
+   Cenas usadas pelos visuais das questões (simulado e treino).
+   As operações interativas da aba "Estruturas" vivem em structureOps.ts.
    ===================================================================== */
 
-export function stackScene(): VizScene {
-  const code = [
-    'push(x):',
-    '  topo = topo + 1',
-    '  dados[topo] = x',
-    'pop():',
-    '  x = dados[topo]',
-    '  topo = topo - 1',
-  ];
-
-  const slotX = 160;
-  const slotY = (index: number) => 258 - index * 48;
-  const slots: VizNode[] = [0, 1, 2, 3, 4].map((index) =>
-    n(`slot${index}`, slotX, slotY(index), '', { shape: 'slot', w: 96, h: 42, sub: `${index}` }),
-  );
-
-  const items: VizNode[] = [
-    n('s0', slotX, slotY(0), '5', { shape: 'box', w: 88, h: 36 }),
-    n('s1', slotX, slotY(1), '8', { shape: 'box', w: 88, h: 36 }),
-  ];
-
-  const frames: VizFrame[] = [];
-  const ptr = (index: number) => [p(`slot${index}`, 'TOPO', 'right', 'primary')];
-
-  frames.push(snap([...slots, ...items], [], ptr(1), 'Pilha LIFO: o último a entrar é o primeiro a sair.', undefined, [{ name: 'topo', value: '1' }]));
-
-  const novo = n('s2', 330, 88, '7', { shape: 'box', w: 88, h: 36, state: 'inserted' });
-  frames.push(snap([...slots, ...items, novo], [], ptr(1), 'push(7): o novo elemento chega pelo topo.', 0, [{ name: 'x', value: '7' }, { name: 'topo', value: '1' }]));
-  frames.push(snap([...slots, ...items, novo], [], ptr(2), 'topo avança para a próxima posição livre.', 1, [{ name: 'x', value: '7' }, { name: 'topo', value: '2' }]));
-
-  novo.x = slotX;
-  novo.y = slotY(2);
-  frames.push(snap([...slots, ...items, novo], [], ptr(2), '7 desliza para a posição do topo.', 2, [{ name: 'topo', value: '2' }]));
-
-  novo.state = 'default';
-  frames.push(snap([...slots, ...items, novo], [], ptr(2), 'push concluído: custo O(1), sem tocar nos demais.', 2, [{ name: 'topo', value: '2' }]));
-
-  novo.state = 'active';
-  frames.push(snap([...slots, ...items, novo], [], ptr(2), 'pop(): lê o elemento apontado por topo.', 4, [{ name: 'x', value: '7' }]));
-
-  novo.state = 'removed';
-  novo.x = 330;
-  novo.y = 88;
-  frames.push(snap([...slots, ...items, novo], [], ptr(2), '7 sai pelo topo da pilha.', 4, [{ name: 'x', value: '7' }]));
-
-  frames.push(snap([...slots, ...items], [], ptr(1), 'topo recua. pop também custa O(1).', 5, [{ name: 'topo', value: '1' }]));
-
-  return { operation: 'push(7) e pop()', complexity: 'O(1)', code, frames, width: 460, height: 310 };
-}
-
-/* =====================================================================
-   FILA — entra no final, sai pela frente
-   ===================================================================== */
-
-export function queueScene(): VizScene {
-  const code = [
-    'enfileirar(x):',
-    '  dados[tras] = x; tras++',
-    'desenfileirar():',
-    '  x = dados[frente]; frente++',
-    '  return x',
-  ];
-
-  const slotY = 168;
-  const slotX = (index: number) => 70 + index * 82;
-  const slots: VizNode[] = [0, 1, 2, 3, 4].map((index) =>
-    n(`slot${index}`, slotX(index), slotY, '', { shape: 'slot', w: 72, h: 46, sub: `${index}` }),
-  );
-
-  const items: VizNode[] = [
-    n('q0', slotX(0), slotY, '4', { shape: 'box', w: 64, h: 40 }),
-    n('q1', slotX(1), slotY, '9', { shape: 'box', w: 64, h: 40 }),
-  ];
-
-  const ptrs = (frente: number, tras: number): VizPointer[] => [
-    p(`slot${frente}`, 'FRENTE', 'top', 'accent'),
-    p(`slot${tras}`, 'TRÁS', 'bottom', 'primary'),
-  ];
-
-  const frames: VizFrame[] = [];
-  frames.push(snap([...slots, ...items], [], ptrs(0, 1), 'Fila FIFO: o primeiro a entrar é o primeiro a sair.', undefined, [{ name: 'frente', value: '0' }, { name: 'tras', value: '1' }]));
-
-  const novo = n('q2', 400, 70, '2', { shape: 'box', w: 64, h: 40, state: 'inserted' });
-  frames.push(snap([...slots, ...items, novo], [], ptrs(0, 1), 'enfileirar(2): o elemento chega pelo final.', 0, [{ name: 'x', value: '2' }]));
-
-  novo.x = slotX(2);
-  novo.y = slotY;
-  frames.push(snap([...slots, ...items, novo], [], ptrs(0, 2), '2 entra na posição de trás e o ponteiro avança.', 1, [{ name: 'tras', value: '2' }]));
-
-  novo.state = 'default';
-  items.push(novo);
-  frames.push(snap([...slots, ...items], [], ptrs(0, 2), 'Inserção no final: O(1).', 1, [{ name: 'frente', value: '0' }, { name: 'tras', value: '2' }]));
-
-  const primeiro = items[0];
-  primeiro.state = 'active';
-  frames.push(snap([...slots, ...items], [], ptrs(0, 2), 'desenfileirar(): remove sempre quem está na frente.', 3, [{ name: 'x', value: '4' }]));
-
-  primeiro.state = 'removed';
-  primeiro.x = 40;
-  primeiro.y = 70;
-  frames.push(snap([...slots, ...items], [], ptrs(0, 2), '4 sai pela frente da fila.', 3, [{ name: 'x', value: '4' }]));
-
-  items.shift();
-  frames.push(snap([...slots, ...items], [], ptrs(1, 2), 'frente avança. A ordem de chegada foi respeitada.', 4, [{ name: 'frente', value: '1' }, { name: 'tras', value: '2' }]));
-
-  return { operation: 'enfileirar(2) e desenfileirar()', complexity: 'O(1)', code, frames, width: 460, height: 260 };
-}
-
-/* =====================================================================
-   FILA CIRCULAR — índices com módulo
-   ===================================================================== */
-
-export function circularQueueScene(): VizScene {
-  const code = [
-    'enfileirar(x):',
-    '  dados[tras] = x',
-    '  tras = (tras + 1) % n',
-    'desenfileirar():',
-    '  x = dados[frente]',
-    '  frente = (frente + 1) % n',
-  ];
-
-  const total = 8;
-  const cx = 230;
-  const cy = 172;
-  const radius = 108;
-  const pos = (index: number) => {
-    const angle = ((index * 360) / total - 90) * (Math.PI / 180);
-    return { x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
-  };
-
-  const slots: VizNode[] = Array.from({ length: total }, (_, index) => {
-    const { x, y } = pos(index);
-    return n(`slot${index}`, x, y, '', { shape: 'slot', w: 52, h: 40, sub: `${index}` });
-  });
-
-  const mk = (id: string, index: number, label: string) => {
-    const { x, y } = pos(index);
-    return n(id, x, y, label, { shape: 'box', w: 46, h: 34 });
-  };
-
-  const items: VizNode[] = [mk('c5', 5, '7'), mk('c6', 6, '1'), mk('c7', 7, '6')];
-
-  const ptrs = (frente: number, tras: number): VizPointer[] => [
-    p(`slot${frente}`, 'FRENTE', frente >= 2 && frente <= 6 ? 'bottom' : 'top', 'accent'),
-    p(`slot${tras}`, 'TRÁS', tras >= 2 && tras <= 6 ? 'bottom' : 'top', 'primary'),
-  ];
-
-  const frames: VizFrame[] = [];
-  frames.push(snap([...slots, ...items], [], ptrs(5, 0), 'Fila circular: o vetor "dá a volta" com aritmética modular.', undefined, [{ name: 'frente', value: '5' }, { name: 'tras', value: '0' }, { name: 'n', value: '8' }]));
-
-  const novo = n('c0', cx, cy, '9', { shape: 'box', w: 46, h: 34, state: 'inserted' });
-  frames.push(snap([...slots, ...items, novo], [], ptrs(5, 0), 'enfileirar(9): trás está no índice 0 — já deu a volta!', 1, [{ name: 'x', value: '9' }, { name: 'tras', value: '0' }]));
-
-  const alvo = pos(0);
-  novo.x = alvo.x;
-  novo.y = alvo.y;
-  frames.push(snap([...slots, ...items, novo], [], ptrs(5, 0), '9 ocupa o índice 0 sem deslocar ninguém.', 1, [{ name: 'tras', value: '0' }]));
-
-  novo.state = 'default';
-  items.push(novo);
-  frames.push(snap([...slots, ...items], [], ptrs(5, 1), 'tras = (0 + 1) % 8 = 1. O módulo evita estourar o vetor.', 2, [{ name: 'tras', value: '1' }]));
-
-  const primeiro = items[0];
-  primeiro.state = 'active';
-  frames.push(snap([...slots, ...items], [], ptrs(5, 1), 'desenfileirar(): frente continua saindo primeiro.', 4, [{ name: 'x', value: '7' }]));
-
-  primeiro.state = 'removed';
-  primeiro.x = cx;
-  primeiro.y = cy;
-  frames.push(snap([...slots, ...items], [], ptrs(5, 1), '7 sai da fila.', 4, [{ name: 'x', value: '7' }]));
-
-  items.shift();
-  frames.push(snap([...slots, ...items], [], ptrs(6, 1), 'frente = (5 + 1) % 8 = 6. Nada foi copiado: O(1).', 5, [{ name: 'frente', value: '6' }]));
-
-  return { operation: 'enfileirar(9) com volta e desenfileirar()', complexity: 'O(1)', code, frames, width: 460, height: 344 };
-}
-
-/* =====================================================================
-   LISTA ENCADEADA — inserção ordenada com religação de ponteiros
-   ===================================================================== */
-
-export function linkedListScene(): VizScene {
-  const code = [
-    'inserir(x):',
-    '  p = inicio',
-    '  enquanto p.prox.valor < x:',
-    '    p = p.prox',
-    '  novo.prox = p.prox',
-    '  p.prox = novo',
-  ];
-
-  const y = 150;
-  const nodes: VizNode[] = [
-    n('l10', 70, y, '10', { shape: 'box', w: 64, h: 44 }),
-    n('l20', 180, y, '20', { shape: 'box', w: 64, h: 44 }),
-    n('l30', 290, y, '30', { shape: 'box', w: 64, h: 44 }),
-    n('lnull', 396, y, '∅', { shape: 'pill', w: 52, h: 36 }),
-  ];
-
-  const chain: VizEdge[] = [e('l10', 'l20', { arrow: true }), e('l20', 'l30', { arrow: true }), e('l30', 'lnull', { arrow: true })];
-  const inicio = p('l10', 'INÍCIO', 'top', 'accent');
-
-  const frames: VizFrame[] = [];
-  frames.push(snap(nodes, chain, [inicio], 'Lista encadeada ordenada: cada nó aponta para o próximo.', undefined));
-
-  const novo = n('l25', 235, 250, '25', { shape: 'box', w: 64, h: 44, state: 'inserted' });
-  frames.push(snap([...nodes, novo], chain, [inicio], 'inserir(25): precisamos achar o ponto certo sem perder ponteiros.', 0, [{ name: 'x', value: '25' }]));
-
-  nodes[0].state = 'active';
-  frames.push(snap([...nodes, novo], chain, [inicio, p('l10', 'p', 'bottom', 'warning')], 'p começa no início. 20 < 25, então p avança.', 2, [{ name: 'p', value: '10' }]));
-
-  nodes[0].state = 'visited';
-  nodes[1].state = 'active';
-  frames.push(snap([...nodes, novo], chain, [inicio, p('l20', 'p', 'bottom', 'warning')], '30 ≥ 25: o novo nó entra logo depois de p = 20.', 3, [{ name: 'p', value: '20' }]));
-
-  const comNovo = [...chain.filter((edge) => edge.id !== 'l20->l30'), e('l25', 'l30', { arrow: true, state: 'inserted' }), e('l20', 'l30', { arrow: true, dashed: true, state: 'removed' })];
-  frames.push(snap([...nodes, novo], comNovo, [inicio, p('l20', 'p', 'bottom', 'warning')], 'Primeiro: novo.prox = p.prox. O 30 nunca fica órfão.', 4, [{ name: 'novo.prox', value: '30' }]));
-
-  const religada = [e('l10', 'l20', { arrow: true }), e('l20', 'l25', { arrow: true, state: 'inserted' }), e('l25', 'l30', { arrow: true, state: 'inserted' }), e('l30', 'lnull', { arrow: true })];
-  frames.push(snap([...nodes, novo], religada, [inicio], 'Depois: p.prox = novo. A corrente foi religada.', 5, [{ name: 'p.prox', value: '25' }]));
-
-  nodes[0].state = 'default';
-  nodes[1].state = 'default';
-  nodes[0].x = 60;
-  nodes[1].x = 155;
-  novo.x = 250;
-  novo.y = y;
-  novo.state = 'default';
-  nodes[2].x = 345;
-  nodes[3].x = 432;
-  frames.push(snap([...nodes, novo], religada, [inicio], '25 assume o lugar. Busca O(n), religação O(1).', 5));
-
-  return { operation: 'inserir(25) mantendo a ordem', complexity: 'O(n)', code, frames, width: 460, height: 300 };
-}
-
-/* =====================================================================
-   TABELA HASH — cálculo do índice e tratamento de colisão
-   ===================================================================== */
+/* ---------- TABELA HASH — inserção com colisão (visual de questão) ---------- */
 
 export function hashScene(collidingKey = 30): VizScene {
   const code = [
@@ -304,9 +69,7 @@ export function hashScene(collidingKey = 30): VizScene {
   return { operation: `inserir(42) e inserir(${chave}) com colisão`, complexity: 'O(1) médio', code, frames, width: 460, height: 320 };
 }
 
-/* =====================================================================
-   ÁRVORE BINÁRIA — percurso recursivo (usada nas questões)
-   ===================================================================== */
+/* ---------- ÁRVORE BINÁRIA — percurso recursivo ---------- */
 
 export function binaryTreeTraversalScene(labels: string[]): VizScene {
   const code = [
@@ -354,151 +117,7 @@ export function binaryTreeTraversalScene(labels: string[]): VizScene {
   return { operation: 'percurso recursivo', complexity: 'O(n)', code, frames, width: 460, height: 300 };
 }
 
-/* =====================================================================
-   ABP / ABB — busca comparando e descendo
-   ===================================================================== */
-
-export function bstScene(): VizScene {
-  const code = [
-    'buscar(no, x):',
-    '  se no == null: não está',
-    '  se x == no.valor: achou!',
-    '  se x < no.valor: buscar(no.esq)',
-    '  senão: buscar(no.dir)',
-  ];
-
-  const labels = ['50', '30', '70', '20', '40', '60', '80'];
-  const root = buildLevelOrderTree(labels)!;
-  const positions = layoutTree(root, 460, { top: 52, levelGap: 72 });
-
-  const nodes: VizNode[] = [];
-  const edges: VizEdge[] = [];
-
-  (function collect(node: TreeNode) {
-    const at = positions.get(node.id)!;
-    nodes.push(n(node.id, at.x, at.y, node.label));
-    if (node.left) {
-      edges.push(e(node.id, node.left.id));
-      collect(node.left);
-    }
-    if (node.right) {
-      edges.push(e(node.id, node.right.id));
-      collect(node.right);
-    }
-  })(root);
-
-  const byLabel = (label: string) => nodes.find((node) => node.label === label)!;
-  const raiz = p(root.id, 'RAIZ', 'top', 'accent');
-  const frames: VizFrame[] = [];
-
-  frames.push(snap(nodes, edges, [raiz], 'ABB: menores à esquerda, maiores à direita. Vamos buscar 40.', 0, [{ name: 'x', value: '40' }]));
-
-  byLabel('50').state = 'compare';
-  frames.push(snap(nodes, edges, [raiz], '40 < 50 → a resposta só pode estar à esquerda.', 3, [{ name: 'no', value: '50' }, { name: 'x', value: '40' }]));
-
-  byLabel('50').state = 'visited';
-  byLabel('30').state = 'compare';
-  frames.push(snap(nodes, edges, [raiz], '40 > 30 → agora desce para a direita.', 4, [{ name: 'no', value: '30' }, { name: 'x', value: '40' }]));
-
-  byLabel('30').state = 'visited';
-  byLabel('40').state = 'found';
-  frames.push(snap(nodes, edges, [raiz], 'Achou! Só 3 comparações em 7 nós: a árvore corta metade a cada passo.', 2, [{ name: 'no', value: '40' }, { name: 'comparações', value: '3' }]));
-
-  frames.push(snap(nodes, edges, [raiz], 'Busca proporcional à altura: O(log n) se balanceada, O(n) se degenerar.', 2));
-
-  return { operation: 'buscar(40)', complexity: 'O(altura)', code, frames, width: 460, height: 300 };
-}
-
-/* =====================================================================
-   AVL — inserções reais com fator de balanceamento e rotações
-   ===================================================================== */
-
-type AvlNode = { key: number; left?: AvlNode; right?: AvlNode };
-
-function avlHeight(node?: AvlNode): number {
-  return node ? 1 + Math.max(avlHeight(node.left), avlHeight(node.right)) : 0;
-}
-
-function balance(node: AvlNode): number {
-  return avlHeight(node.left) - avlHeight(node.right);
-}
-
-function insertPlain(node: AvlNode | undefined, key: number): AvlNode {
-  if (!node) return { key };
-  if (key < node.key) return { ...node, left: insertPlain(node.left, key) };
-  return { ...node, right: insertPlain(node.right, key) };
-}
-
-function rebalance(node: AvlNode | undefined): { node?: AvlNode; rotation?: string; pivot?: number } {
-  if (!node) return { node };
-
-  const left = rebalance(node.left);
-  const right = rebalance(node.right);
-  let current: AvlNode = { ...node, left: left.node, right: right.node };
-  let rotation = left.rotation ?? right.rotation;
-  let pivot = left.pivot ?? right.pivot;
-
-  const factor = balance(current);
-
-  if (factor > 1 && current.left) {
-    if (balance(current.left) < 0) {
-      const filho = current.left;
-      const neto = filho.right!;
-      current = { ...current, left: { ...neto, left: { ...filho, right: neto.left }, right: neto.right } };
-      rotation = 'rotação dupla esquerda-direita';
-    } else {
-      rotation = 'rotação simples para a direita';
-    }
-    pivot = current.key;
-    const raiz = current.left!;
-    current = { ...raiz, right: { ...current, left: raiz.right } };
-  } else if (factor < -1 && current.right) {
-    if (balance(current.right) > 0) {
-      const filho = current.right;
-      const neto = filho.left!;
-      current = { ...current, right: { ...neto, right: { ...filho, left: neto.right }, left: neto.left } };
-      rotation = 'rotação dupla direita-esquerda';
-    } else {
-      rotation = 'rotação simples para a esquerda';
-    }
-    pivot = current.key;
-    const raiz = current.right!;
-    current = { ...raiz, left: { ...current, right: raiz.left } };
-  }
-
-  return { node: current, rotation, pivot };
-}
-
-function avlToViz(root: AvlNode | undefined, width: number): { nodes: VizNode[]; edges: VizEdge[]; rootId?: string } {
-  if (!root) return { nodes: [], edges: [] };
-
-  const toTree = (node: AvlNode): TreeNode => ({
-    id: `a${node.key}`,
-    label: `${node.key}`,
-    left: node.left ? toTree(node.left) : undefined,
-    right: node.right ? toTree(node.right) : undefined,
-  });
-
-  const tree = toTree(root);
-  const positions = layoutTree(tree, width, { top: 56, levelGap: 68 });
-  const nodes: VizNode[] = [];
-  const edges: VizEdge[] = [];
-
-  (function walk(avl: AvlNode) {
-    const at = positions.get(`a${avl.key}`)!;
-    nodes.push(n(`a${avl.key}`, at.x, at.y, `${avl.key}`, { sub: `fb ${balance(avl)}` }));
-    if (avl.left) {
-      edges.push(e(`a${avl.key}`, `a${avl.left.key}`));
-      walk(avl.left);
-    }
-    if (avl.right) {
-      edges.push(e(`a${avl.key}`, `a${avl.right.key}`));
-      walk(avl.right);
-    }
-  })(root);
-
-  return { nodes, edges, rootId: tree.id };
-}
+/* ---------- AVL — sequência de inserções com rotações ---------- */
 
 export function avlScene(values: number[]): VizScene {
   const code = [
@@ -565,9 +184,7 @@ export function avlScene(values: number[]): VizScene {
   return { operation: `inserir ${values.join(', ')}`, complexity: 'O(log n)', code, frames, width: 460, height: 300 };
 }
 
-/* =====================================================================
-   TRIE — caminho letra a letra e marcador de fim
-   ===================================================================== */
+/* ---------- TRIE — caminho letra a letra (visual de questão) ---------- */
 
 export function trieScene(labels: string[]): VizScene {
   const code = [
@@ -652,174 +269,7 @@ export function trieScene(labels: string[]): VizScene {
   return { operation: `buscar("${word}")`, complexity: 'O(k)', code, frames, width: 460, height: Math.max(280, 120 + (chars.length + 1) * stepY) };
 }
 
-/* =====================================================================
-   HEAP — inserção com subida (sift-up)
-   ===================================================================== */
-
-export function heapScene(): VizScene {
-  const code = [
-    'inserir(x):',
-    '  coloca x na próxima folha livre',
-    '  enquanto x > pai:',
-    '    troca x com o pai',
-    '  // x parou na posição certa',
-  ];
-
-  const labels = ['90', '70', '80', '30', '40', '60'];
-  const layoutLabels = [...labels, '85'];
-  const root = buildLevelOrderTree(layoutLabels)!;
-  const positions = layoutTree(root, 460, { top: 52, levelGap: 74 });
-  const posAt = (index: number) => positions.get(`t${index}`)!;
-
-  const nodes: VizNode[] = labels.map((label, index) => {
-    const at = posAt(index);
-    return n(`h${label}`, at.x, at.y, label, { sub: `i=${index}` });
-  });
-
-  const edgeFor = (childIndex: number, order: string[]) =>
-    e(`h${order[Math.floor((childIndex - 1) / 2)]}`, `h${order[childIndex]}`);
-
-  const buildEdges = (order: string[]) => order.slice(1).map((_, k) => edgeFor(k + 1, order));
-
-  let order = [...labels];
-  const raiz = () => [p(`h${order[0]}`, 'RAIZ (máximo)', 'top', 'accent')];
-  const frames: VizFrame[] = [];
-
-  frames.push(snap(nodes, buildEdges(order), raiz(), 'Heap máximo: todo pai é maior ou igual aos filhos.', undefined));
-
-  const novo = n('h85', 400, 60, '85', { sub: 'i=6', state: 'inserted' });
-  nodes.push(novo);
-  frames.push(snap(nodes, buildEdges(order), raiz(), 'inserir(85): o valor chega para entrar no heap.', 0, [{ name: 'x', value: '85' }]));
-
-  order = [...order, '85'];
-  const at6 = posAt(6);
-  novo.x = at6.x;
-  novo.y = at6.y;
-  frames.push(snap(nodes, buildEdges(order), raiz(), '85 ocupa a próxima folha livre (índice 6), mantendo a árvore completa.', 1, [{ name: 'i', value: '6' }]));
-
-  const byLabel = (label: string) => nodes.find((node) => node.label === label)!;
-  const swap = (childLabel: string, parentLabel: string) => {
-    const childIndex = order.indexOf(childLabel);
-    const parentIndex = Math.floor((childIndex - 1) / 2);
-    [order[childIndex], order[parentIndex]] = [order[parentIndex], order[childIndex]];
-    const childNode = byLabel(childLabel);
-    const parentNode = byLabel(parentLabel);
-    const a = posAt(parentIndex);
-    const b = posAt(childIndex);
-    childNode.x = a.x;
-    childNode.y = a.y;
-    childNode.sub = `i=${parentIndex}`;
-    parentNode.x = b.x;
-    parentNode.y = b.y;
-    parentNode.sub = `i=${childIndex}`;
-  };
-
-  byLabel('80').state = 'compare';
-  frames.push(snap(nodes, buildEdges(order), raiz(), '85 > 80 (pai): viola a regra do heap → troca.', 2, [{ name: 'x', value: '85' }, { name: 'pai', value: '80' }]));
-
-  byLabel('80').state = 'default';
-  swap('85', '80');
-  frames.push(snap(nodes, buildEdges(order), raiz(), '85 sobe um nível; 80 desce para o lugar dele.', 3, [{ name: 'i', value: '2' }]));
-
-  byLabel('90').state = 'compare';
-  frames.push(snap(nodes, buildEdges(order), raiz(), '85 < 90: a regra vale de novo → a subida para aqui.', 2, [{ name: 'x', value: '85' }, { name: 'pai', value: '90' }]));
-
-  byLabel('90').state = 'default';
-  novo.state = 'found';
-  frames.push(snap(nodes, buildEdges(order), raiz(), 'Heap restaurado. A subida percorre no máximo a altura: O(log n).', 4, [{ name: 'trocas', value: '1' }]));
-
-  return { operation: 'inserir(85) com sift-up', complexity: 'O(log n)', code, frames, width: 460, height: 300 };
-}
-
-/* =====================================================================
-   GRAFO — BFS destacando fronteira e arestas usadas
-   ===================================================================== */
-
-export function graphScene(): VizScene {
-  const code = [
-    'BFS(origem):',
-    '  fila = [origem]',
-    '  v = fila.remove()',
-    '  para cada vizinho w não visitado:',
-    '    marca w e enfileira',
-    '  repete até a fila esvaziar',
-  ];
-
-  const coords: Record<string, { x: number; y: number }> = {
-    A: { x: 90, y: 84 },
-    B: { x: 236, y: 54 },
-    C: { x: 382, y: 84 },
-    D: { x: 128, y: 226 },
-    E: { x: 268, y: 244 },
-    F: { x: 396, y: 210 },
-  };
-
-  const arestas: Array<[string, string]> = [
-    ['A', 'B'],
-    ['A', 'D'],
-    ['B', 'C'],
-    ['B', 'E'],
-    ['C', 'F'],
-    ['D', 'E'],
-    ['E', 'F'],
-  ];
-
-  const nodes: VizNode[] = Object.entries(coords).map(([id, at]) => n(`g${id}`, at.x, at.y, id));
-  const edges: VizEdge[] = arestas.map(([a, b]) => e(`g${a}`, `g${b}`));
-  const byId = (id: string) => nodes.find((node) => node.id === `g${id}`)!;
-  const markEdge = (a: string, b: string) => {
-    const edge = edges.find((item) => item.id === `g${a}->g${b}` || item.id === `g${b}->g${a}`);
-    if (edge) edge.state = 'found';
-  };
-
-  const frames: VizFrame[] = [];
-  const origem = p('gA', 'ORIGEM', 'left', 'accent');
-
-  frames.push(snap(nodes, edges, [origem], 'BFS explora o grafo em camadas, usando uma fila.', 1, [{ name: 'fila', value: '[A]' }]));
-
-  byId('A').state = 'active';
-  frames.push(snap(nodes, edges, [origem], 'Remove A da fila e olha os vizinhos dele.', 2, [{ name: 'v', value: 'A' }, { name: 'fila', value: '[]' }]));
-
-  byId('B').state = 'compare';
-  byId('D').state = 'compare';
-  markEdge('A', 'B');
-  markEdge('A', 'D');
-  frames.push(snap(nodes, edges, [origem], 'B e D entram na fila: primeira camada descoberta.', 4, [{ name: 'fila', value: '[B, D]' }]));
-
-  byId('A').state = 'visited';
-  byId('B').state = 'active';
-  frames.push(snap(nodes, edges, [origem], 'Processa B: vizinhos novos são C e E.', 2, [{ name: 'v', value: 'B' }, { name: 'fila', value: '[D]' }]));
-
-  byId('C').state = 'compare';
-  byId('E').state = 'compare';
-  markEdge('B', 'C');
-  markEdge('B', 'E');
-  frames.push(snap(nodes, edges, [origem], 'C e E enfileirados. A aresta usada fica marcada.', 4, [{ name: 'fila', value: '[D, C, E]' }]));
-
-  byId('B').state = 'visited';
-  byId('D').state = 'active';
-  frames.push(snap(nodes, edges, [origem], 'Processa D: E já foi descoberto, nada novo entra.', 3, [{ name: 'v', value: 'D' }, { name: 'fila', value: '[C, E]' }]));
-
-  byId('D').state = 'visited';
-  byId('C').state = 'active';
-  frames.push(snap(nodes, edges, [origem], 'Processa C: F é o último vértice novo.', 4, [{ name: 'v', value: 'C' }, { name: 'fila', value: '[E, F]' }]));
-
-  byId('C').state = 'visited';
-  byId('F').state = 'compare';
-  markEdge('C', 'F');
-  byId('E').state = 'active';
-  frames.push(snap(nodes, edges, [origem], 'Processa E e depois F: fila esvazia.', 5, [{ name: 'fila', value: '[F]' }]));
-
-  byId('E').state = 'visited';
-  byId('F').state = 'visited';
-  frames.push(snap(nodes, edges, [origem], 'Todos visitados em camadas: custo O(V + A).', 5, [{ name: 'fila', value: '[]' }]));
-
-  return { operation: 'BFS a partir de A', complexity: 'O(V + A)', code, frames, width: 460, height: 300 };
-}
-
-/* =====================================================================
-   VETOR — varredura de laço (somatórios)
-   ===================================================================== */
+/* ---------- VETOR — varredura de laço (somatórios) ---------- */
 
 export function arraySweepScene(labels: string[]): VizScene {
   const code = ['para i = 0 até n-1:', '  processa vetor[i]', '// total = soma das execuções'];
@@ -848,9 +298,7 @@ export function arraySweepScene(labels: string[]): VizScene {
   return { operation: 'contar execuções do laço', complexity: 'soma dos termos', code, frames, width, height: 250 };
 }
 
-/* =====================================================================
-   VETOR — passo do insertion sort (chave, deslocamentos, inserção)
-   ===================================================================== */
+/* ---------- VETOR — passo do insertion sort ---------- */
 
 export function insertionSortScene(values: number[]): VizScene {
   const code = [
@@ -932,50 +380,6 @@ export function insertionSortScene(values: number[]): VizScene {
 }
 
 /* =====================================================================
-   ESTRUTURA DOIDONA — busca camada por camada
-   ===================================================================== */
-
-export function doidonaScene(labels: string[]): VizScene {
-  const camadas = labels.filter((label) => label.trim());
-  const code = [
-    'buscar(x):',
-    ...camadas.map((camada) => `  se está em ${camada}: retorna true`),
-    '  retorna falso  // só após TODAS',
-  ];
-
-  const width = 460;
-  const count = Math.max(camadas.length, 1);
-  const gap = Math.min(104, (width - 80) / Math.max(count - 1, 1));
-  const startX = width / 2 - (gap * (count - 1)) / 2;
-
-  const nodes: VizNode[] = camadas.map((camada, index) =>
-    n(`layer${index}`, startX + index * gap, 150, camada, { shape: 'pill', w: Math.max(64, camada.length * 11 + 26), h: 44, sub: `camada ${index + 1}` }),
-  );
-
-  const edges: VizEdge[] = camadas.slice(1).map((_, index) => e(`layer${index}`, `layer${index + 1}`, { arrow: true, dashed: true }));
-  const frames: VizFrame[] = [];
-
-  frames.push(snap(nodes, edges, [], 'Estrutura composta: a busca atravessa as camadas em ordem.', 0, [{ name: 'x', value: '42' }]));
-
-  camadas.forEach((camada, index) => {
-    nodes[index].state = 'compare';
-    frames.push(snap(nodes, edges, [], `Procura x em ${camada}…`, index + 1, [{ name: 'camada', value: camada }]));
-
-    if (index < camadas.length - 1) {
-      nodes[index].state = 'visited';
-      frames.push(snap(nodes, edges, [], `Não está em ${camada}. NÃO retorne falso ainda: há camadas restantes.`, index + 2, [{ name: 'camada', value: camada }]));
-    } else {
-      nodes[index].state = 'found';
-      frames.push(snap(nodes, edges, [], `Encontrado em ${camada}, a última camada. Retornar falso cedo perderia este item.`, index + 1, [{ name: 'resultado', value: 'true' }]));
-    }
-  });
-
-  frames.push(snap(nodes, edges, [], 'Regra de ouro: só conclua ausência depois de testar TODAS as camadas.', camadas.length + 1));
-
-  return { operation: 'buscar(x) na estrutura composta', complexity: 'soma das camadas', code, frames, width, height: 270 };
-}
-
-/* =====================================================================
    Mapeamento: visual do conteúdo → cena animada
    ===================================================================== */
 
@@ -1000,7 +404,8 @@ export function buildSceneForVisual(visual: StructureVisual): VizScene {
       return hashScene(key ?? 30);
     }
     case 'doidona':
-      return doidonaScene(cleaned);
+      // Busca que atravessa T1 → T2 → subestrutura, como na questão.
+      return doidonaScene('buscar', 17, defaultDoidonaConfig);
     case 'array': {
       const numeric = cleaned.every(isNumeric) && cleaned.length >= 3;
       const sorted = numeric && cleaned.map(Number).every((value, index, all) => index === 0 || all[index - 1] <= value);
@@ -1011,10 +416,6 @@ export function buildSceneForVisual(visual: StructureVisual): VizScene {
   }
 }
 
-/* =====================================================================
-   Catálogo da galeria "Estruturas"
-   ===================================================================== */
-
 export type StructureCatalogEntry = {
   id: string;
   name: string;
@@ -1023,15 +424,46 @@ export type StructureCatalogEntry = {
 };
 
 export const structureCatalog: StructureCatalogEntry[] = [
-  { id: 'pilha', name: 'Pilha', blurb: 'LIFO: push e pop pelo topo em O(1).', build: stackScene },
-  { id: 'fila', name: 'Fila', blurb: 'FIFO: entra no final, sai pela frente.', build: queueScene },
-  { id: 'fila-circular', name: 'Fila circular', blurb: 'Índices com módulo: o vetor dá a volta.', build: circularQueueScene },
-  { id: 'lista', name: 'Lista encadeada', blurb: 'Nós ligados por ponteiros; religação sem deslocar.', build: linkedListScene },
-  { id: 'hash', name: 'Tabela hash', blurb: 'Chave vira índice; colisões vão para a reserva.', build: () => hashScene() },
-  { id: 'abb', name: 'Árvore de busca (ABB)', blurb: 'Menores à esquerda, maiores à direita.', build: bstScene },
-  { id: 'avl', name: 'Árvore AVL', blurb: 'Fator de balanceamento e rotações automáticas.', build: () => avlScene([30, 20, 10, 40, 50]) },
-  { id: 'trie', name: 'Árvore TRIE', blurb: 'Uma letra por nível; palavra exige marcador fim.', build: () => trieScene(['c', 'a', 's', 'a', 'fim']) },
-  { id: 'heap', name: 'Heap', blurb: 'Árvore completa: pai sempre maior que os filhos.', build: heapScene },
-  { id: 'grafo', name: 'Grafo (BFS)', blurb: 'Vértices e arestas explorados em camadas.', build: graphScene },
-  { id: 'doidona', name: 'Estrutura Doidona', blurb: 'Camadas compostas: T1, T2, T3, lista e árvore.', build: () => doidonaScene(['T1', 'T2', 'T3', 'lista', 'árvore']) },
+  {
+    id: 'hash',
+    name: 'Tabela hash',
+    blurb: 'Chave vira indice; colisoes seguem para a reserva.',
+    build: () => hashScene(30),
+  },
+  {
+    id: 'arvore-binaria',
+    name: 'Arvore binaria',
+    blurb: 'Recursao visita a raiz e desce pelas subarvores.',
+    build: () => binaryTreeTraversalScene(['8', '3', '10', '1', '6']),
+  },
+  {
+    id: 'avl',
+    name: 'Arvore AVL',
+    blurb: 'Insercao com fator de balanceamento e rotacoes.',
+    build: () => avlScene([30, 20, 10, 40, 50]),
+  },
+  {
+    id: 'trie',
+    name: 'Arvore TRIE',
+    blurb: 'Uma letra por nivel; palavra completa exige marcador fim.',
+    build: () => trieScene(['c', 'a', 's', 'a', 'fim']),
+  },
+  {
+    id: 'somatorio',
+    name: 'Somatorios',
+    blurb: 'Lacos viram contagem de execucoes e formulas.',
+    build: () => arraySweepScene(['1', '2', '3', '...', 'n']),
+  },
+  {
+    id: 'ordenacao',
+    name: 'Ordenacao',
+    blurb: 'Insertion sort desloca valores ate encaixar a chave.',
+    build: () => insertionSortScene([4, 3, 8, 6, 1, 2, 9]),
+  },
+  {
+    id: 'doidona',
+    name: 'Estrutura Doidona',
+    blurb: 'Hash principal com desvio para estruturas de reserva.',
+    build: () => doidonaScene('buscar', 17, defaultDoidonaConfig),
+  },
 ];

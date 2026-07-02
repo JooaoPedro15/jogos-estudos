@@ -145,29 +145,34 @@ function PointerShape({ pointer, nodes }: { pointer: VizPointer; nodes: Map<stri
   }
 
   const { hw, hh } = nodeHalf(target);
-  const gap = 14;
-  let x = target.x;
-  let y = target.y;
-  let tip = { x: target.x, y: target.y };
+  const lineLen = 12;
+  let line: { x1: number; y1: number; x2: number; y2: number };
+  let text: { x: number; y: number; anchor: 'start' | 'middle' | 'end' };
 
   if (pointer.side === 'top') {
-    y = target.y - hh - gap - 12;
-    tip = { x: target.x, y: target.y - hh - 4 };
+    line = { x1: target.x, y1: target.y - hh - 4 - lineLen, x2: target.x, y2: target.y - hh - 4 };
+    text = { x: target.x, y: line.y1 - 9, anchor: 'middle' };
   } else if (pointer.side === 'bottom') {
-    y = target.y + hh + gap + 14;
-    tip = { x: target.x, y: target.y + hh + 4 };
+    line = { x1: target.x, y1: target.y + hh + 4 + lineLen, x2: target.x, y2: target.y + hh + 4 };
+    text = { x: target.x, y: line.y1 + 11, anchor: 'middle' };
   } else if (pointer.side === 'left') {
-    x = target.x - hw - gap - 20;
-    tip = { x: target.x - hw - 4, y: target.y };
+    line = { x1: target.x - hw - 4 - lineLen, y1: target.y, x2: target.x - hw - 4, y2: target.y };
+    text = { x: line.x1 - 6, y: target.y, anchor: 'end' };
   } else {
-    x = target.x + hw + gap + 22;
-    tip = { x: target.x + hw + 4, y: target.y };
+    line = { x1: target.x + hw + 4 + lineLen, y1: target.y, x2: target.x + hw + 4, y2: target.y };
+    text = { x: line.x1 + 6, y: target.y, anchor: 'start' };
   }
 
   return (
     <g className={`viz-pointer tone-${pointer.tone ?? 'primary'}`}>
-      <line x1={x} x2={tip.x} y1={y + (pointer.side === 'top' ? 8 : pointer.side === 'bottom' ? -8 : 0)} y2={tip.y} />
-      <text dy="0.34em" x={x} y={y + (pointer.side === 'top' ? -2 : pointer.side === 'bottom' ? 4 : 0)}>
+      <line
+        markerEnd={`url(#viz-pointer-tip-${pointer.tone ?? 'primary'})`}
+        x1={line.x1}
+        x2={line.x2}
+        y1={line.y1}
+        y2={line.y2}
+      />
+      <text dy="0.34em" style={{ textAnchor: text.anchor }} x={text.x} y={text.y}>
         {pointer.label}
       </text>
     </g>
@@ -292,6 +297,19 @@ export function StructureViz({ scene, compact = false }: StructureVizProps) {
               refY="3.5"
             >
               <path className={`viz-arrowhead is-${state}`} d="M0,0 L8,3.5 L0,7 Z" />
+            </marker>
+          ))}
+          {(['primary', 'accent', 'warning'] as const).map((tone) => (
+            <marker
+              id={`viz-pointer-tip-${tone}`}
+              key={tone}
+              markerHeight="6"
+              markerWidth="7"
+              orient="auto-start-reverse"
+              refX="6"
+              refY="3"
+            >
+              <path className={`viz-pointer-tip tone-${tone}`} d="M0,0 L7,3 L0,6 Z" />
             </marker>
           ))}
           <pattern height="26" id="viz-grid" patternUnits="userSpaceOnUse" width="26">
