@@ -6,8 +6,21 @@ O conteudo deve ser guiado por:
 
 - `aeds/materiais/Provas/REAV1` como referencia principal de formato;
 - `aeds/materiais/Provas/REAV2_incompleta` como referencia secundaria;
+- `aeds/materiais/Listas/lista-aeds2-prova3.pdf` como referencia principal para treinos de codigo;
 - `aeds/materiais/Slides AEDS 2` como base de conteudo;
 - desafios ja existentes em `aeds/jogo-aeds-2` como referencia de modelagem.
+
+## Estilo da lista da prova 3
+
+A lista reforca questoes em que o aluno recebe classes prontas e precisa
+implementar ou modificar metodos. Os padroes iniciais do treino de codigo sao:
+
+- arvore binaria/ABB: caso base, recursao, validacao e poda por intervalo;
+- AVL: altura, fator de balanceamento e recalculo depois dos filhos;
+- TRIE/PATRICIA: palavra exata, prefixo, marcador `fim` e contagem abaixo do prefixo;
+- Doidona/hash: rota entre tabela principal e reserva em lista/arvore;
+- estruturas hibridas: decidir a camada correta antes de inserir, pesquisar ou remover;
+- ordenacao: repetir o esqueleto e depois modificar a regra de comparacao.
 
 ## Dominios
 
@@ -111,4 +124,3 @@ Erros comuns:
 - achar que uma particao de quicksort ordena tudo;
 - analisar apenas trocas e esquecer comparacoes;
 - confundir selecao com insercao.
-

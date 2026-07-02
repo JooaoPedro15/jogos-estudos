@@ -1,10 +1,11 @@
-import type { ErrorNotebook, ExamSession } from '../types/progress';
+import type { ErrorNotebook, ExamSession, PracticeSession } from '../types/progress';
 
 export const SAVE_KEY = 'reavaliacao-aeds-2:save';
 
 export type SavedGameState = {
   session: ExamSession;
   notebook: ErrorNotebook;
+  practiceSession?: PracticeSession;
 };
 
 export function saveGame(state: SavedGameState, storage: Storage = window.localStorage): void {

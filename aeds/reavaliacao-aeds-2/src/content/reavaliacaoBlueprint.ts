@@ -11,6 +11,12 @@ export const reavaliacaoBlueprint: ExamBlueprint = {
       format: 'summation-from-code',
       title: 'Somatorio a partir de codigo',
       stem: 'Considere um trecho com dois lacos: i varia de 1 ate n - 1 e j varia de 0 ate i - 1.',
+      visual: {
+        kind: 'array',
+        title: 'Lacos aninhados',
+        caption: 'Cada valor de i define quantas vezes o laco j executa.',
+        labels: ['i=1', '1 vez', 'i=2', '2 vezes', 'i=n-1', 'n-1 vezes'],
+      },
       steps: [
         {
           id: 'simulado-somatorio-identificar',
@@ -43,6 +49,12 @@ export const reavaliacaoBlueprint: ExamBlueprint = {
       format: 'structure-simulation',
       title: 'Simulacao de AVL',
       stem: 'Insira 10, 20 e 30 em uma AVL inicialmente vazia.',
+      visual: {
+        kind: 'avl',
+        title: 'Caso RR',
+        caption: 'A cadeia cresce pela direita antes da rotacao.',
+        labels: ['10', '20', '30'],
+      },
       steps: [
         {
           id: 'simulado-avl-rotacao',
@@ -75,6 +87,12 @@ export const reavaliacaoBlueprint: ExamBlueprint = {
       format: 'prove-or-refute',
       title: 'Provar ou refutar em TRIE',
       stem: 'Uma TRIE contem a palavra casa. Analise a afirmacao: se cas existe como prefixo, entao cas tambem e palavra.',
+      visual: {
+        kind: 'trie',
+        title: 'Prefixo em TRIE',
+        caption: 'O caminho existe, mas palavra completa depende do marcador fim.',
+        labels: ['c', 'a', 's', 'a', 'fim'],
+      },
       steps: [
         {
           id: 'simulado-trie-prefixo',
@@ -107,6 +125,12 @@ export const reavaliacaoBlueprint: ExamBlueprint = {
       format: 'algorithm-adaptation',
       title: 'Adaptacao de algoritmo de ordenacao',
       stem: 'Adapte a insercao para colocar a chave atual na posicao correta em um prefixo ja ordenado.',
+      visual: {
+        kind: 'array',
+        title: 'Insertion sort',
+        caption: 'O prefixo ordenado cresce uma posicao por rodada.',
+        labels: ['1', '3', '5', '2', '8'],
+      },
       steps: [
         {
           id: 'simulado-ordenacao-blocos',
@@ -145,6 +169,12 @@ export const reavaliacaoBlueprint: ExamBlueprint = {
       format: 'case-analysis',
       title: 'Melhor e pior caso em arvore normal',
       stem: 'Analise uma funcao recursiva que calcula altura visitando esquerda e direita.',
+      visual: {
+        kind: 'binary-tree',
+        title: 'Altura recursiva',
+        caption: 'A funcao precisa combinar a altura dos dois lados.',
+        labels: ['9', '4', '13', '2', '7'],
+      },
       steps: [
         {
           id: 'simulado-arvore-caso-base',
@@ -177,6 +207,12 @@ export const reavaliacaoBlueprint: ExamBlueprint = {
       format: 'composite-structure-method',
       title: 'Metodo em Estrutura Doidona',
       stem: 'Implemente a busca em uma estrutura composta por T1, T2, T3, lista e arvore.',
+      visual: {
+        kind: 'doidona',
+        title: 'Estrutura composta',
+        caption: 'A busca passa por camadas antes de concluir ausencia.',
+        labels: ['T1', 'T2', 'T3', 'lista', 'arvore'],
+      },
       steps: [
         {
           id: 'simulado-doidona-camada',

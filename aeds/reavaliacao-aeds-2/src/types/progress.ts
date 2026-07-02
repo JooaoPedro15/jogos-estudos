@@ -46,3 +46,15 @@ export type ErrorRecord = {
 export type ErrorNotebook = {
   records: ErrorRecord[];
 };
+
+export type PracticeMode = 'quick' | 'marathon';
+
+export type PracticeSession = {
+  mode: PracticeMode;
+  targetCount?: number;
+  currentDrillIndex: number;
+  completedCount: number;
+  score: number;
+  attempts: StepAttempt[];
+  completed: boolean;
+};

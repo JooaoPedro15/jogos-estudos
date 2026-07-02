@@ -18,6 +18,8 @@ aeds/materiais/
   Provas/
     REAV1/
     REAV2_incompleta/
+  Listas/
+    lista-aeds2-prova3.pdf
   Slides AEDS 2/
     u01 Fundamentos de Analise de Algoritmos/
     u02 Estruturas de dados basicas lineares/
@@ -44,4 +46,7 @@ aeds/materiais-privados/
 O jogo deve usar os materiais como referencia de formato e conteudo, criando
 exercicios proprios com valores, enunciados e variacoes novas. A ideia nao e
 copiar uma prova inteira, mas treinar as habilidades que ela cobra.
+
+A lista `lista-aeds2-prova3.pdf` deve guiar principalmente os treinos de codigo:
+classes prontas, metodo pedido, estrutura visual e adaptacao de logica.
 

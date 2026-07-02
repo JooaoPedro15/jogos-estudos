@@ -6,7 +6,9 @@ export type QuestionFormat =
   | 'prove-or-refute'
   | 'algorithm-adaptation'
   | 'case-analysis'
-  | 'composite-structure-method';
+  | 'composite-structure-method'
+  | 'code-repetition'
+  | 'code-modification';
 
 export type SkillId = 'recognize' | 'simulate' | 'program' | 'justify';
 
@@ -115,6 +117,7 @@ export type ExamQuestion = {
   format: QuestionFormat;
   title: string;
   stem: string;
+  visual?: StructureVisual;
   steps: ExamStep[];
 };
 
@@ -162,4 +165,31 @@ export type StepResult = {
   scoreDelta: number;
   feedback: string;
   mistakeTag?: MistakeTag;
+};
+
+export type StructureVisualKind = 'binary-tree' | 'avl' | 'trie' | 'doidona' | 'array' | 'hash';
+
+export type StructureVisual = {
+  kind: StructureVisualKind;
+  title: string;
+  caption: string;
+  labels: string[];
+};
+
+export type CodeDrillPhase = 'repeat' | 'modify';
+
+export type CodeDrill = {
+  id: string;
+  domainId: DomainId;
+  title: string;
+  source: 'lista-prova3' | 'reav-style';
+  repetitionGroup: string;
+  phase: CodeDrillPhase;
+  format: Extract<QuestionFormat, 'code-repetition' | 'code-modification'>;
+  skillId: SkillId;
+  goal: string;
+  stem: string;
+  scaffold: string;
+  visual: StructureVisual;
+  step: ExamStep;
 };

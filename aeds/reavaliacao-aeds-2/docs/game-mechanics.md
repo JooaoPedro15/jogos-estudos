@@ -3,10 +3,10 @@
 ## Loop principal
 
 1. Escolher ou receber o proximo dominio recomendado.
-2. Fazer aquecimento visual curto.
-3. Resolver uma oficina de codigo.
-4. Enfrentar um erro classico daquele dominio.
-5. Resolver uma questao estilo reavaliacao.
+2. Fazer uma ou duas questoes rapidas de codigo, ou iniciar maratona.
+3. Ver a estrutura da questao em um visual parecido com prova.
+4. Resolver uma oficina de codigo.
+5. Usar `Me ensine` quando travar, vendo a resposta modelo e sua explicacao.
 6. Atualizar dominio, caderno de erros e preparo para o simulado.
 
 ## Campanha
@@ -31,6 +31,19 @@ Tipos de etapa:
 - `digitar`: escrever uma linha ou expressao curta.
 - `simular`: prever caminho, estado final ou contador.
 - `rubrica`: selecionar justificativa aceitavel para uma resposta discursiva.
+
+## Treino de codigo continuo
+
+O treino de codigo existe para uso casual e para estudo longo:
+
+- `Pegar 2 questoes`: sessao curta para fazer quando a pessoa tem pouco tempo.
+- `Maratona`: fluxo continuo para resolver varias questoes em sequencia.
+- `Repeticao`: refazer padroes fundamentais ate automatizar a estrutura.
+- `Modificacao`: depois da repeticao, adaptar a estrutura para uma regra nova.
+- `Me ensine`: abrir uma explicacao local da resposta modelo, linha ou bloco.
+
+Os exercicios devem se inspirar na lista da prova 3: classes prontas, metodo a
+implementar, estrutura visual e analise de logica.
 
 ## Caderno de erros
 
@@ -70,4 +83,3 @@ O simulado final tem 6 questoes e usa os macroformatos reais:
 
 O simulado pode ser feito com tempo opcional. A primeira versao pode nao exigir
 cronometro; o foco inicial e qualidade de correcao e revisao.
-

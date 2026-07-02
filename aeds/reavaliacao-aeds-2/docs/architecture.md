@@ -22,11 +22,13 @@ src/
     App.tsx
     App.css
   content/
+    codeDrills.ts
     domains.ts
     reavaliacaoBlueprint.ts
     reviewVariations.ts
   engine/
     adaptiveReview.ts
+    codePractice.ts
     evaluator.ts
     examSession.ts
   persistence/
@@ -41,9 +43,11 @@ src/
 | Modulo | Responsabilidade |
 | --- | --- |
 | `content/domains` | Catalogo dos 6 dominios: Doidona, TRIE, AVL, arvore normal, somatorios e ordenacao. |
+| `content/codeDrills` | Banco de treinos repetitivos de codigo inspirados na lista da prova 3. |
 | `content/reavaliacaoBlueprint` | Simulado fixo com 6 questoes e macroformatos da reavaliacao. |
 | `content/reviewVariations` | Variacoes predefinidas para treinar erros parecidos. |
 | `engine/evaluator` | Avaliar escolha, rubrica, lacuna, blocos, correcao de linha e codigo curto. |
+| `engine/codePractice` | Controlar treino rapido e maratona de questoes de codigo. |
 | `engine/examSession` | Controlar posicao, pontuacao, conclusao e tentativas do simulado. |
 | `engine/adaptiveReview` | Agrupar erros por conceito, priorizar revisao e resolver apos acertos seguidos. |
 | `persistence/save` | Salvar e carregar sessao/caderno no navegador. |
@@ -60,19 +64,22 @@ type QuestionFormat =
   | 'prove-or-refute'
   | 'algorithm-adaptation'
   | 'case-analysis'
-  | 'composite-structure-method';
+  | 'composite-structure-method'
+  | 'code-repetition'
+  | 'code-modification';
 ```
 
 ## Principios de implementacao
 
 - Avaliadores e revisao adaptativa ficam em funcoes puras e testaveis.
 - Conteudo fica declarativo para facilitar trocar valores e criar novas questoes.
-- A interface sempre mostra dominio, habilidade, questao atual, feedback e revisao.
+- A interface sempre mostra dominio, habilidade, questao atual, visual da estrutura, feedback e revisao.
 - O simulado final usa blueprint fixo de 6 formatos.
+- O treino de codigo deve servir tanto para 1-2 questoes rapidas quanto para maratona.
 - O caderno de erros funciona sem backend.
 
 ## Proximos incrementos arquiteturais
 
 - Separar componentes menores dentro de `src/app/components/` quando a tela crescer.
-- Adicionar diagramas visuais em `src/visuals/` para AVL, TRIE, arvore e Doidona.
+- Evoluir os diagramas visuais para componentes dedicados em `src/visuals/`.
 - Criar um modulo de `progression` quando houver campanha completa por dominio.

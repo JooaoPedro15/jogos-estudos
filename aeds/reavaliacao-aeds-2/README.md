@@ -9,8 +9,8 @@ simulado final.
 ## Estado
 
 Primeira versao jogavel implementada. O app ja possui painel dos 6 dominios,
-simulado de 6 questoes, avaliador de etapas, caderno adaptativo de erros e
-persistencia local.
+simulado de 6 questoes, treino continuo de codigo, visual de apoio nas questoes,
+botao `Me ensine`, caderno adaptativo de erros e persistencia local.
 
 ## Objetivo educacional
 
@@ -41,6 +41,7 @@ locais em `aeds/materiais/Provas`:
 | --- | --- |
 | Campanha | Painel dos 6 dominios da reavaliacao. |
 | Oficina de codigo | Etapas de escolha, lacuna, blocos, correcao e codigo curto. |
+| Treino de Codigo | Sessoes rapidas de 2 questoes ou maratona continua baseada na lista da prova 3. |
 | Caderno de erros | Revisao adaptativa dos erros mais repetidos. |
 | Simulado final | Prova curta com 6 questoes no formato da reavaliacao. |
 | Materiais | Referencias locais usadas para mapear conteudo e questoes. |

@@ -11,7 +11,8 @@ ou revisao adaptativa.
 2. Selecao adaptativa de erros.
 3. Calculo de dominio/progresso.
 4. Blueprint do simulado final.
-5. Componentes essenciais de UI.
+5. Treino continuo de codigo.
+6. Componentes essenciais de UI.
 
 ## Testes unitarios
 
@@ -20,6 +21,8 @@ ou revisao adaptativa.
 | `evaluator` | escolha correta, lacuna normalizada, ordem de blocos, codigo curto. |
 | `adaptiveReview` | priorizar erro recorrente, remover erro apos acertos seguidos. |
 | `examSession` | garantir exatamente 6 questoes, formatos esperados, avanco e conclusao. |
+| `codePractice` | sessao rapida, maratona, tentativas e metadados para caderno. |
+| `codeDrills` | catalogo com repeticao antes de modificacao logica. |
 | `persistence` | salvar, carregar e ignorar dados invalidos. |
 
 ## Testes de componente
@@ -27,6 +30,8 @@ ou revisao adaptativa.
 - campanha renderiza os 6 dominios;
 - caderno mostra erros prioritarios;
 - simulado mostra questoes no formato correto;
+- treino de codigo mostra codigo, visual, sessoes rapidas e maratona;
+- `Me ensine` mostra resposta modelo e explicacao;
 - feedback explica erro comum;
 - botoes e formularios sao acessiveis por teclado.
 
