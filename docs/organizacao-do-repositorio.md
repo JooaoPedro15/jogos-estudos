@@ -1,121 +1,86 @@
-# Organização do Repositório
+# Organizacao do Repositorio
 
-## 🎯 Objetivo
+Este documento explica a estrutura do repositorio "jogos-estudos" e como novos
+jogos devem ser adicionados.
 
-Este documento explica como o repositório "jogos-estudos" está organizado, para que
-qualquer pessoa (incluindo você no futuro) entenda a estrutura, saiba onde encontrar
-cada coisa e consiga adicionar novos projetos sem quebrar o padrão.
+## Principios
 
-## 📐 Princípios
+1. Repositorio unico, projetos independentes.
+2. Uma pasta raiz por materia.
+3. Um jogo por subpasta.
+4. Documentacao junto do projeto.
+5. Materiais ficam em `materiais/` quando podem ser versionados e em
+   `materiais-privados/` quando devem ficar apenas localmente.
 
-1. **Repositório único, projetos independentes.** Cada jogo tem seu próprio código,
-   dependências, testes e forma de rodar. Não há workspace/monorepo complexo.
-2. **Agrupamento por matéria.** Cada disciplina da faculdade tem uma pasta raiz.
-3. **Preservação.** Versões antigas e snapshots são mantidos, nunca sobrescritos.
-4. **Documentação honesta.** Conteúdos são documentados apenas se realmente existem
-   no código ou nos materiais.
-5. **Privacidade.** Materiais de terceiros, credenciais e rascunhos de IA ficam fora
-   do Git.
-
-## 🗂️ Estrutura
+## Estrutura
 
 ```text
 jogos-estudos/
-├── README.md                       README principal do repositório
-├── .gitignore                      Cobertura única (Node, Python, IA, OS, IDEs)
-├── docs/                           Documentação geral
-│   ├── README.md
-│   ├── organizacao-do-repositorio.md  (este arquivo)
-│   └── inventario-dos-projetos.md
-├── <materia>/                      Uma pasta por disciplina
-│   ├── README.md                   Apresenta a matéria e seus jogos
-│   ├── <jogo-xyz>/                 Um jogo por subpasta
-│   │   ├── README.md
-│   │   ├── src/ (ou equivalente)
-│   │   └── ...
-│   ├── materiais/                  Materiais acadêmicos públicos (versionados)
-│   └── materiais-privados/         Materiais que NÃO vão para o Git (ignorado)
-└── arquivos-avulsos/               Arquivos isolados sem projeto definido
+  README.md
+  docs/
+    README.md
+    organizacao-do-repositorio.md
+    inventario-dos-projetos.md
+    superpowers/
+      specs/
+  aeds/
+    README.md
+    jogo-aeds-2/
+    jogo-reavaliacao-aeds-2/
+    materiais/
+    docs/
+  arquitetura-computadores/
+    README.md
+    jogo-arquitetura-roguelike/
+    jogo-arquitetura-legacy/
+    primeira-versao/
+  arquivos-avulsos/
 ```
 
-## 📝 Padrão de nomes
+## Padrao de nomes
 
-Todas as pastas seguem estes padrões:
-
-| Elemento | Regra | Exemplo |
+| Item | Regra | Exemplo |
 | --- | --- | --- |
-| Matéria | minúsculo, sem acento, sem espaço | `aeds`, `arquitetura-computadores` |
-| Jogo | `jogo-<nome>` minúsculo, hifenizado | `jogo-aeds-2`, `jogo-arquitetura-roguelike` |
-| Docs | `docs/` ou `materiais/` | `docs/`, `materiais/` |
-| Arquivos privados | `*-privados/` (no `.gitignore`) | `materiais-privados/` |
-| Documentação de projeto | Dentro do próprio projeto `docs/` | `jogo-aeds-2/docs/` |
+| Materia | minusculo, sem acento, hifenizado quando necessario | `arquitetura-computadores` |
+| Jogo | `jogo-<nome>` | `jogo-reavaliacao-aeds-2` |
+| Docs do projeto | dentro do proprio jogo | `aeds/jogo-reavaliacao-aeds-2/docs/` |
+| Materiais versionados | dentro da materia | `aeds/materiais/` |
+| Materiais privados | pasta ignorada localmente | `aeds/materiais-privados/` |
 
-## 🔧 Como adicionar uma nova matéria
+## Como adicionar um jogo
 
-1. Crie uma pasta raiz com o nome da matéria (minúsculo, hifenizado, sem acento):
-   ```bash
-   mkdir calculo-numerico
-   ```
-2. Crie o `README.md` da matéria (veja `aeds/README.md` como exemplo).
-3. Crie `materiais/README.md` (explica o que pode ser compartilhado).
-4. Crie `docs/` se houver documentação cruzada.
-5. Adicione jogos dentro da pasta da matéria.
+1. Criar a pasta dentro da materia.
+2. Criar `README.md` do jogo.
+3. Criar `docs/` do jogo com spec, mecanicas, arquitetura e roadmap.
+4. Se houver codigo, manter dependencias e comandos dentro da propria pasta.
+5. Atualizar `aeds/README.md` ou o README da materia correspondente.
+6. Atualizar `docs/inventario-dos-projetos.md`.
+7. Atualizar o README raiz quando o projeto ja tiver estado tecnico claro.
 
-## 🔧 Como adicionar um novo jogo
-
-1. Crie uma pasta dentro da matéria:
-   ```bash
-   mkdir calculo-numerico/jogo-interpolacao
-   ```
-2. Coloque o código-fonte, dependências e configuração.
-3. Crie `README.md` no jogo com: nome, descrição, objetivo educacional, conteúdos,
-   tecnologias, requisitos, instalação, execução, testes, estrutura, estado atual.
-4. Verifique que `.gitignore` raiz cobre as tecnologias usadas.
-5. Teste: instale, rode, rode testes. Confirme que tudo funciona.
-6. Adicione o jogo na tabela do `README.md` principal.
-7. Atualize `docs/inventario-dos-projetos.md`.
-
-## 📖 Onde colocar documentação
+## Onde colocar documentacao
 
 | Tipo | Onde |
 | --- | --- |
-| Documentação geral do repo | `docs/` (raiz) |
-| Specs/plans de um jogo | `<jogo>/docs/` (dentro do projeto) |
-| Materiais acadêmicos públicos | `<materia>/materiais/` |
-| Materiais acadêmicos privados | `<materia>/materiais-privados/` (ignorado) |
-| README por matéria | `<materia>/README.md` |
-| README por jogo | `<jogo>/README.md` |
+| Documentacao geral do repo | `docs/` |
+| Spec formal do fluxo de design | `docs/superpowers/specs/` |
+| Documentacao de um jogo | `<materia>/<jogo>/docs/` |
+| README por materia | `<materia>/README.md` |
+| README por jogo | `<materia>/<jogo>/README.md` |
 
-## 🔒 O que permanece privado (fora do Git)
+## Materiais
 
-O `.gitignore` raiz cuida de ignorar:
+Por padrao, materiais sensiveis ou privados ficam fora do Git. Ainda assim, um
+projeto pode versionar materiais de referencia em `<materia>/materiais/` quando
+o dono do repositorio decidir que eles podem subir.
 
-| Pasta/arquivo | Motivo |
-| --- | --- |
-| `materiais-privados/` | Slides, PDFs e provas de terceiros |
-| `prompts-privados/` | Prompts e conversas com IA |
-| `ai-scratch/`, `session-notes/` | Rascunhos de sessão |
-| `.claude/`, `.cursor/`, `.codex/` | Configs de assistentes/IDE |
-| `.superpowers/` | Scratch de brainstorm |
-| `.env`, `*.pem`, `*.key` | Credenciais e segredos |
-| `node_modules/`, `dist/`, `tmp/` | Dependências, build e temporários |
+No caso atual de AEDS II, `aeds/materiais/Provas/` e
+`aeds/materiais/Slides AEDS 2/` podem ser versionados e sao usados como base do
+jogo `aeds/jogo-reavaliacao-aeds-2`.
 
-## 🔄 Como atualizar a tabela do README principal
+## Independencia dos projetos
 
-Sempre que adicionar, remover ou mudar o estado de um projeto:
-
-1. Abra `README.md` na raiz.
-2. Atualize a tabela de projetos (nome, matéria, descrição, tecnologias, estado, pasta).
-3. Estados válidos: `Em desenvolvimento`, `Protótipo`, `Funcional`, `Pausado`,
-   `Versão antiga (preservada)`, `Concluído`.
-4. Não marque como "Concluído" sem confirmar testes e execução.
-5. Atualize `docs/inventario-dos-projetos.md` também.
-
-## 🏗️ Como manter cada projeto independente
-
-- Cada jogo tem seu próprio `package.json` (se necessário).
-- Não há workspaces, Turborepo ou Nx.
-- Dependências não são compartilhadas entre projetos.
-- O `.gitignore` raiz é a primeira camada; projetos podem ter `.gitignore`
-  adicionais se necessário.
-- Caminhos relativos dentro de cada projeto não dependem da posição no repo.
+- Cada jogo deve ter seus proprios comandos.
+- Nao ha workspace, Turborepo ou Nx.
+- Dependencias nao devem ser compartilhadas implicitamente entre jogos.
+- O `.gitignore` raiz cobre dependencias, builds, temporarios e pastas privadas.
+- Caminhos internos de um projeto devem funcionar a partir da propria pasta.

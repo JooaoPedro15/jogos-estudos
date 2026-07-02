@@ -1,163 +1,153 @@
-# Inventário dos Projetos
+# Inventario dos Projetos
 
-Inventário técnico detalhado de cada projeto encontrado no repositório, documentando
-sua localização, tecnologia, comandos e estado atual. Última atualização: 2026-06-27.
+Inventario tecnico dos projetos do repositorio. Ultima atualizacao: 2026-07-01.
 
 ---
 
-## Projeto 1: AEDS II Card Roguelike
+## Projeto 1: Estruturas
 
 | Campo | Valor |
 | --- | --- |
-| **Nome** | AEDS II Card Roguelike |
-| **Pasta** | `aeds/jogo-aeds-2/` |
-| **Matéria** | AEDS II — Algoritmos e Estruturas de Dados II |
-| **Tecnologia** | React 19, TypeScript, Vite 8, Vitest 4, Testing Library |
-| **Versão** | 0.1.0 |
-| **Estado** | Em desenvolvimento |
-| **Versão legacy?** | Não (versão única e atual) |
+| Nome | Estruturas |
+| Pasta | `aeds/jogo-aeds-2/` |
+| Materia | AEDS II |
+| Tecnologia | React, TypeScript, Vite, Vitest, Testing Library |
+| Estado | Em desenvolvimento |
+
+### Objetivo
+
+Jogo geral de estruturas de dados para AEDS II, organizado por biblioteca,
+trilhas, laboratorio, caderno de erros e simulado.
+
+### Conteudos
+
+Lista, pilha, ordenacao, arvore binaria, ABB, AVL, 2-3-4, alvinegra, hash,
+TRIE, PATRICIA e Doidona.
 
 ### Comandos
 
-| Ação | Comando (dentro de `aeds/jogo-aeds-2/`) |
+Dentro de `aeds/jogo-aeds-2/`:
+
+| Acao | Comando |
 | --- | --- |
-| Instalar dependências | `npm install` |
-| Servidor de desenvolvimento | `npm run dev` |
+| Instalar | `npm install` |
+| Desenvolvimento | `npm run dev` |
 | Testes | `npm test` |
-| Testes (watch) | `npm run test:watch` |
-| Lint / type-check | `npm run lint` |
-| Build de produção | `npm run build` |
+| Type-check | `npm run lint` |
+| Build | `npm run build` |
 
-### Dependências
+### Documentacao
 
-**Runtime:** react, react-dom, lucide-react
-**Dev:** vite, @vitejs/plugin-react, typescript, vitest, @testing-library/react,
-@testing-library/jest-dom, @testing-library/user-event, jsdom, @types/node,
-@types/react, @types/react-dom
-
-### Conteúdos trabalhados
-ABB (2 desafios), AVL (2), Alvinegra (2), Hash (2), TRIE (2), Binária genérica (2),
-Híbrida/Doidona (2). Total: 14 desafios.
-
-### Documentação disponível
 - `aeds/jogo-aeds-2/README.md`
-- `aeds/jogo-aeds-2/docs/superpowers/specs/` — 3 specs de design
-- `aeds/jogo-aeds-2/docs/superpowers/plans/` — 3 planos de implementação
-- `aeds/README.md`
-
-### Materiais acadêmicos relacionados
-- PDFs de referência em `aeds/jogo-aeds-2/tmp/pdfs/` (unidades 04–08, ignorados do Git).
-- Cobrem: pilha, fila, listas, árvores binárias, AVL, 2-3-4, alvinegra, hash, TRIE, PATRICIA.
-
-### Problemas identificados
-- `.git/` órfão existia na pasta (vazio) — removido durante reorganização.
-- `src/` não estava commitado inicialmente — adicionado em commit posterior.
-- Pilhas, filas e listas ainda não estão no banco de desafios (futuro).
+- `aeds/jogo-aeds-2/docs/`
 
 ---
 
-## Projeto 2: ARQUITETO — Tape-Out Run (Roguelike)
+## Projeto 2: Reavaliacao AEDS II
 
 | Campo | Valor |
 | --- | --- |
-| **Nome** | ARQUITETO: Tape-Out Run |
-| **Pasta** | `arquitetura-computadores/jogo-arquitetura-roguelike/` |
-| **Matéria** | Arquitetura de Computadores II |
-| **Tecnologia** | JavaScript (ES modules), sem dependências externas |
-| **Versão** | 0.1.0 |
-| **Estado** | Em desenvolvimento (projeto principal) |
-| **Versão legacy?** | Não (versão nova, reescrita do zero) |
+| Nome | Reavaliacao AEDS II |
+| Pasta | `aeds/jogo-reavaliacao-aeds-2/` |
+| Materia | AEDS II |
+| Tecnologia | Planejada: React, TypeScript, Vite, Vitest, Testing Library |
+| Estado | Design/spec aprovado |
+
+### Objetivo
+
+Novo jogo focado em preparar para a reavaliacao de AEDS II. A experiencia
+planejada combina campanha de 6 dominios, oficina de codigo, caderno adaptativo
+de erros e simulado final no formato das reavaliacoes.
+
+### Dominios iniciais
+
+Doidona, TRIE, AVL, arvore normal/binaria, somatorios e algoritmos de ordenacao.
+
+### Documentacao
+
+- `aeds/jogo-reavaliacao-aeds-2/README.md`
+- `aeds/jogo-reavaliacao-aeds-2/docs/`
+- `docs/superpowers/specs/2026-07-01-reavaliacao-aeds-2-design.md`
+
+### Materiais relacionados
+
+- `aeds/materiais/Provas/`
+- `aeds/materiais/Slides AEDS 2/`
+
+---
+
+## Projeto 3: ARQUITETO - Tape-Out Run
+
+| Campo | Valor |
+| --- | --- |
+| Nome | ARQUITETO: Tape-Out Run |
+| Pasta | `arquitetura-computadores/jogo-arquitetura-roguelike/` |
+| Materia | Arquitetura de Computadores II |
+| Tecnologia | JavaScript ES modules, sem dependencias externas |
+| Estado | Em desenvolvimento |
+
+### Objetivo
+
+Roguelite de montagem de CPU cobrindo topicos de MIPS, datapath, pipeline,
+desempenho e memoria.
 
 ### Comandos
 
-| Ação | Comando (dentro de `arquitetura-computadores/jogo-arquitetura-roguelike/`) |
+Dentro de `arquitetura-computadores/jogo-arquitetura-roguelike/`:
+
+| Acao | Comando |
 | --- | --- |
-| Instalar dependências | Não há (zero dependências) |
-| Servidor estático | `npm run serve` (python -m http.server 8080) |
-| Testes | `npm test` (node tests/run-all.js) |
+| Testes | `npm test` |
+| Servidor estatico | `npm run serve` |
 
-### Dependências
-Nenhuma (zero `dependencies`, zero `devDependencies` no `package.json`).
+### Documentacao
 
-### Conteúdos trabalhados
-10 tópicos: Aritmética, CLA, Amdahl, Desempenho, Memória/Cache, ISA, Funções MIPS,
-Datapath/Controle, Tempos, Pipeline. 7 tipos de desafio.
-
-### Documentação disponível
 - `arquitetura-computadores/jogo-arquitetura-roguelike/README.md`
 - `arquitetura-computadores/jogo-arquitetura-roguelike/docs/BRAINSTORM.md`
-- `arquitetura-computadores/README.md`
-
-### Materiais acadêmicos relacionados
-- Referenciados via `src/content/fontes.js` — materiais em `D:\CC\AC2` (não incluídos).
-- Listas, gabaritos, slides e provas resolvidas.
-
-### Problemas identificados
-- Nenhum. Projeto limpo, sem `.git` interno, sem dependências.
 
 ---
 
-## Projeto 3: MIPS Datapath Quest (Legacy)
+## Projeto 4: MIPS Datapath Quest Legacy
 
 | Campo | Valor |
 | --- | --- |
-| **Nome** | MIPS Datapath Quest (versão 1) |
-| **Pasta** | `arquitetura-computadores/jogo-arquitetura-legacy/` |
-| **Matéria** | Arquitetura de Computadores II |
-| **Tecnologia** | HTML + CSS + JavaScript inline (vanilla), sem dependências |
-| **Versão** | N/A (arquivo único) |
-| **Estado** | Versão antiga (preservada) — NÃO modificar |
-| **Versão legacy?** | Sim |
+| Nome | MIPS Datapath Quest |
+| Pasta | `arquitetura-computadores/jogo-arquitetura-legacy/` |
+| Materia | Arquitetura de Computadores II |
+| Tecnologia | HTML, CSS e JavaScript inline |
+| Estado | Versao antiga preservada |
 
-### Comandos
+### Execucao
 
-| Ação | Comando |
-| --- | --- |
-| Executar | Duplo-clique em `mips-datapath-quest.html` |
+Abrir `mips-datapath-quest.html` no navegador.
 
-### Dependências
-Nenhuma. Funciona offline.
+### Documentacao
 
-### Conteúdos trabalhados
-Datapath MIPS uniciclo, sinais de controle, tempos do caminho crítico, pipeline 5 estágios,
-Academia de lições, Modo Aprendiz/Prova, modo Roguelike da Prova.
-
-### Documentação disponível
 - `arquitetura-computadores/jogo-arquitetura-legacy/README.md`
-- `arquitetura-computadores/docs/superpowers/specs/2026-06-27-mips-roguelike-design.md`
-- `arquitetura-computadores/docs/superpowers/plans/2026-06-27-mips-roguelike-implementation.md`
-
-### Problemas identificados
-- Arquivo duplicado idêntico em `arquivos-avulsos/mips-datapath-quest.html` (preservado).
-- Sem testes automatizados.
 
 ---
 
-## Projeto 4: Primeira Versão (Snapshot)
+## Projeto 5: MIPS Datapath Quest - Snapshot
 
 | Campo | Valor |
 | --- | --- |
-| **Nome** | MIPS Datapath Quest — snapshot pré-roguelike |
-| **Pasta** | `arquitetura-computadores/primeira-versao/` |
-| **Matéria** | Arquitetura de Computadores II |
-| **Tecnologia** | HTML + CSS + JavaScript inline (vanilla) |
-| **Versão** | N/A (arquivo único) |
-| **Estado** | Preservado (backup) |
-| **Versão legacy?** | Sim (snapshot anterior) |
+| Nome | MIPS Datapath Quest snapshot pre-roguelike |
+| Pasta | `arquitetura-computadores/primeira-versao/` |
+| Materia | Arquitetura de Computadores II |
+| Tecnologia | HTML, CSS e JavaScript inline |
+| Estado | Preservado |
 
-### Comandos
-Mesmo do legacy: duplo-clique em `mips-datapath-quest.html`.
+### Execucao
 
-### Documentação disponível
-- `arquitetura-computadores/primeira-versao/README.md`
+Abrir `mips-datapath-quest.html` no navegador.
 
 ---
 
 ## Recursos adicionais versionados
 
-| Recurso | Pasta | Descrição |
+| Recurso | Pasta | Descricao |
 | --- | --- | --- |
-| Checkpoints de desenvolvimento | `arquitetura-computadores/work/checkpoints/` | 12 snapshots HTML do processo de implementação do modo roguelike no legacy |
-| HTML avulso duplicado | `arquivos-avulsos/mips-datapath-quest.html` | Cópia idêntica ao legacy (era raiz do Arq2) |
-| Specs/plans do AEDS | `aeds/jogo-aeds-2/docs/superpowers/` | 3 specs de design + 3 planos de implementação |
-| Spec/plan do Arq legacy | `arquitetura-computadores/docs/superpowers/` | Spec de design + plano de implementação do modo roguelike |
+| Checkpoints de desenvolvimento | `arquitetura-computadores/work/checkpoints/` | Snapshots HTML do processo de desenvolvimento |
+| HTML avulso duplicado | `arquivos-avulsos/mips-datapath-quest.html` | Copia preservada do legacy |
+| Specs formais | `docs/superpowers/specs/` | Specs geradas no fluxo de design |
+| Materiais de AEDS | `aeds/materiais/` | Slides, provas e referencias usadas pelos jogos de AEDS |

@@ -1,47 +1,46 @@
-# Materiais Acadêmicos — AEDS II
+# Materiais Academicos - AEDS II
 
-## 🎯 Objetivo
+Esta pasta centraliza materiais usados como referencia para os jogos de AEDS II.
 
-Centralizar materiais acadêmicos relacionados a AEDS II que podem ser
-**compartilhados publicamente** (resumos, anotações próprias, guias criados por você).
+## Uso atual
 
-## 📁 O que colocar aqui
+O novo jogo `aeds/jogo-reavaliacao-aeds-2` usa esta pasta para entender:
 
-- Resumos e anotações próprias (texto, Markdown).
-- Diagramas criados por você (PNG, SVG).
-- Listas de exercícios com soluções próprias.
-- Qualquer material que você **tenha permissão para redistribuir**.
+- o formato das reavaliacoes;
+- os tipos de questao cobrados;
+- os dominios de conteudo mais importantes;
+- exemplos de codigo, estruturas e algoritmos dos materiais.
 
-## 🚫 O que NÃO colocar aqui
-
-- **Slides de aula** (direitos autorais do professor/universidade).
-- **Provas e gabaritos** oficiais.
-- **Livros ou capítulos** escaneados.
-- **Qualquer material que não seja seu ou que não tenha permissão para publicar.**
-
-Esses materiais ficam em `materiais-privados/` (ignorada pelo Git). Veja as instruções
-abaixo.
-
-## 📂 Como organizar materiais privados localmente
-
-O repositório possui uma pasta `materiais-privados/` (ignorada pelo `.gitignore`) que
-deve existir **apenas localmente**, sem ser commitada.
+## Organizacao
 
 ```text
-aeds/
-├── materiais/              ← versionado (apenas conteúdo próprio)
-└── materiais-privados/      ← ignorado pelo Git (slides, PDFs, provas)
-    ├── slides/
-    ├── listas/
-    └── provas/
+aeds/materiais/
+  Provas/
+    REAV1/
+    REAV2_incompleta/
+  Slides AEDS 2/
+    u01 Fundamentos de Analise de Algoritmos/
+    u02 Estruturas de dados basicas lineares/
+    u03 Ordenacao em memoria principal/
+    u04 Estruturas de dados basicas flexiveis/
+    u05 Arvores binarias/
+    u06 Balanceamento de arvores/
+    u07 Tabelas e dicionarios/
+    u08 Arvores TRIE/
 ```
 
-Para criar a estrutura local:
-```bash
-mkdir -p aeds/materiais-privados/slides
-mkdir -p aeds/materiais-privados/listas
-mkdir -p aeds/materiais-privados/provas
+## Regra do repositorio
+
+Para este projeto, o dono do repositorio autorizou que esta pasta de materiais
+possa subir para o Git. Se algum material futuro nao puder ser versionado, use
+uma pasta local ignorada, como:
+
+```text
+aeds/materiais-privados/
 ```
 
-> **Nota:** No momento, os PDFs de referência da disciplina estão em
-> `aeds/jogo-aeds-2/tmp/pdfs/` (ignorado pelo Git).
+## Como o jogo deve usar estes materiais
+
+O jogo deve usar os materiais como referencia de formato e conteudo, criando
+exercicios proprios com valores, enunciados e variacoes novas. A ideia nao e
+copiar uma prova inteira, mas treinar as habilidades que ela cobra.

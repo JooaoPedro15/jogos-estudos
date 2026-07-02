@@ -1,42 +1,58 @@
-# AEDS — Algoritmos e Estruturas de Dados
+# AEDS - Algoritmos e Estruturas de Dados
 
-## 🎯 Objetivo
+## Objetivo
 
-Reunir jogos educacionais voltados para o estudo de **AEDS II** (Algoritmos e Estruturas
-de Dados II). Os jogos abordam estruturas de dados, seus algoritmos de manipulação,
-complexidade e propriedades — sempre de forma interativa e voltada para a prova.
+Reunir jogos educacionais voltados para o estudo de AEDS II. Os jogos abordam
+estruturas de dados, algoritmos de manipulacao, complexidade e propriedades,
+sempre de forma interativa e voltada para prova.
 
-## 🎮 Jogos disponíveis
+## Jogos disponiveis
 
-### [jogo-aeds-2/](jogo-aeds-2/) — AEDS II Card Roguelike
-**Estado:** Em desenvolvimento
+### [jogo-aeds-2/](jogo-aeds-2/) - Estruturas
 
-Roguelike de cartas inspirado em Balatro. Cada run apresenta 14 encontros (normais,
-elites e chefe) onde o jogador resolve desafios de AEDS usando cartas de ferramentas.
-Inclui sistema de combos, passivas de run, diagramas SVG das estruturas e pontuação.
+**Estado:** Em desenvolvimento.
 
-**Conteúdos trabalhados no jogo:**
-- Árvore Binária de Busca (ABB) — pesquisa, propriedades
-- Árvore AVL — fator de balanceamento, rotações
-- Árvore Alvinegra (Red-Black) — propriedades, recoloração
-- Tabela Hash — pesquisa, área de reserva, rehashing
-- Árvore TRIE — busca por palavra, verificação de prefixo
-- Estrutura Híbrida ("Doidona") — busca/inserção em camadas (árvore → T1 → T2 → lista)
-- Árvore Binária genérica — altura, maior caminho
+Jogo educativo de AEDS II para praticar estruturas de dados por dominio:
+Biblioteca, Trilha, Laboratorio, Caderno de erros e Simulado.
 
-**Conteúdos presentes nos materiais de referência (não ainda no jogo):**
-- Pilhas, filas, listas simples e duplamente encadeadas (unidade 04)
-- Ordenação (unidade 03)
-- PATRICIA (unidade 08)
+Conteudos trabalhados:
 
-## 📁 Onde encontrar
+- lista, pilha e ordenacao;
+- arvore binaria, ABB, AVL, 2-3-4 e alvinegra;
+- hash;
+- TRIE e PATRICIA;
+- Doidona.
 
-| Pasta | Conteúdo |
+### [jogo-reavaliacao-aeds-2/](jogo-reavaliacao-aeds-2/) - Reavaliacao AEDS II
+
+**Estado:** Design/spec aprovado.
+
+Jogo novo, em pasta separada, focado em preparar especificamente para a
+reavaliacao de AEDS II. A experiencia planejada combina campanha de 6 dominios,
+oficina de codigo, caderno adaptativo de erros e simulado final no formato das
+reavaliacoes.
+
+Dominios iniciais:
+
+- Doidona;
+- Arvore TRIE;
+- Arvore AVL;
+- Arvore normal/binaria;
+- Somatorios;
+- Algoritmos de ordenacao.
+
+## Onde encontrar
+
+| Pasta | Conteudo |
 | --- | --- |
-| [`jogo-aeds-2/`](jogo-aeds-2/) | Jogo principal (React + TypeScript + Vite) |
-| [`materiais/`](materiais/) | Materiais acadêmicos públicos |
-| [`docs/`](docs/) | Documentação cruzada entre jogos da matéria (vazio por enquanto) |
+| [`jogo-aeds-2/`](jogo-aeds-2/) | Jogo geral de estruturas de dados |
+| [`jogo-reavaliacao-aeds-2/`](jogo-reavaliacao-aeds-2/) | Novo jogo focado na reavaliacao |
+| [`materiais/`](materiais/) | Materiais academicos e provas usadas como referencia |
+| [`docs/`](docs/) | Documentacao cruzada entre jogos da materia |
 
-> **Materiais privados** (PDFs de slides, listas de exercício, provas) ficam em
-> `materiais-privados/` (ignorada pelo Git). Veja o README dentro de `materiais/`
-> para instruções.
+## Materiais
+
+Nesta materia, `aeds/materiais/` pode conter slides, provas, imagens e outros
+materiais de referencia que o dono do repositorio decidiu manter versionados.
+Materiais que nao devem subir para o Git ainda podem ficar em
+`aeds/materiais-privados/`.

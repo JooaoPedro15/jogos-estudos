@@ -1,0 +1,16 @@
+node_modules
+dist
+tmp
+.superpowers
+coverage
+docs/PROMPT-CONTINUACAO.md
+docs/superpowers/
+docs/*.local.md
+docs/rascunhos/
+docs/material-extraido/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
